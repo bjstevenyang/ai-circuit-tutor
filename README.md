@@ -54,6 +54,7 @@ LED 采用固定 2.0 V 正向压降，课程电流限制为 20 mA。忽略电源
 - [系统设计](docs/SYSTEM_DESIGN.md)：模块、状态和数据流。
 - [电路模型](docs/CIRCUIT_MODEL.md)：所有电气结论的依据。
 - [测试计划](docs/TEST_PLAN.md)：测试映射、发布门槛和验证状态。
+- [测试清单](docs/TEST_INVENTORY.md)：所有自动化测试的文件位置、逐项覆盖内容和新增回归。
 - [决策记录](docs/DECISIONS.md)：已批准选择及取舍。
 
 开始修改前阅读 [AGENTS.md](AGENTS.md)。真实浏览器、读屏和目标年龄学生试用仍需按测试计划记录实际结果；自动化不能替代教学有效性验证。
