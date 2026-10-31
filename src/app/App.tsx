@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity } from '../circuit';
 import type { AnalysisResult, CircuitDocument, ComponentInstance, Rotation, Wire } from '../circuit';
 import { Breadboard } from '../editor/Breadboard';
@@ -122,6 +122,21 @@ export function App() {
     dispatch({ type: 'edit', history: commitDocument(state.history, result.document), saveStatus: save(result.document) });
     return true;
   };
+  const deleteSelected = () => {
+    if (!selected || !edit({ type: 'remove', id: selected })) return;
+    setSelected(null);
+    setTool('inspect');
+    setWireFrom('');
+    setWireTo('');
+  };
+  const handleDeleteKey = (event: KeyboardEvent<HTMLElement>) => {
+    if (!selected || event.repeat || event.nativeEvent.isComposing || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+    event.preventDefault();
+    deleteSelected();
+  };
   const travel = (direction: 'undo' | 'redo') => {
     const history = direction === 'undo' ? undo(state.history) : redo(state.history);
     if (history === state.history) return;
@@ -191,7 +206,7 @@ export function App() {
       <div className={`save-indicator ${state.saveStatus.startsWith('未保存') || state.storageBlocked ? 'unsaved' : ''}`} role="status"><span className="status-dot" />{state.saveStatus}</div>
     </header>
 
-    <main>
+    <main onKeyDown={handleDeleteKey}>
       <section className="lesson-heading" aria-labelledby="lesson-title">
         <div><div className="eyebrow"><span className="lesson-number">01</span> 第一个电路 <span className="level-tag">入门</span></div><h1 id="lesson-title">让一颗 LED 亮起来<span className="heading-dot">.</span></h1><p>用一块面包板，理解连接、电流与极性。</p></div>
         <div className="lesson-goal"><span className="goal-icon"><Icon name="check" /></span><div><small>本次目标</small><p>搭建带限流电阻的 LED 串联电路</p></div></div>
@@ -244,7 +259,7 @@ export function App() {
         </aside>
 
         <section className="workbench-panel" id="workbench" aria-label="电路工作台">
-          <div className="workbench-toolbar">
+          <div className="workbench-toolbar" role="toolbar" aria-label="电路编辑操作">
             <div className="tool-group" role="group" aria-label="编辑工具">
               <button className={tool === 'inspect' ? 'tool active' : 'tool'} onClick={() => { setTool('inspect'); setWireFrom(''); }} aria-pressed={tool === 'inspect'}><Icon name="eye" /><span>查看连接</span></button>
               <button className={tool === 'wire' ? 'tool active' : 'tool'} onClick={() => { setTool('wire'); setSelected(null); setError(''); }} aria-pressed={tool === 'wire'}><Icon name="wire" /><span>连线</span></button>
@@ -255,6 +270,7 @@ export function App() {
               <span className="toolbar-divider" />
               <button className="icon-button" aria-label="重置工作台" title="重置工作台（可撤销）" onClick={() => { if (edit({ type: 'reset' })) { setSelected(null); setSelectedEndpoint(null); setWireFrom(''); setTool('inspect'); } }}><Icon name="reset" /></button>
             </div>
+            <button className="delete-button" title="删除选中对象（Delete / Backspace）" disabled={!selectedPart && !selectedWire} onClick={deleteSelected}><Icon name="trash" size={16} />删除</button>
             <button className="run-button" onClick={() => { setError(''); setTool('inspect'); dispatch({ type: 'run', result: analyzeCircuit(document) }); }}><Icon name="play" size={16} />运行电路</button>
           </div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
@@ -267,7 +283,7 @@ export function App() {
           <div className="canvas-footer"><span><i className="legend-dot" />直接相连的孔位</span><span><i className="legend-dot occupied" />已使用</span><span className="keyboard-tip">Tab 聚焦 · 方向键移动 · Enter 选择</span></div>
           <div className="selection-panel">
             {selectedPart ? <>
-              <div className="selection-heading"><strong>{selectedPart.kind === 'resistor' ? '电阻' : '红色 LED'}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><button className="text-danger" onClick={() => { if (edit({ type: 'remove', id: selectedPart.id })) { setSelected(null); setTool('inspect'); } }}><Icon name="trash" size={14} />删除</button></div>
+              <div className="selection-heading"><strong>{selectedPart.kind === 'resistor' ? '电阻' : '红色 LED'}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
               <div className="selection-controls">
                 {selectedPart.kind === 'resistor' && <label>阻值 <select aria-label="所选电阻阻值" value={selectedPart.resistance ?? 330} onChange={event => edit({ type: 'resistance', id: selectedPart.id, value: Number(event.target.value) as 100 | 330 | 1000 })}><option value="100">100 Ω</option><option value="330">330 Ω</option><option value="1000">1,000 Ω</option></select></label>}
                 <label>新锚点 <input aria-label="所选元件新锚点" value={moveAnchor} onChange={event => setMoveAnchor(event.target.value)} /></label>
@@ -276,7 +292,7 @@ export function App() {
                 <button className="small-button" onClick={() => { setTool('move'); setRotation(selectedPart.rotation); }}><Icon name="move" size={14} />点选移动</button>
               </div>
             </> : selectedWire ? <>
-              <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><button className="text-danger" onClick={() => { if (edit({ type: 'remove', id: selectedWire.id })) setSelected(null); }}><Icon name="trash" size={14} />删除</button></div>
+              <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><span className="delete-tip">Delete / 退格键删除</span></div>
               <div className="selection-controls"><label>颜色 <select aria-label="所选导线颜色" value={selectedWire.color} onChange={event => edit({ type: 'update-wire', id: selectedWire.id, color: event.target.value })}>{COLORS.map(([color, label]) => <option key={color} value={color}>{label}</option>)}</select></label><button className="small-button" onClick={() => edit({ type: 'update-wire', id: selectedWire.id, bend: selectedWire.bend === 'horizontal' ? 'vertical' : 'horizontal' })}>切换折线路径</button></div>
             </> : <form className="connection-inspector" onSubmit={event => {
               event.preventDefault(); const id = normalizeEndpoint(inspectInput);

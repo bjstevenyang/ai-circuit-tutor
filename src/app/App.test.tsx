@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from './App';
 import { STORAGE_KEY } from '../storage';
 
@@ -8,6 +8,46 @@ beforeEach(() => localStorage.clear());
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('student-facing editor feedback', () => {
+  it.each(['Delete', 'Backspace'])('deletes a selected component with %s and supports undo', key => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '放置元件' }));
+    const part = screen.getByRole('button', { name: '电阻 330 欧姆，锚点 a10' });
+    fireEvent.click(part);
+    fireEvent.keyDown(part, { key });
+    expect(screen.queryByRole('button', { name: '电阻 330 欧姆，锚点 a10' })).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}').components).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: '撤销' }));
+    expect(screen.getByRole('button', { name: '电阻 330 欧姆，锚点 a10' })).toBeInTheDocument();
+  });
+
+  it('offers a visible delete button beside the run controls', () => {
+    render(<App />);
+    const toolbar = within(screen.getByRole('toolbar', { name: '电路编辑操作' }));
+    expect(toolbar.getByRole('button', { name: '删除' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '放置元件' }));
+    expect(toolbar.getByRole('button', { name: '删除' })).toBeEnabled();
+    fireEvent.click(toolbar.getByRole('button', { name: '删除' }));
+    expect(screen.queryByRole('button', { name: '电阻 330 欧姆，锚点 a10' })).not.toBeInTheDocument();
+  });
+
+  it.each(['Delete', 'Backspace'])('preserves the selected component when %s edits a text field', key => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '放置元件' }));
+    fireEvent.keyDown(screen.getByLabelText('所选元件新锚点'), { key });
+    expect(screen.getByRole('button', { name: '电阻 330 欧姆，锚点 a10' })).toBeInTheDocument();
+  });
+
+  it('also deletes selected wires through the same shortcut', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('导线起点'), { target: { value: 'a1' } });
+    fireEvent.change(screen.getByLabelText('导线终点'), { target: { value: 'a2' } });
+    fireEvent.click(screen.getByRole('button', { name: '添加导线' }));
+    const wire = screen.getByRole('button', { name: '导线 a1 到 a2' });
+    fireEvent.click(wire);
+    fireEvent.keyDown(wire, { key: 'Delete' });
+    expect(screen.queryByRole('button', { name: '导线 a1 到 a2' })).not.toBeInTheDocument();
+  });
+
   it('reports the selected conductive group through the non-drag inspector', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('查看孔位连接'), { target: { value: 'a1' } });

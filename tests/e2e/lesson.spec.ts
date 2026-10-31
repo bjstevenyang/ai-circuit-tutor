@@ -21,6 +21,27 @@ async function assemble(page: Page, reversed = false) {
   await wire(page, 'd14', 'battery:-');
 }
 
+test('deletion works with keyboard and visible toolbar without deleting while typing', async ({ page }) => {
+  await page.goto('/');
+  await placePart(page, 'resistor', 'a10');
+  const part = page.getByRole('button', { name: '电阻 330 欧姆，锚点 a10', exact: true });
+  await page.getByLabel('所选元件新锚点').focus();
+  await page.keyboard.press('Backspace');
+  await expect(part).toBeVisible();
+  for (const key of ['Delete', 'Backspace']) {
+    await part.click();
+    await page.keyboard.press(key);
+    await expect(part).toHaveCount(0);
+    await page.getByRole('button', { name: '撤销', exact: true }).click();
+    await expect(part).toBeVisible();
+  }
+  await part.click();
+  await page.getByRole('toolbar', { name: '电路编辑操作' }).getByRole('button', { name: '删除', exact: true }).click();
+  await expect(part).toHaveCount(0);
+  await page.reload();
+  await expect(part).toHaveCount(0);
+});
+
 test('build a valid circuit, inspect connections, and restore after reload', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
