@@ -1,6 +1,11 @@
 import { useRef, useState } from 'react';
-import { ENDPOINTS, ENDPOINT_BY_ID, HOLES, getComponentPins } from '../circuit';
-import type { CircuitDocument, ComponentInstance } from '../circuit';
+import { ENDPOINTS, ENDPOINT_BY_ID, HOLES, getComponentPins, COMPONENTS, componentBody } from '../circuit';
+import { PartShape } from './PartShape';
+import { applyEdit } from './model';
+import { snapAnchor, snapEndpoint } from './drag';
+import type { BoardPoint } from './drag';
+import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { CircuitDocument, ComponentInstance, ComponentReading } from '../circuit';
 
 type Props = {
   document: CircuitDocument;
@@ -9,50 +14,82 @@ type Props = {
   selectedEndpoint: string | null;
   highlighted: readonly string[];
   wireStart: string;
+  wiring: boolean;
+  wireStyle: {color:string;bend:'horizontal'|'vertical'};
   preview: ComponentInstance | null;
   previewValid: boolean;
-  ledOn: boolean;
+  readings?: Record<string, ComponentReading>;
+  pressedButtons?: readonly string[];
   onEndpoint: (id: string) => void;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
+  onMove: (id: string, anchor: string | null) => void;
+  onWireDrag: (from: string, to: string | null) => void;
 };
 
-export function PartShape({ part, ghost = false, lit = false }: {
-  part: ComponentInstance;
-  ghost?: boolean;
-  lit?: boolean;
-}) {
-  const pins = getComponentPins(part);
-  if (!pins) return null;
-  const a = ENDPOINT_BY_ID.get(pins[0]);
-  const b = ENDPOINT_BY_ID.get(pins[1]);
-  if (!a || !b) return null;
-  const x = (a.x + b.x) / 2;
-  const y = (a.y + b.y) / 2;
-  return <g className={ghost ? 'part-shape ghost' : 'part-shape'}>
-    <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="part-lead" />
-    {part.kind === 'resistor' ? <g transform={`translate(${x} ${y}) rotate(${part.rotation})`}>
-      <rect x="-19" y="-8" width="38" height="16" rx="5" fill="#ddc49b" stroke="#aa885e" />
-      <path d="M-11-8v16M-4-8v16M4-8v16M13-8v16" stroke="#be603c" strokeWidth="3" />
-      <path d="M-4-8v16" stroke="#6d5139" strokeWidth="3" />
-      <path d="M13-8v16" stroke="#ba9a41" strokeWidth="2" />
-    </g> : <g transform={`translate(${x} ${y}) rotate(${part.rotation})`}>
-      {lit && <circle r="24" fill="#f45a42" opacity=".18" />}
-      <circle r="10" fill={lit ? '#ff6249' : '#c44f45'} stroke="#87392f" strokeWidth="1.5" />
-      <path d="M5-7v14" stroke="#ffe1d0" strokeWidth="1.5" />
-      <ellipse cx="-3" cy="-3" rx="3" ry="4" fill="white" opacity=".4" />
-      <text x="-19" y="-12" className="pin-mark">A</text>
-      <text x="14" y="-12" className="pin-mark">K</text>
-    </g>}
-    <circle cx={a.x} cy={a.y} r="3" fill="#6c797a" />
-    <circle cx={b.x} cy={b.y} r="3" fill="#6c797a" />
-  </g>;
-}
+type Drag = { part: ComponentInstance; pointerId: number; start: BoardPoint; client: BoardPoint; moved: boolean };
 
 export function Breadboard(props: Props) {
   const { document: circuit, connected, highlighted, selected, selectedEndpoint, wireStart } = props;
   const svgRef = useRef<SVGSVGElement>(null);
   const [focusHole, setFocusHole] = useState('a1');
+  const drag = useRef<Drag | null>(null);
+  const suppressClick = useRef(false);
+  const wireDrag = useRef<{from:string;pointerId:number;client:BoardPoint;moved:boolean}|null>(null);
+  const [wireView,setWireView] = useState<{from:string;to:string|null;point:BoardPoint}|null>(null);
+  const [dragView, setDragView] = useState<{ part: ComponentInstance; anchor: string | null; dx: number; dy: number } | null>(null);
+  const boardPoint = (event: ReactPointerEvent): BoardPoint | null => {
+    const matrix = svgRef.current?.getScreenCTM();
+    if (!matrix) return null;
+    return new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+  };
+  const updateDrag = (event: ReactPointerEvent) => {
+    const session = drag.current;
+    if (!session || session.pointerId !== event.pointerId) return null;
+    const point = boardPoint(event);
+    if (!point) return null;
+    session.moved ||= Math.hypot(event.clientX-session.client.x, event.clientY-session.client.y) >= 4;
+    if (!session.moved) return null;
+    const origin = ENDPOINT_BY_ID.get(session.part.anchor)!;
+    const dx = point.x-session.start.x, dy = point.y-session.start.y;
+    const anchor = snapAnchor({x: origin.x+dx, y: origin.y+dy});
+    setDragView({part: session.part, anchor, dx, dy});
+    return anchor;
+  };
+  const beginWire = (event: ReactPointerEvent<SVGGElement>, from: string) => {
+    if (!props.wiring || event.button !== 0 || drag.current || wireDrag.current) return;
+    event.preventDefault();
+    event.currentTarget.focus();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    suppressClick.current = false;
+    wireDrag.current={from,pointerId:event.pointerId,client:{x:event.clientX,y:event.clientY},moved:false};
+  };
+  const updateWire = (event: ReactPointerEvent) => {
+    const session=wireDrag.current;
+    if(!session || session.pointerId!==event.pointerId)return null;
+    const point=boardPoint(event);
+    if(!point)return null;
+    session.moved ||= Math.hypot(event.clientX-session.client.x,event.clientY-session.client.y)>=4;
+    if(!session.moved)return null;
+    const to=snapEndpoint(point);
+    setWireView({from:session.from,to,point});
+    return to;
+  };
+  const endpointClick = (event: {detail:number}, id:string) => {
+    if(suppressClick.current && event.detail>0){suppressClick.current=false;return;}
+    props.onEndpoint(id);
+  };
+  const cancelDrag = () => {
+    if (drag.current?.moved) suppressClick.current = true;
+    if (wireDrag.current?.moved) suppressClick.current = true;
+    drag.current = null;
+    wireDrag.current = null;
+    setDragView(null);
+    setWireView(null);
+  };
+  const dragPreview = dragView?.anchor ? {...dragView.part, anchor: dragView.anchor} : null;
+  const dragValid = !!dragPreview && applyEdit(circuit, {type:'move',id:dragPreview.id,anchor:dragPreview.anchor,rotation:dragPreview.rotation}).ok;
+  const wireValid = !!wireView?.to && applyEdit(circuit,{type:'wire',wire:{id:'__wire-preview__',from:wireView.from,to:wireView.to,...props.wireStyle}}).ok;
   const occupied = new Set(circuit.wires.flatMap(wire => [wire.from, wire.to]));
   circuit.components.forEach(part => getComponentPins(part)?.forEach(pin => occupied.add(pin)));
   const active = new Set(connected);
@@ -79,6 +116,23 @@ export function Breadboard(props: Props) {
   };
   return <svg ref={svgRef} className="breadboard-svg" viewBox="0 0 880 650"
     role="group" aria-label="交互式面包板，方向键移动孔位，回车选择"
+    onPointerMove={event=>{if(wireDrag.current)updateWire(event);else updateDrag(event);}}
+    onPointerUp={event => {
+      const connection=wireDrag.current;
+      if(connection && connection.pointerId===event.pointerId){
+        const to=updateWire(event);
+        if(connection.moved){suppressClick.current=true;props.onWireDrag(connection.from,to);}
+        wireDrag.current=null;setWireView(null);return;
+      }
+      const session = drag.current;
+      if (!session || session.pointerId !== event.pointerId) return;
+      const anchor = updateDrag(event);
+      if (session.moved) { suppressClick.current = true; props.onMove(session.part.id, anchor); }
+      drag.current = null;
+      setDragView(null);
+    }}
+    onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag}
+    onKeyDown={event => { if (event.key === 'Escape' && (drag.current||wireDrag.current)) { event.preventDefault(); cancelDrag(); } }}
     onPointerLeave={() => props.onHover(null)}>
     <defs>
       <filter id="board-shadow" x="-20%" y="-20%" width="140%" height="150%">
@@ -152,7 +206,8 @@ export function Breadboard(props: Props) {
     {ENDPOINTS.filter(endpoint => endpoint.id.startsWith('battery:')).map(endpoint => <g
       key={endpoint.id} role="button" tabIndex={0} aria-label={`电池${endpoint.id.endsWith('+') ? '正' : '负'}极`}
       className={`battery-port ${wireStart === endpoint.id ? 'wire-start' : ''}`}
-      onClick={() => props.onEndpoint(endpoint.id)} onKeyDown={event => {
+      onPointerDown={event=>beginWire(event,endpoint.id)}
+      onClick={event=>endpointClick(event,endpoint.id)} onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); props.onEndpoint(endpoint.id); }
       }}>
       <circle cx={endpoint.x} cy={endpoint.y} r="13" fill="transparent" />
@@ -167,7 +222,8 @@ export function Breadboard(props: Props) {
       aria-pressed={selectedEndpoint === hole.id} tabIndex={focusHole === hole.id ? 0 : -1}
       className={`socket socket-hit ${active.has(hole.id) ? 'connected' : ''}`}
       onFocus={() => { setFocusHole(hole.id); props.onHover(hole.id); }}
-      onClick={() => props.onEndpoint(hole.id)} onPointerEnter={() => props.onHover(hole.id)}
+      onPointerDown={event=>beginWire(event,hole.id)}
+      onClick={event=>endpointClick(event,hole.id)} onPointerEnter={() => props.onHover(hole.id)}
       onKeyDown={event => {
         if (event.key.startsWith('Arrow')) { event.preventDefault(); arrowFocus(hole.id, event.key); }
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); props.onEndpoint(hole.id); }
@@ -175,20 +231,43 @@ export function Breadboard(props: Props) {
       <title>{hole.id} · {hole.group}</title>
       <circle cx={hole.x} cy={hole.y} r="9" fill="transparent" className="socket-target" />
     </g>)}
-    {circuit.components.map(part => <g key={part.id} role="button" tabIndex={0} className="component-item"
-      aria-label={`${part.kind === 'resistor' ? `电阻 ${part.resistance ?? 330} 欧姆` : '红色 LED'}，锚点 ${part.anchor}`}
-      aria-pressed={selected === part.id} onClick={() => props.onSelect(part.id)} onKeyDown={event => {
+    {circuit.components.map(part => <g key={part.id} role="button" tabIndex={0} className={`component-item ${dragView?.part.id === part.id ? 'dragging' : ''}`}
+      aria-label={`${part.kind === 'resistor' ? `电阻 ${part.resistance ?? 330} 欧姆` : COMPONENTS[part.kind].name}，锚点 ${part.anchor}`}
+      aria-pressed={selected === part.id}
+      onPointerDown={event => {
+        if (event.button !== 0 || drag.current) return;
+        const start = boardPoint(event);
+        if (!start) return;
+        event.preventDefault();
+        event.currentTarget.focus();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        suppressClick.current = false;
+        drag.current = {part,pointerId:event.pointerId,start,client:{x:event.clientX,y:event.clientY},moved:false};
+        props.onSelect(part.id);
+      }}
+      onClick={event => { if (suppressClick.current && event.detail > 0) { suppressClick.current = false; return; } props.onSelect(part.id); }} onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); props.onSelect(part.id); }
       }}>
       {selected === part.id && (() => {
-        const pins = getComponentPins(part);
-        const a = pins ? ENDPOINT_BY_ID.get(pins[0]) : undefined;
-        const b = pins ? ENDPOINT_BY_ID.get(pins[1]) : undefined;
-        return a && b ? <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#edbd62" strokeWidth="27" strokeLinecap="round" opacity=".4" /> : null;
+        const body=componentBody(part);
+        return body ? <rect x={body.cx-body.width/2-5} y={body.cy-body.height/2-5} width={body.width+10} height={body.height+10} rx="5" fill="#edbd62" opacity=".35" transform={`rotate(${part.rotation} ${body.cx} ${body.cy})`}/> : null;
       })()}
-      <PartShape part={part} lit={part.kind === 'led' && props.ledOn} />
+      <PartShape part={part} lit={props.readings?.[part.id]?.on ?? false} activated={props.pressedButtons?.includes(part.id) ?? false} />
     </g>)}
-    {props.preview && <g className={props.previewValid ? 'preview valid' : 'preview invalid'} pointerEvents="none">
+    {wireView && (()=>{
+      const from=ENDPOINT_BY_ID.get(wireView.from)!,to=ENDPOINT_BY_ID.get(wireView.to??'')??wireView.point;
+      const path=props.wireStyle.bend==='horizontal'?`M${from.x} ${from.y}H${to.x}V${to.y}`:`M${from.x} ${from.y}V${to.y}H${to.x}`;
+      return <g className={`preview wire-preview ${wireValid?'valid':'invalid'}`} pointerEvents="none" aria-hidden="true">
+        <path d={path} fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="5 3"/>
+        <circle cx={to.x} cy={to.y} r="8" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <text x="440" y="625" textAnchor="middle" className="drag-feedback">{wireValid?`松开连接 ${wireView.from} → ${wireView.to}`:'请拖到另一个空闲孔位 · Esc 取消'}</text>
+      </g>;
+    })()}
+    {dragView && <g className={`preview drag-preview ${dragValid?'valid':'invalid'}`} pointerEvents="none" aria-hidden="true">
+      {dragPreview ? <PartShape part={dragPreview} ghost /> : <g transform={`translate(${dragView.dx} ${dragView.dy})`}><PartShape part={dragView.part} ghost /></g>}
+      <text x="440" y="625" textAnchor="middle" className="drag-feedback">{dragValid?'松开放置 · Esc 取消':'当前位置不可放置 · 松开返回原位'}</text>
+    </g>}
+    {!dragView && props.preview && <g className={props.previewValid ? 'preview valid' : 'preview invalid'} pointerEvents="none">
       <PartShape part={props.preview} ghost />
       {(() => {
         const hole = ENDPOINT_BY_ID.get(props.preview.anchor);

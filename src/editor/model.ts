@@ -1,4 +1,5 @@
-import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins } from '../circuit';
+import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from '../circuit';
+import { validComponent } from '../circuit/validation';
 import type { CircuitDocument, ComponentInstance, Rotation, Wire } from '../circuit';
 
 export type EditCommand =
@@ -8,21 +9,19 @@ export type EditCommand =
   | { type: 'wire'; wire: Wire }
   | { type: 'update-wire'; id: string; color?: string; bend?: Wire['bend'] }
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
+  | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light'> }
   | { type: 'reset' };
 
 export type EditResult = { ok: true; document: CircuitDocument } | { ok: false; error: string };
 export type Bounds = { x: number; y: number; width: number; height: number };
 
 export function componentBounds(component: ComponentInstance): Bounds | null {
-  const pins = getComponentPins(component);
-  if (!pins) return null;
-  const a = ENDPOINT_BY_ID.get(pins[0]);
-  const b = ENDPOINT_BY_ID.get(pins[1]);
-  if (!a || !b) return null;
+  const body = componentBody(component);
+  if (!body) return null;
   const horizontal = component.rotation === 0 || component.rotation === 180;
-  const width = component.kind === 'led' ? 20 : horizontal ? 38 : 16;
-  const height = component.kind === 'led' ? 20 : horizontal ? 16 : 38;
-  return { x: (a.x + b.x - width) / 2, y: (a.y + b.y - height) / 2, width, height };
+  const width = horizontal ? body.width : body.height;
+  const height = horizontal ? body.height : body.width;
+  return { x: body.cx-width/2, y: body.cy-height/2, width, height };
 }
 
 function overlaps(a: Bounds, b: Bounds) {
@@ -33,7 +32,9 @@ function overlaps(a: Bounds, b: Bounds) {
 export function validateDocument(document: CircuitDocument): string | null {
   const identities = new Set<string>();
   const occupied = new Set<string>();
-  const kinds = new Set<string>();
+  if (document.components.length > MAX_COMPONENTS) return `工作台最多放置 ${MAX_COMPONENTS} 个元件。`;
+  if (document.wires.length > MAX_WIRES) return `工作台最多连接 ${MAX_WIRES} 根导线。`;
+  if (document.components.filter(p => ['led','diode','buzzer'].includes(p.kind)).length > MAX_POLAR_COMPONENTS) return `LED、二极管和蜂鸣器合计最多 ${MAX_POLAR_COMPONENTS} 个，以保证仿真响应。`;
   const bounds: Bounds[] = [];
   const reserveId = (id: string) => {
     if (!id.trim() || identities.has(id)) return false;
@@ -41,11 +42,9 @@ export function validateDocument(document: CircuitDocument): string | null {
   };
   for (const component of document.components) {
     if (!reserveId(component.id)) return '对象标识重复或为空。';
-    if (kinds.has(component.kind)) return '本课程每种元件只能放置一个。';
-    kinds.add(component.kind);
+    if (!validComponent(component)) return '元件参数或引脚位置无效，请检查锚点、方向与参数。';
     if (!/^[a-j](?:[1-9]|[12]\d|30)$/.test(component.anchor)) return '元件锚点必须是 a1–j30 的中间孔位。';
     if (![0, 90, 180, 270].includes(component.rotation)) return '请选择一个有效的安装方向。';
-    if (component.kind === 'resistor' && component.resistance !== undefined && ![100, 330, 1000].includes(component.resistance)) return '电阻只能选择 100、330 或 1,000 Ω。';
     const pins = getComponentPins(component);
     const body = componentBounds(component);
     if (!pins || !body || pins.some(pin => !/^[a-j](?:[1-9]|[12]\d|30)$/.test(pin))) return '引脚超出可安装孔位，请更换锚点或方向。';
@@ -92,6 +91,11 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
       break;
     }
     case 'reset': next = createEmptyDocument(); break;
+    case 'configure': {
+      if (!document.components.some(p => p.id === command.id)) return { ok: false, error: '找不到要修改的元件。' };
+      next = { ...document, components: document.components.map(p => p.id === command.id ? { ...p, ...command.settings } : p) };
+      break;
+    }
   }
   const error = validateDocument(next);
   return error ? { ok: false, error } : { ok: true, document: next };

@@ -55,11 +55,11 @@ test('build a valid circuit, inspect connections, and restore after reload', asy
   if (test.info().project.name === 'chromium') {
     await page.screenshot({ path: 'test-results/circuit-complete.png', fullPage: true });
   }
-  await expect(page.getByText('7.58', { exact: false })).toBeVisible();
+  await expect(page.locator('.current-reading strong')).toContainText('7.58');
   await page.getByRole('button', { name: '查看 a1 的连接' }).click();
   await expect(page.getByText('a1 所在网络包含 5 个孔位／端口')).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('status')).toContainText('已恢复本地作品');
+  await expect(page.locator('.save-indicator')).toContainText('已恢复本地作品');
   await expect(page.getByRole('heading', { name: '亮起来了！' })).toHaveCount(0);
   await page.getByRole('button', { name: '运行电路', exact: true }).click();
   await expect(page.getByRole('heading', { name: '亮起来了！' })).toBeVisible();
@@ -88,7 +88,7 @@ test('request progressive hints for reversed LED, repair it, and invalidate old 
 
 test('pointer placement previews pins, rejects occupied holes, and supports history', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '电阻 330 Ω · 可调整' }).click();
+  await page.getByRole('button', { name: '添加电阻' }).click();
   const hole = page.getByRole('button', { name: '孔位 a10，空闲', exact: true });
   await hole.hover();
   await expect(page.locator('.preview.valid')).toBeVisible();
@@ -109,7 +109,7 @@ test('complete the lesson using keyboard controls without dragging', async ({ pa
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('a10');
   await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: '红色 LED 注意 A / K 极性' }).focus();
+  await page.getByRole('button', { name: '添加红色 LED' }).focus();
   await page.keyboard.press('Enter');
   await page.getByLabel('锚点孔位', { exact: true }).focus();
   await page.keyboard.press('ControlOrMeta+A');
@@ -134,7 +134,7 @@ test('surface storage failures without losing the in-memory document', async ({ 
   });
   await page.goto('/');
   await placePart(page, 'resistor', 'a10');
-  await expect(page.getByRole('status')).toContainText('未保存');
+  await expect(page.locator('.save-indicator')).toContainText('未保存');
   await expect(page.getByRole('button', { name: '电阻 330 欧姆，锚点 a10', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '重试保存', exact: true })).toBeVisible();
 });

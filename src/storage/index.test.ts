@@ -17,7 +17,7 @@ describe('single local workspace', () => {
     expect(loadWorkspace(storage)).toEqual({ status: 'loaded', document: populated() });
   });
   it('preserves malformed and unknown-version saves without writing during load', () => {
-    for (const raw of ['{broken', JSON.stringify({ ...populated(), schemaVersion: 2 }), 'null', '[]']) {
+    for (const raw of ['{broken', JSON.stringify({ ...populated(), schemaVersion: 99 }), 'null', '[]']) {
       const storage = memoryStorage(raw);
       expect(loadWorkspace(storage).status).toBe('error');
       expect(storage.contents.get(STORAGE_KEY)).toBe(raw);
@@ -57,5 +57,40 @@ describe('single local workspace', () => {
   it('handles absence of browser globals as a visible storage error', () => {
     expect(loadWorkspace().status).toBe('error');
     expect(saveWorkspace(populated()).ok).toBe(false);
+  });
+});
+
+describe('version 2 component workspace compatibility', () => {
+  it('migrates a v1 save in memory without changing its IDs, positions or wires', () => {
+    const current=populated();
+    const legacy={...current,schemaVersion:1,lessonId:'led-series-v1'};
+    const raw=JSON.stringify(legacy),storage=memoryStorage(raw);
+    const restored=loadWorkspace(storage);
+    expect(restored).toEqual({status:'loaded',document:current});
+    expect(storage.contents.get(STORAGE_KEY)).toBe(raw);
+    expect(saveWorkspace(current,storage).ok).toBe(true);
+    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!).schemaVersion).toBe(2);
+  });
+  it('round-trips all eight kinds and strips transient/unrecognized fields', async () => {
+    const { createComponent }=await import('../circuit');
+    const kinds=['resistor','led','switch','button','potentiometer','buzzer','diode','ldr'] as const;
+    const anchors=['a1','a6','a10','e26','a15','a20','f1','f6'];
+    const document={...createEmptyDocument(),components:kinds.map((kind,i)=>createComponent(kind,anchors[i]!,0,`p${i}`))};
+    document.components[2]!.closed=true;
+    document.components[4]!.position=17;
+    document.components[7]!.light=88;
+    const storage=memoryStorage(JSON.stringify({...document,pressedButtons:['p3'],analysis:{complete:true}}));
+    expect(loadWorkspace(storage)).toEqual({status:'loaded',document});
+    expect(saveWorkspace(document,storage).ok).toBe(true);
+    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!)).toEqual(document);
+  });
+  it.each([
+    {kind:'potentiometer',position:-1},{kind:'potentiometer',position:0.5},
+    {kind:'ldr',light:101},{kind:'switch',closed:'true'},
+    {kind:'resistor',resistance:0},{kind:'resistor',resistance:1000001},
+    {kind:'led',position:50},
+  ])('rejects invalid new component settings %j', settings=>{
+    const value={...createEmptyDocument(),components:[{id:'bad',anchor:'a10',rotation:0,...settings}]};
+    expect(parseDocument(value)).toBeNull();
   });
 });

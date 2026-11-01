@@ -48,9 +48,9 @@ describe('physical placement commands', () => {
     const next = edited(createEmptyDocument(), { type: 'place', component: led({ anchor: 'a20', rotation: 90 }) });
     expect(getComponentPins(next.components[0]!)).toEqual(['a20', 'b20']);
   });
-  it('limits the lesson tray to one of each part and requires unique object identities', () => {
+  it('allows multiple instances while requiring unique object identities', () => {
     const placed = edited(createEmptyDocument(), { type: 'place', component: resistor() });
-    expect(applyEdit(placed, { type: 'place', component: resistor({ id: 'r2', anchor: 'a20' }) }).ok).toBe(false);
+    expect(applyEdit(placed, { type: 'place', component: resistor({ id: 'r2', anchor: 'a20' }) }).ok).toBe(true);
     expect(applyEdit(placed, { type: 'place', component: led({ id: 'r1' }) }).ok).toBe(false);
     expect(applyEdit(placed, { type: 'wire', wire: wire({ id: 'r1' }) }).ok).toBe(false);
   });

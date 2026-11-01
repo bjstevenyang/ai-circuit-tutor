@@ -103,7 +103,8 @@ describe('bounded series-circuit simulation', () => {
       { id: 'resistor', kind: 'resistor', anchor: 'a14', rotation: 180, resistance: 330 },
       { id: 'led', kind: 'led', anchor: 'c10', rotation: 0 },
     ];
-    expect(analyzeCircuit(document)).toEqual(analyzeCircuit(validCircuit()));
+    expect(analyzeCircuit(document)).toMatchObject({status:'supported',complete:true,ledOn:true,diagnostics:[]});
+    expect(analyzeCircuit(document).currentMa).toBeCloseTo(7.575757575757576,6);
   });
 
   it('is invariant to resistor terminal order, hole choice within a group, IDs, redundant wire and presentation', () => {
@@ -113,7 +114,8 @@ describe('bounded series-circuit simulation', () => {
     document.components.reverse();
     document.wires = document.wires.map((wire, index) => ({ ...wire, id: `renamed-${index}`, from: wire.to, to: wire.from, color: '#abcdef', bend: 'vertical' }));
     document.wires.push(makeWire('e10', 'c10'));
-    expect(analyzeCircuit(document)).toEqual(analyzeCircuit(validCircuit()));
+    expect(analyzeCircuit(document)).toMatchObject({status:'supported',complete:true,ledOn:true,diagnostics:[]});
+    expect(analyzeCircuit(document).currentMa).toBeCloseTo(7.575757575757576,6);
   });
 
   it('returns the declared zero-current approximation for a reversed LED', () => {
@@ -191,9 +193,9 @@ describe('bounded series-circuit simulation', () => {
     expect(analyzeCircuit(document)).toEqual(result);
   });
 
-  it('rejects additional components or invalid references as unsupported', () => {
+  it('rejects circuits exceeding the polarity limit or containing invalid references', () => {
     const document = validCircuit();
-    document.components.push({ id: 'another-led', kind: 'led', anchor: 'h20', rotation: 0 });
+    for (let i=0;i<6;i++) document.components.push({ id: `another-led-${i}`, kind: 'led', anchor: `h${20+i}`, rotation: 0 });
     expect(analyzeCircuit(document).status).toBe('unsupported');
     expect(analyzeCircuit(document).currentMa).toBeUndefined();
     const badWire = validCircuit();
@@ -201,12 +203,13 @@ describe('bounded series-circuit simulation', () => {
     expect(analyzeCircuit(badWire).status).toBe('unsupported');
   });
 
-  it('reports an out-of-model powered resistor arrangement without series measurements', () => {
+  it('solves a powered resistor branch without falsely lighting a dangling LED', () => {
     const document = validCircuit();
     document.wires = [makeWire('battery:+', 'b10'), makeWire('d13', 'battery:-')];
     const result = analyzeCircuit(document);
-    expect(result.status).toBe('unsupported');
-    expect(result.currentMa).toBeUndefined();
+    expect(result.status).toBe('supported');
+    expect(result.currentMa).toBeCloseTo(4.5/330*1000,6);
+    expect(result.ledOn).toBe(false);
     expect(result.complete).toBe(false);
   });
 

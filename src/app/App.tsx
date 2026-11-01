@@ -1,14 +1,17 @@
-import { useReducer, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
-import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity } from '../circuit';
-import type { AnalysisResult, CircuitDocument, ComponentInstance, Rotation, Wire } from '../circuit';
+import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity, COMPONENTS, COMPONENT_KINDS, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, createComponent } from '../circuit';
+import type { AnalysisResult, CircuitDocument, ComponentInstance, ComponentKind, Rotation, Wire } from '../circuit';
 import { Breadboard } from '../editor/Breadboard';
+import { PartControls } from '../editor/PartControls';
+import { useBuzzerSound } from './useBuzzerSound';
 import { applyEdit, commitDocument, createHistory, redo, undo } from '../editor/model';
 import type { EditCommand, HistoryState } from '../editor/model';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import { getDiagnosticCopy } from '../tutor';
 
-type Tool = 'inspect' | 'wire' | 'resistor' | 'led' | 'move';
+type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
+const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
 type AppState = {
   history: HistoryState;
   analysis: AnalysisResult | null;
@@ -67,14 +70,14 @@ function Icon({ name, size = 18 }: { name: 'circuit' | 'play' | 'wire' | 'eye' |
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-function PartIcon({ kind }: { kind: 'resistor' | 'led' }) {
+function PartIcon({ kind }: { kind: ComponentKind }) {
   return <svg viewBox="0 0 110 50" aria-hidden="true">
     {kind === 'resistor' ? <>
       <path d="M12 25h86" stroke="#8c9992" strokeWidth="3" />
       <rect x="29" y="14" width="52" height="22" rx="7" fill="#ddc49b" stroke="#b3966e" />
       <path d="M39 14v22M49 14v22M59 14v22M71 14v22" stroke="#be603c" strokeWidth="5" />
       <path d="M49 14v22" stroke="#664735" strokeWidth="5" /><path d="M71 14v22" stroke="#b49b47" strokeWidth="3" />
-    </> : <>
+    </> : kind !== 'led' ? <><path d="M12 25h86" stroke="#9ba79d" strokeWidth="2"/><rect x="35" y="8" width="40" height="33" rx="7" fill="#577768"/><text x="55" y="30" textAnchor="middle" fill="#eff5df" fontSize="18">{({switch:'↔',button:'●',potentiometer:'↗',buzzer:'♪',diode:'▷|',ldr:'☀'} as const)[kind]}</text></> : <>
       <path d="M48 31v15m14-15v12" stroke="#9ba79d" strokeWidth="2" />
       <path d="M41 30V19a14 14 0 0 1 28 0v11Z" fill="#c96b5e" stroke="#a5473e" strokeWidth="1.5" />
       <rect x="38" y="29" width="34" height="5" rx="2" fill="#a54e44" />
@@ -93,7 +96,7 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [anchor, setAnchor] = useState('a10');
-  const [placeKind, setPlaceKind] = useState<'resistor' | 'led'>('resistor');
+  const [placeKind, setPlaceKind] = useState<ComponentKind>('resistor');
   const [rotation, setRotation] = useState<Rotation>(0);
   const [wireFrom, setWireFrom] = useState('');
   const [wireTo, setWireTo] = useState('');
@@ -103,23 +106,44 @@ export function App() {
   const [inspectInput, setInspectInput] = useState('a1');
   const [moveAnchor, setMoveAnchor] = useState('');
   const [zoom, setZoom] = useState(100);
+  const [pressedButtons, setPressedButtons] = useState<string[]>([]);
   const document = state.history.document;
+  useEffect(() => {
+    const release = () => {
+      if (!pressedButtons.length) return;
+      setPressedButtons([]);
+      if (state.analysis) dispatch({type:'run',result:analyzeCircuit(document)});
+    };
+    const visibility = () => { if (window.document.hidden) release(); };
+    window.addEventListener('blur',release);
+    window.document.addEventListener('visibilitychange',visibility);
+    return () => { window.removeEventListener('blur',release); window.document.removeEventListener('visibilitychange',visibility); };
+  },[pressedButtons,document,state.analysis]);
   const selectedPart = document.components.find(part => part.id === selected);
   const selectedWire = document.wires.find(wire => wire.id === selected);
   const diagnostic = state.analysis?.diagnostics[state.diagnosticIndex];
   const diagnosticCopy = diagnostic ? getDiagnosticCopy(diagnostic.code) : null;
-  const connected = selectedEndpoint ? inspectConnectivity(document, selectedEndpoint) : [];
+  const connected = selectedEndpoint ? inspectConnectivity(document, selectedEndpoint, { pressedButtons }) : [];
 
+  const sound = useBuzzerSound(document.components.some(p => p.kind === 'buzzer' && state.analysis?.readings?.[p.id]?.on));
+  const run = (next = document, pressed = pressedButtons) => dispatch({ type: 'run', result: analyzeCircuit(next, { pressedButtons: pressed }) });
+  const pressButton = (id: string, pressed: boolean) => {
+    const next = pressed ? [...new Set([...pressedButtons, id])] : pressedButtons.filter(item => item !== id);
+    setPressedButtons(next);
+    if (state.analysis) run(document, next);
+  };
   const save = (next: CircuitDocument) => {
     if (state.storageBlocked) return '未保存：请先处理原有存档';
     const result = saveWorkspace(next);
     return result.ok ? '已自动保存到此浏览器' : `未保存：${result.message}`;
   };
-  const edit = (command: EditCommand) => {
+  const edit = (command: EditCommand, live = false) => {
     const result = applyEdit(document, command);
     if (!result.ok) { setError(result.error); return false; }
     setError('');
     dispatch({ type: 'edit', history: commitDocument(state.history, result.document), saveStatus: save(result.document) });
+    if (live && state.analysis) run(result.document);
+    else setPressedButtons([]);
     return true;
   };
   const deleteSelected = () => {
@@ -142,6 +166,7 @@ export function App() {
     if (history === state.history) return;
     setSelected(null);
     setTool('inspect');
+    setPressedButtons([]);
     setWireFrom('');
     setWireTo('');
     setError('');
@@ -153,10 +178,7 @@ export function App() {
     }
     return false;
   };
-  const newPart = (kind: 'resistor' | 'led', at: string): ComponentInstance => ({
-    id: crypto.randomUUID(), kind, anchor: normalizeEndpoint(at), rotation,
-    ...(kind === 'resistor' ? { resistance: 330 as const } : {}),
-  });
+  const newPart = (kind: ComponentKind, at: string): ComponentInstance => createComponent(kind, normalizeEndpoint(at), rotation, crypto.randomUUID());
   const place = (at: string, kind = placeKind) => {
     const part = newPart(kind, at);
     if (edit({ type: 'place', component: part })) {
@@ -172,7 +194,7 @@ export function App() {
     if (tool === 'wire') {
       if (!wireFrom) setWireFrom(id);
       else addWire(wireFrom, id);
-    } else if (tool === 'resistor' || tool === 'led') {
+    } else if (isPartTool(tool)) {
       place(id, tool);
     } else if (tool === 'move' && selectedPart) {
       if (edit({ type: 'move', id: selectedPart.id, anchor: id, rotation })) {
@@ -182,11 +204,11 @@ export function App() {
       setSelectedEndpoint(id); setInspectInput(id); setSelected(null); setError('');
     }
   };
-  const partTool = (kind: 'resistor' | 'led') => {
+  const partTool = (kind: ComponentKind) => {
     setTool(kind); setPlaceKind(kind); setSelected(null); setError('');
   };
-  const preview: ComponentInstance | null = hover && (tool === 'resistor' || tool === 'led')
-    ? { id: '__preview__', kind: tool, anchor: hover, rotation, ...(tool === 'resistor' ? { resistance: 330 as const } : {}) }
+  const preview: ComponentInstance | null = hover && (isPartTool(tool))
+    ? createComponent(tool, hover, rotation, '__preview__')
     : hover && tool === 'move' && selectedPart ? { ...selectedPart, anchor: hover, rotation } : null;
   const previewValid = !!preview && applyEdit(document, tool === 'move'
     ? { type: 'move', id: preview.id, anchor: preview.anchor, rotation: preview.rotation }
@@ -194,8 +216,8 @@ export function App() {
   const submitPlacement = (event: FormEvent) => { event.preventDefault(); place(anchor); };
   const submitWire = (event: FormEvent) => { event.preventDefault(); addWire(wireFrom, wireTo); };
   const toolInstructions: Record<Tool, string> = {
-    inspect: '点击孔位，看看哪些孔真正相连', wire: wireFrom ? `起点 ${wireFrom} · 请选择终点` : '选择一个起点，再选择终点',
-    resistor: '移动到孔位查看引脚预览，点击放置电阻', led: '移动到孔位查看引脚预览，点击放置 LED', move: '选择新锚点，预览后点击移动元件',
+    inspect: '点击孔位，看看哪些孔真正相连', wire: wireFrom ? `起点 ${wireFrom} · 请选择终点` : '点击两端，或从起点拖到终点',
+    ...Object.fromEntries(COMPONENT_KINDS.map(kind => [kind, `预览全部引脚，点击放置${COMPONENTS[kind].name}`])) as Record<ComponentKind, string>, move: '选择新锚点，预览后点击移动元件',
   };
 
   return <>
@@ -208,8 +230,8 @@ export function App() {
 
     <main onKeyDown={handleDeleteKey}>
       <section className="lesson-heading" aria-labelledby="lesson-title">
-        <div><div className="eyebrow"><span className="lesson-number">01</span> 第一个电路 <span className="level-tag">入门</span></div><h1 id="lesson-title">让一颗 LED 亮起来<span className="heading-dot">.</span></h1><p>用一块面包板，理解连接、电流与极性。</p></div>
-        <div className="lesson-goal"><span className="goal-icon"><Icon name="check" /></span><div><small>本次目标</small><p>搭建带限流电阻的 LED 串联电路</p></div></div>
+        <div><div className="eyebrow"><span className="lesson-number">01</span> 直流电路探索 <span className="level-tag">入门</span></div><h1 id="lesson-title">搭出你的电路<span className="heading-dot">.</span></h1><p>8 类元件，自由组合；看懂连接，试验你的想法。</p></div>
+        <div className="lesson-goal"><span className="goal-icon"><Icon name="check" /></span><div><small>本次目标</small><p>搭建并检查小型直流串并联电路</p></div></div>
       </section>
 
       {state.storageBlocked && <div className="recovery-banner" role="alert">
@@ -225,13 +247,15 @@ export function App() {
 
       <div className="workspace">
         <aside className="parts-panel" aria-label="元件和精确操作">
-          <div className="panel-heading"><h2>元件盒</h2><span className="mono">02 PARTS</span></div>
+          <div className="panel-heading"><h2>元件盒</h2><span className="mono">08 PARTS</span></div>
           <p className="panel-intro">选择元件，再点击孔位放置。</p>
           <div className="part-list">
-            {(['resistor', 'led'] as const).map(kind => {
-              const exists = document.components.some(part => part.kind === kind);
-              return <button key={kind} className={`part-card ${tool === kind ? 'active' : ''}`} disabled={exists} onClick={() => partTool(kind)} aria-pressed={tool === kind}>
-                <span className="part-illustration"><PartIcon kind={kind} /></span><span className="part-card-copy"><strong>{kind === 'resistor' ? '电阻' : '红色 LED'}</strong><small>{exists ? '已放置在面包板' : kind === 'resistor' ? '330 Ω · 可调整' : '注意 A / K 极性'}</small></span><span className="add-mark">{exists ? '✓' : '+'}</span>
+            {COMPONENT_KINDS.map(kind => {
+              const count = document.components.filter(part => part.kind === kind).length;
+              const polarCount = document.components.filter(part => ['led','diode','buzzer'].includes(part.kind)).length;
+              const atLimit = document.components.length >= MAX_COMPONENTS || (['led','diode','buzzer'].includes(kind) && polarCount >= MAX_POLAR_COMPONENTS);
+              return <button key={kind} className={`part-card ${tool === kind ? 'active' : ''}`} disabled={atLimit} onClick={() => partTool(kind)} aria-label={`添加${COMPONENTS[kind].name}`} aria-pressed={tool === kind}>
+                <span className="part-illustration"><PartIcon kind={kind} /></span><span className="part-card-copy"><strong>{COMPONENTS[kind].name}</strong><small>{COMPONENTS[kind].description}</small></span><span className="add-mark">{count ? `${count} · +` : '+'}</span>
               </button>;
             })}
           </div>
@@ -240,9 +264,9 @@ export function App() {
           <details className="control-section" open>
             <summary>精确放置 <span>孔位操作</span></summary>
             <form onSubmit={submitPlacement} aria-label="精确放置">
-              <label htmlFor="part-kind">元件</label><select id="part-kind" value={placeKind} onChange={event => { const kind = event.target.value as 'resistor' | 'led'; setPlaceKind(kind); setTool(kind); }}><option value="resistor">电阻</option><option value="led">红色 LED</option></select>
+              <label htmlFor="part-kind">元件</label><select id="part-kind" value={placeKind} onChange={event => { const kind = event.target.value as ComponentKind; setPlaceKind(kind); setTool(kind); }}>{COMPONENT_KINDS.map(kind => <option key={kind} value={kind}>{COMPONENTS[kind].name}</option>)}</select>
               <div className="field-pair"><div><label htmlFor="anchor">锚点孔位</label><input id="anchor" value={anchor} onChange={event => setAnchor(event.target.value)} placeholder="例如 a10" autoComplete="off" /></div><div><label htmlFor="rotation">方向</label><select id="rotation" value={rotation} onChange={event => setRotation(Number(event.target.value) as Rotation)}><option value="0">向右 →</option><option value="90">向下 ↓</option><option value="180">向左 ←</option><option value="270">向上 ↑</option></select></div></div>
-              <button className="secondary-button full-width" disabled={document.components.some(part => part.kind === placeKind)}>放置元件 <Icon name="arrow" size={15} /></button>
+              <button className="secondary-button full-width" disabled={document.components.length >= MAX_COMPONENTS}>放置元件 <Icon name="arrow" size={15} /></button>
             </form>
           </details>
 
@@ -271,25 +295,38 @@ export function App() {
               <button className="icon-button" aria-label="重置工作台" title="重置工作台（可撤销）" onClick={() => { if (edit({ type: 'reset' })) { setSelected(null); setSelectedEndpoint(null); setWireFrom(''); setTool('inspect'); } }}><Icon name="reset" /></button>
             </div>
             <button className="delete-button" title="删除选中对象（Delete / Backspace）" disabled={!selectedPart && !selectedWire} onClick={deleteSelected}><Icon name="trash" size={16} />删除</button>
-            <button className="run-button" onClick={() => { setError(''); setTool('inspect'); dispatch({ type: 'run', result: analyzeCircuit(document) }); }}><Icon name="play" size={16} />运行电路</button>
+            <button className="run-button" onClick={() => { setError(''); setTool('inspect'); run(); }}><Icon name="play" size={16} />运行电路</button>
           </div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}
               highlighted={diagnostic?.entities ?? []} wireStart={tool === 'wire' ? wireFrom : ''}
-              preview={preview} previewValid={previewValid} ledOn={state.analysis?.ledOn ?? false}
-              onEndpoint={endpointClick} onSelect={chooseItem} onHover={setHover} />
+              wiring={tool==='wire'} wireStyle={{color:wireColor,bend}}
+              preview={preview} previewValid={previewValid}
+              {...(state.analysis?.readings ? {readings: state.analysis.readings} : {})} pressedButtons={pressedButtons}
+              onEndpoint={endpointClick} onSelect={chooseItem} onHover={setHover}
+              onWireDrag={(from,to)=>{
+                setWireFrom('');setWireTo('');
+                if(!to){setError('请将导线拖到有效孔位或电池端口，当前未添加导线。');return;}
+                addWire(from,to);
+              }}
+              onMove={(id, at) => {
+                const part=document.components.find(item=>item.id===id);
+                if (!part || !at) { setError('当前位置没有可安装孔位，元件已保留在原位。'); return; }
+                if (at === part.anchor) return;
+                if (edit({type:'move',id,anchor:at,rotation:part.rotation})) { setMoveAnchor(at); setTool('inspect'); }
+              }} />
           </div></div>
           <div className="canvas-footer"><span><i className="legend-dot" />直接相连的孔位</span><span><i className="legend-dot occupied" />已使用</span><span className="keyboard-tip">Tab 聚焦 · 方向键移动 · Enter 选择</span></div>
           <div className="selection-panel">
             {selectedPart ? <>
-              <div className="selection-heading"><strong>{selectedPart.kind === 'resistor' ? '电阻' : '红色 LED'}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
+              <div className="selection-heading"><strong>{COMPONENTS[selectedPart.kind].name}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
               <div className="selection-controls">
-                {selectedPart.kind === 'resistor' && <label>阻值 <select aria-label="所选电阻阻值" value={selectedPart.resistance ?? 330} onChange={event => edit({ type: 'resistance', id: selectedPart.id, value: Number(event.target.value) as 100 | 330 | 1000 })}><option value="100">100 Ω</option><option value="330">330 Ω</option><option value="1000">1,000 Ω</option></select></label>}
+                <PartControls part={selectedPart} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
                 <label>新锚点 <input aria-label="所选元件新锚点" value={moveAnchor} onChange={event => setMoveAnchor(event.target.value)} /></label>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: normalizeEndpoint(moveAnchor), rotation: selectedPart.rotation })}>移动元件</button>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: selectedPart.anchor, rotation: ((selectedPart.rotation + 90) % 360) as Rotation })}><Icon name="rotate" size={14} />旋转 90°</button>
-                <button className="small-button" onClick={() => { setTool('move'); setRotation(selectedPart.rotation); }}><Icon name="move" size={14} />点选移动</button>
+                <button className="small-button" onClick={() => { setTool('move'); setRotation(selectedPart.rotation); }}><Icon name="move" size={14} />点选移动</button><span className="drag-tip">也可拖动元件 · Esc 取消</span>
               </div>
             </> : selectedWire ? <>
               <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><span className="delete-tip">Delete / 退格键删除</span></div>
@@ -309,28 +346,29 @@ export function App() {
           <div className="tutor-heading"><span className="tutor-symbol"><Icon name="bulb" size={21} /></span><div><h2>一起想一想</h2><span>先观察，再找到答案</span></div><span className="reviewed-badge">课程提示</span></div>
           <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live="polite">
             {state.analysis?.complete ? <>
-              <span className="result-icon success-icon"><Icon name="check" size={24} /></span><span className="eyebrow">CIRCUIT COMPLETE</span><h3>亮起来了！</h3><p>电阻与正向 LED 串联，电流在课程允许范围内。换一种布局，也能得到相同的结果。</p>
+              <span className="result-icon success-icon"><Icon name="check" size={24} /></span><span className="eyebrow">CIRCUIT COMPLETE</span><h3>{state.analysis.ledOn ? '亮起来了！' : '蜂鸣器工作了！'}</h3><p>至少一个 LED 或蜂鸣器正常工作，当前没有检测到模型内的电气问题。此结果不代表已匹配某张目标电路图。</p>
             </> : state.analysis ? <>
-              <span className="eyebrow">{state.analysis.status === 'unsupported' ? 'MODEL LIMIT' : 'LET’S INVESTIGATE'}</span><h3>{diagnosticCopy?.title ?? '再检查一下连接'}</h3><p>{diagnosticCopy?.description ?? '检查元件和导线，找到完整的回路。'}</p>
+              <span className="eyebrow">{state.analysis.status === 'unsupported' ? 'MODEL LIMIT' : 'LET’S INVESTIGATE'}</span><h3>{diagnosticCopy?.title ?? '直流电路已求解'}</h3><p>{diagnosticCopy?.description ?? '可选中各元件查看电流；开关、按钮、旋钮和光照在运行后会即时更新结果。'}</p>
             </> : <>
               <div className="empty-circuit-illustration"><span>＋</span><i /><span className="mini-led" /><i /><span>−</span></div><span className="eyebrow">A LITTLE EXPERIMENT</span><h3>电流会走哪条路？</h3><p>放好电阻和 LED，接通电池，再运行电路。遇到问题时，我们一步一步寻找线索。</p>
             </>}
-            {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>估算回路电流</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
-            {state.analysis && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '课程目标已达成' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? '未计算 LED 状态' : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
+            {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>估算电池总电流</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
+            {state.analysis && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '电路检测通过' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? (state.analysis.currentMa === undefined ? '未计算 LED 状态' : '查看各元件的工作状态') : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
           </div>
           {!!state.analysis?.diagnostics.length && <div className="diagnostic-list" aria-label="诊断项目">
             {state.analysis.diagnostics.map((item, index) => <button key={`${item.code}-${index}`} className={index === state.diagnosticIndex ? 'active' : ''} onClick={() => dispatch({ type: 'diagnostic', index })}><span>{String(index + 1).padStart(2, '0')}</span>{getDiagnosticCopy(item.code).title}<Icon name="arrow" size={13} /></button>)}
           </div>}
+          <div className="sound-control"><button className="small-button" aria-pressed={sound.enabled} onClick={() => { void sound.toggle(); }}>{sound.enabled ? '关闭声音' : '启用蜂鸣器声音'}</button>{sound.error && <p role="status">{sound.error}</p>}</div>
           <div className="hint-section"><div className="hint-section-heading"><h3>给我一点提示</h3><span>{state.hintLevel} / 3</span></div>
             <div className="hint-progress" aria-hidden="true">{[1, 2, 3].map(level => <i key={level} className={state.hintLevel >= level ? 'revealed' : ''} />)}</div>
             {diagnosticCopy && state.hintLevel > 0 ? <ol className="hint-list">{diagnosticCopy.hints.slice(0, state.hintLevel).map((hint, index) => <li key={hint}><span>{['想一想', '看这里', '试着修复'][index]}</span><p>{hint}</p></li>)}</ol> : <p className="hint-placeholder">{state.analysis?.complete ? '试着选中孔位，解释电流经过的路径。' : '先运行电路。每次只揭开一个线索，把发现留给你。'}</p>}
             <button className="hint-button" disabled={!diagnosticCopy || state.hintLevel === 3} onClick={() => dispatch({ type: 'hint' })}><Icon name="bulb" size={17} />{state.hintLevel === 3 ? '全部线索已揭开' : state.hintLevel ? '再给我一个线索' : '揭开第一个线索'}<Icon name="arrow" size={15} /></button>
-            {diagnostic && <p className="evidence-caption">检查对象：{diagnostic.entities.length ? diagnostic.entities.map(id => ENDPOINT_BY_ID.has(id) ? id : document.components.find(part => part.id === id)?.kind === 'resistor' ? '电阻' : document.components.find(part => part.id === id)?.kind === 'led' ? 'LED' : document.wires.some(wire => wire.id === id) ? '导线' : id).join(' · ') : '整个回路'}</p>}
+            {diagnostic && <p className="evidence-caption">检查对象：{diagnostic.entities.length ? diagnostic.entities.map(id => ENDPOINT_BY_ID.has(id) ? id : document.components.find(part => part.id === id) ? COMPONENTS[document.components.find(part => part.id === id)!.kind].name : document.wires.some(wire => wire.id === id) ? '导线' : id).join(' · ') : '整个回路'}</p>}
           </div>
           <div className="breadboard-tip"><span className="note-label">面包板小知识</span><h3>看起来靠近，不一定相连。</h3><p>同一编号的 a–e 孔内部相连，f–j 是另一组。中央沟槽两侧、电源轨与中间孔位，都需要导线连接。</p><button onClick={() => { setTool('inspect'); setSelected(null); setSelectedEndpoint('a1'); setInspectInput('a1'); }}>查看 a1 的连接 <Icon name="arrow" size={14} /></button></div>
         </aside>
       </div>
-      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池 4.5 V、红色 LED 固定压降 2.0 V；仅支持一个电阻和一个 LED 的串联回路。20 mA 是本课程约定的工作限制。忽略电源内阻、元件容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为经过审阅的课程内容，当前未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><span className="version-label">LEARN BY MAKING / V0.1</span></footer>
+      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池 4.5 V、红色 LED 固定压降 2.0 V；支持最多 24 个元件、120 根导线的小型直流电路，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3 V 发声阈值。20 mA 是每颗 LED 的课程限制。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、元件容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为经过审阅的课程内容，当前未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><span className="version-label">LEARN BY MAKING / V0.2</span></footer>
     </main>
   </>;
 }
