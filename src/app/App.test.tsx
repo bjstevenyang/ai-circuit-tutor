@@ -97,3 +97,36 @@ describe('student-facing editor feedback', () => {
     expect(screen.getByRole('button', { name: '重做' })).toBeEnabled();
   });
 });
+
+describe('wire endpoint editing without dragging',()=>{
+  function addSelectedWire(){
+    render(<App/>);
+    fireEvent.change(screen.getByLabelText('导线起点'),{target:{value:'battery:+'}});
+    fireEvent.change(screen.getByLabelText('导线终点'),{target:{value:'b10'}});
+    fireEvent.click(screen.getByRole('button',{name:'添加导线'}));
+    fireEvent.click(screen.getByRole('button',{name:'导线 battery:+ 到 b10'}));
+  }
+  it('offers endpoint handles and a keyboard form that reconnects the original wire',()=>{
+    addSelectedWire();
+    const original=JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    expect(screen.getByRole('button',{name:'导线起点 battery:+'})).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('button',{name:'导线终点 b10'}),{key:'Enter'});
+    expect(screen.getByLabelText('新接点孔位')).toHaveFocus();
+    fireEvent.change(screen.getByLabelText('新接点孔位'),{target:{value:' E10 '}});
+    fireEvent.click(screen.getByRole('button',{name:'修改接点'}));
+    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    expect(saved.wires).toEqual([{...original.wires[0],to:'e10'}]);
+    expect(screen.getByRole('button',{name:'导线 battery:+ 到 e10'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'撤销'}));
+    expect(screen.getByRole('button',{name:'导线 battery:+ 到 b10'})).toBeInTheDocument();
+  });
+  it('preserves the wire and invalid text when a new endpoint is rejected',()=>{
+    addSelectedWire();
+    const saved=localStorage.getItem(STORAGE_KEY);
+    fireEvent.change(screen.getByLabelText('新接点孔位'),{target:{value:'z99'}});
+    fireEvent.click(screen.getByRole('button',{name:'修改接点'}));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByLabelText('新接点孔位')).toHaveValue('z99');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+  });
+});

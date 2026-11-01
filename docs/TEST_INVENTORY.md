@@ -7,17 +7,17 @@
 | 类别 | 测试源码 | 用例数 |
 | --- | --- | ---: |
 | 电路连接与有限仿真 | [circuit.test.ts](../src/circuit/circuit.test.ts) | 29 |
-| 放置、编辑与撤销历史 | [model.test.ts](../src/editor/model.test.ts) | 12 |
+| 放置、编辑与撤销历史 | [model.test.ts](../src/editor/model.test.ts) | 19 |
 | 新元件、直流网络 | [components.test.ts](../src/circuit/components.test.ts) | 27 |
 | 多引脚与吸附 | [components.test.ts](../src/editor/components.test.ts) | 14 |
 | 本地保存与恢复 | [index.test.ts](../src/storage/index.test.ts) | 15 |
 | 逐级教学提示 | [index.test.ts](../src/tutor/index.test.ts) | 19 |
-| 应用界面交互 | [App.test.tsx](../src/app/App.test.tsx) | 11 |
+| 应用界面交互 | [App.test.tsx](../src/app/App.test.tsx) | 13 |
 | 新元件界面控制与声音 | [components.test.tsx](../src/app/components.test.tsx) | 7 |
-| **Vitest 合计** | **8 个测试文件** | **134** |
+| **Vitest 合计** | **8 个测试文件** | **143** |
 | 原有浏览器流程 | [lesson.spec.ts](../tests/e2e/lesson.spec.ts) | 7 |
-| 新元件及拖动流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 9 |
-| **本次浏览器合计** | **仅 Chromium** | **16** |
+| 新元件及拖动／改接流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 12 |
+| **本次浏览器合计** | **仅 Chromium** | **19** |
 
 参数化测试按实际展开数量计数；一项用例可能包含多个断言。例如全部 420² 个孔位对的核对属于一个测试用例。Playwright 保留三种引擎配置，按用户最新要求本次仅执行 Chromium；配置数量不是通过数量。
 
@@ -50,7 +50,7 @@
 | C23–C28 | 分别处理 null、空对象、非法导线集合、空元件、空导线、错误旋转类型；返回不支持而非抛异常 |
 | C29 | 重复对象 ID 不能被误判为成功电路 |
 
-## 3. 放置、编辑与历史：12 项
+## 3. 放置、编辑与历史：原有 12 项
 
 源码：[src/editor/model.test.ts](../src/editor/model.test.ts)。
 
@@ -93,7 +93,7 @@
 | T11 | 短路、课程电流限制和不支持拓扑的解释符合模型限制 |
 | T12–T14 | 分别将负数、NaN、负无穷的提示进度规范化 |
 
-## 6. 应用界面交互：11 项
+## 6. 应用界面交互：原有 11 项
 
 源码：[src/app/App.test.tsx](../src/app/App.test.tsx)。使用模拟 DOM，真实浏览器中的点击命中和键盘行为由下一节验证。
 
@@ -253,3 +253,22 @@ v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试�
 | B14 | 拖动占用／越界回退，Esc 取消不增加历史 |
 | B15 | 电池／孔位拖动连线、预览、运行、单步撤销和刷新 |
 | B16 | 拖动连线拒绝占用／同端点，Esc 取消，并保留原点击两端方式 |
+
+
+## 11. 已有导线改接回归（2026-10-31）
+
+在上一轮 134 项模块测试及 16 个浏览器场景上，本次新增 9 项模块／界面测试和 3 个 Chromium 场景；当前合计 143 项 Vitest、19 个 Chromium 场景。
+
+| 编号 | 文件 | 覆盖内容 |
+| --- | --- | --- |
+| E27–E28 | src/editor/model.test.ts | 分别改接起点／终点，保留 ID、样式、另一端、线数量和原文档 |
+| E29 | src/editor/model.test.ts | 组件、导线、电池占用及无效／重合端点原子拒绝 |
+| E30 | src/editor/model.test.ts | 原孔可保持，旧孔在改接后释放 |
+| E31 | src/editor/model.test.ts | 允许物理合法的错误电路，交由分析处理 |
+| E32 | src/editor/model.test.ts | 不存在的导线不能被改接或意外创建 |
+| E33 | src/editor/model.test.ts | 单步撤销／重做，无变化不加历史 |
+| A19 | src/app/App.test.tsx | 两端手柄、键盘聚焦、表单改接、规范化输入、保存及撤销 |
+| A20 | src/app/App.test.tsx | 非法输入保留供修改，原存档不变 |
+| B17 | tests/e2e/components.spec.ts | 缩放后拖动两端，样式与 ID 保持，结果失效、一步撤销、刷新恢复 |
+| B18 | tests/e2e/components.spec.ts | 占用／重合／空白回退，Esc 和 pointercancel 取消，原地改接无历史且结果保留 |
+| B19 | tests/e2e/components.spec.ts | 手柄键盘激活、表单选择起点、无效输入保留及正确改接 |

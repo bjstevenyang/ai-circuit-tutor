@@ -289,3 +289,8 @@ h2 { font-size: 13px; font-weight: 650; }
 .drag-feedback { fill: currentColor; font-size: 14px; }
 .drag-tip { color: #65745c; font-size: 11px; padding-bottom: 7px; }
 .socket-hit, .battery-port { touch-action: none; }
+.wire-end-handle { cursor: grab; touch-action: none; }
+.wire-end-handle:active { cursor: grabbing; }
+.wire-end-handle:hover circle:nth-of-type(2), .wire-end-handle:focus-visible circle:nth-of-type(2) { stroke-width: 3; fill: #ffedb5; }
+.wire-item.reconnecting { opacity: .3; }
+.reconnect-form input { width: 125px; }

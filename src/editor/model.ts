@@ -2,12 +2,14 @@ import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, M
 import { validComponent } from '../circuit/validation';
 import type { CircuitDocument, ComponentInstance, Rotation, Wire } from '../circuit';
 
+export type WireEnd = 'from' | 'to';
 export type EditCommand =
   | { type: 'place'; component: ComponentInstance }
   | { type: 'move'; id: string; anchor: string; rotation: Rotation }
   | { type: 'remove'; id: string }
   | { type: 'wire'; wire: Wire }
   | { type: 'update-wire'; id: string; color?: string; bend?: Wire['bend'] }
+  | { type: 'reconnect-wire'; id: string; endpoint: WireEnd; to: string }
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
   | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light'> }
   | { type: 'reset' };
@@ -80,6 +82,11 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
       break;
     }
     case 'wire': next = { ...document, wires: [...document.wires, { ...command.wire }] }; break;
+    case 'reconnect-wire': {
+      if (!document.wires.some(wire => wire.id === command.id)) return { ok: false, error: '找不到要修改的导线。' };
+      next = { ...document, wires: document.wires.map(wire => wire.id === command.id ? { ...wire, [command.endpoint]: command.to } : wire) };
+      break;
+    }
     case 'update-wire': {
       if (!document.wires.some(wire => wire.id === command.id)) return { ok: false, error: '找不到要修改的导线。' };
       next = { ...document, wires: document.wires.map(wire => wire.id === command.id ? { ...wire, ...(command.color === undefined ? {} : { color: command.color }), ...(command.bend === undefined ? {} : { bend: command.bend }) } : wire) };

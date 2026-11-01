@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { ENDPOINTS, ENDPOINT_BY_ID, HOLES, getComponentPins, COMPONENTS, componentBody } from '../circuit';
 import { PartShape } from './PartShape';
 import { applyEdit } from './model';
+import type { WireEnd } from './model';
 import { snapAnchor, snapEndpoint } from './drag';
 import type { BoardPoint } from './drag';
 import type { PointerEvent as ReactPointerEvent } from 'react';
@@ -25,9 +26,13 @@ type Props = {
   onHover: (id: string | null) => void;
   onMove: (id: string, anchor: string | null) => void;
   onWireDrag: (from: string, to: string | null) => void;
+  onWireReconnect: (id: string, endpoint: WireEnd, to: string | null) => void;
+  onWireEndSelect: (endpoint: WireEnd) => void;
 };
 
 type Drag = { part: ComponentInstance; pointerId: number; start: BoardPoint; client: BoardPoint; moved: boolean };
+type Reconnect = { id: string; endpoint: WireEnd };
+type WireView = { from: string; to: string | null; point: BoardPoint; reconnect?: Reconnect };
 
 export function Breadboard(props: Props) {
   const { document: circuit, connected, highlighted, selected, selectedEndpoint, wireStart } = props;
@@ -35,8 +40,8 @@ export function Breadboard(props: Props) {
   const [focusHole, setFocusHole] = useState('a1');
   const drag = useRef<Drag | null>(null);
   const suppressClick = useRef(false);
-  const wireDrag = useRef<{from:string;pointerId:number;client:BoardPoint;moved:boolean}|null>(null);
-  const [wireView,setWireView] = useState<{from:string;to:string|null;point:BoardPoint}|null>(null);
+  const wireDrag = useRef<{from:string;pointerId:number;client:BoardPoint;moved:boolean;reconnect?:Reconnect}|null>(null);
+  const [wireView,setWireView] = useState<WireView|null>(null);
   const [dragView, setDragView] = useState<{ part: ComponentInstance; anchor: string | null; dx: number; dy: number } | null>(null);
   const boardPoint = (event: ReactPointerEvent): BoardPoint | null => {
     const matrix = svgRef.current?.getScreenCTM();
@@ -64,6 +69,16 @@ export function Breadboard(props: Props) {
     suppressClick.current = false;
     wireDrag.current={from,pointerId:event.pointerId,client:{x:event.clientX,y:event.clientY},moved:false};
   };
+  const beginReconnect = (event: ReactPointerEvent<SVGGElement>) => {
+    const endpoint=event.currentTarget.dataset.wireEnd;
+    if(endpoint!=='from'&&endpoint!=='to')return;
+    if(event.button!==0||drag.current||wireDrag.current)return;
+    const wire=circuit.wires.find(item=>item.id===selected);
+    if(!wire)return;
+    event.preventDefault();event.stopPropagation();event.currentTarget.focus();
+    event.currentTarget.setPointerCapture(event.pointerId);suppressClick.current=false;
+    wireDrag.current={from:wire[endpoint==='from'?'to':'from'],pointerId:event.pointerId,client:{x:event.clientX,y:event.clientY},moved:false,reconnect:{id:wire.id,endpoint}};
+  };
   const updateWire = (event: ReactPointerEvent) => {
     const session=wireDrag.current;
     if(!session || session.pointerId!==event.pointerId)return null;
@@ -72,7 +87,7 @@ export function Breadboard(props: Props) {
     session.moved ||= Math.hypot(event.clientX-session.client.x,event.clientY-session.client.y)>=4;
     if(!session.moved)return null;
     const to=snapEndpoint(point);
-    setWireView({from:session.from,to,point});
+    setWireView({from:session.from,to,point,...(session.reconnect?{reconnect:{...session.reconnect}}:{})});
     return to;
   };
   const endpointClick = (event: {detail:number}, id:string) => {
@@ -89,7 +104,10 @@ export function Breadboard(props: Props) {
   };
   const dragPreview = dragView?.anchor ? {...dragView.part, anchor: dragView.anchor} : null;
   const dragValid = !!dragPreview && applyEdit(circuit, {type:'move',id:dragPreview.id,anchor:dragPreview.anchor,rotation:dragPreview.rotation}).ok;
-  const wireValid = !!wireView?.to && applyEdit(circuit,{type:'wire',wire:{id:'__wire-preview__',from:wireView.from,to:wireView.to,...props.wireStyle}}).ok;
+  const wireValid = !!wireView?.to && applyEdit(circuit,wireView.reconnect
+    ? {type:'reconnect-wire',...wireView.reconnect,to:wireView.to}
+    : {type:'wire',wire:{id:'__wire-preview__',from:wireView.from,to:wireView.to,...props.wireStyle}}).ok;
+  const selectedWire = circuit.wires.find(wire=>wire.id===selected);
   const occupied = new Set(circuit.wires.flatMap(wire => [wire.from, wire.to]));
   circuit.components.forEach(part => getComponentPins(part)?.forEach(pin => occupied.add(pin)));
   const active = new Set(connected);
@@ -121,7 +139,11 @@ export function Breadboard(props: Props) {
       const connection=wireDrag.current;
       if(connection && connection.pointerId===event.pointerId){
         const to=updateWire(event);
-        if(connection.moved){suppressClick.current=true;props.onWireDrag(connection.from,to);}
+        if(connection.moved){
+          suppressClick.current=true;
+          if(connection.reconnect)props.onWireReconnect(connection.reconnect.id,connection.reconnect.endpoint,to);
+          else props.onWireDrag(connection.from,to);
+        }
         wireDrag.current=null;setWireView(null);return;
       }
       const session = drag.current;
@@ -190,7 +212,7 @@ export function Breadboard(props: Props) {
       const path = wire.bend === 'horizontal'
         ? `M${a.x} ${a.y}H${b.x}V${b.y}`
         : `M${a.x} ${a.y}V${b.y}H${b.x}`;
-      return <g key={wire.id} role="button" tabIndex={0} className="wire-item"
+      return <g key={wire.id} role="button" tabIndex={0} className={`wire-item ${wireView?.reconnect?.id===wire.id?'reconnecting':''}`}
         aria-label={`导线 ${wire.from} 到 ${wire.to}`} aria-pressed={selected === wire.id}
         onClick={() => props.onSelect(wire.id)} onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); props.onSelect(wire.id); }
@@ -254,13 +276,28 @@ export function Breadboard(props: Props) {
       })()}
       <PartShape part={part} lit={props.readings?.[part.id]?.on ?? false} activated={props.pressedButtons?.includes(part.id) ?? false} />
     </g>)}
+    {selectedWire && (['from','to'] as const).map(endpoint=>{
+      const point=ENDPOINT_BY_ID.get(selectedWire[endpoint])!;
+      return <g key={endpoint} role="button" tabIndex={0} className="wire-end-handle"
+        aria-label={`导线${endpoint==='from'?'起点':'终点'} ${selectedWire[endpoint]}`}
+        data-wire-end={endpoint} onPointerDown={beginReconnect}
+        onClick={event=>{event.stopPropagation();suppressClick.current=false;}}
+        onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();props.onWireEndSelect(endpoint);}}}>
+        <title>拖到新孔位改接；回车可使用下方表单</title>
+        <circle cx={point.x} cy={point.y} r="10" fill="transparent"/>
+        <circle cx={point.x} cy={point.y} r="7" fill="#fffdf2" stroke="#a57528" strokeWidth="2"/>
+        <circle cx={point.x} cy={point.y} r="3" fill={selectedWire.color}/>
+      </g>;
+    })}
     {wireView && (()=>{
-      const from=ENDPOINT_BY_ID.get(wireView.from)!,to=ENDPOINT_BY_ID.get(wireView.to??'')??wireView.point;
-      const path=props.wireStyle.bend==='horizontal'?`M${from.x} ${from.y}H${to.x}V${to.y}`:`M${from.x} ${from.y}V${to.y}H${to.x}`;
+      const fixed=ENDPOINT_BY_ID.get(wireView.from)!,moving=ENDPOINT_BY_ID.get(wireView.to??'')??wireView.point;
+      const [from,to]=wireView.reconnect?.endpoint==='from'?[moving,fixed]:[fixed,moving];
+      const style=wireView.reconnect?circuit.wires.find(w=>w.id===wireView.reconnect!.id)??props.wireStyle:props.wireStyle;
+      const path=style.bend==='horizontal'?`M${from.x} ${from.y}H${to.x}V${to.y}`:`M${from.x} ${from.y}V${to.y}H${to.x}`;
       return <g className={`preview wire-preview ${wireValid?'valid':'invalid'}`} pointerEvents="none" aria-hidden="true">
         <path d={path} fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="5 3"/>
-        <circle cx={to.x} cy={to.y} r="8" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <text x="440" y="625" textAnchor="middle" className="drag-feedback">{wireValid?`松开连接 ${wireView.from} → ${wireView.to}`:'请拖到另一个空闲孔位 · Esc 取消'}</text>
+        <circle cx={moving.x} cy={moving.y} r="8" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <text x="440" y="625" textAnchor="middle" className="drag-feedback">{wireValid?`${wireView.reconnect?'松开改接至':'松开连接至'} ${wireView.to}`:'请拖到另一个空闲孔位 · Esc 取消'}</text>
       </g>;
     })()}
     {dragView && <g className={`preview drag-preview ${dragValid?'valid':'invalid'}`} pointerEvents="none" aria-hidden="true">

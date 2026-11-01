@@ -196,3 +196,81 @@ test('wire drag rejects occupied or identical endpoints and cancels without a ne
   await page.getByRole('button',{name:'孔位 a4，空闲',exact:true}).click();
   await expect(page.locator('.wire-item')).toHaveCount(3);
 });
+
+async function selectSupplyWire(page:Page){
+  const point=await boardPoint(page,302,565);
+  await page.mouse.click(point.x,point.y);
+  await expect(page.getByRole('button',{name:'导线终点 b10',exact:true})).toBeVisible();
+}
+async function reconnect(page:Page,name:string,to:[number,number],release=true){
+  const handle=page.getByRole('button',{name,exact:true});
+  await handle.scrollIntoViewIfNeeded();
+  const box=(await handle.boundingBox())!,target=await boardPoint(page,...to);
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+  await page.mouse.move(target.x,target.y,{steps:8});
+  if(release)await page.mouse.up();
+}
+
+test('existing wire endpoints reconnect at zoom with stable identity, one-step undo and reload',async({page})=>{
+  const document=validCircuit();document.wires[0]!.bend='vertical';document.wires[0]!.color='#695c8d';
+  await open(page,document);await run(page);
+  await page.getByRole('button',{name:'放大画布'}).click();
+  // The original line uses a vertical-first bend in this case: select it via keyboard.
+  await page.getByRole('button',{name:'导线 battery:+ 到 b10',exact:true}).focus();await page.keyboard.press('Enter');
+  await reconnect(page,'导线终点 b10',[320,250],false); // same conductive strip, e10
+  await expect(page.locator('.wire-preview.valid')).toBeVisible();
+  await page.mouse.up();
+  await expect(page.getByRole('button',{name:'导线终点 e10',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
+  const wires=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).wires,STORAGE_KEY);
+  expect(wires).toEqual([{...document.wires[0],to:'e10'},document.wires[1]]);
+  await page.getByRole('button',{name:'撤销',exact:true}).click();
+  await expect(page.getByRole('button',{name:'导线 battery:+ 到 b10',exact:true})).toBeAttached();
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'重做',exact:true}).click();
+  await page.getByRole('button',{name:'导线 battery:+ 到 e10',exact:true}).focus();await page.keyboard.press('Enter');
+  await reconnect(page,'导线起点 battery:+',[140,100]); // move the other end to top+:1
+  await expect(page.getByRole('button',{name:'导线 top+:1 到 e10',exact:true})).toBeAttached();
+  await expect(page.locator('.wire-item')).toHaveCount(2);
+  await page.reload();
+  await expect(page.getByRole('button',{name:'导线 top+:1 到 e10',exact:true})).toBeAttached();
+});
+
+test('reconnecting rejects occupied, identical and empty targets; cancellation and no-op preserve results',async({page})=>{
+  await open(page,validCircuit());await run(page);
+  await page.locator('.breadboard-svg').scrollIntoViewIfNeeded();
+  await selectSupplyWire(page);
+  for(const [point,message] of [[[320,170],'占用'],[[400,230],'占用'],[[285,565],'不同'],[[140,280],'没有有效接点']] as [[number,number],string][]){
+    await reconnect(page,'导线终点 b10',point);
+    await expect(page.getByRole('alert')).toContainText(message);
+    await expect(page.getByRole('button',{name:'导线终点 b10',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+  }
+  await reconnect(page,'导线终点 b10',[320,250],false);
+  await page.keyboard.press('Escape');await page.mouse.up();
+  await reconnect(page,'导线终点 b10',[320,250],false);
+  await page.getByRole('button',{name:'导线终点 b10',exact:true}).dispatchEvent('pointercancel',{pointerId:1});
+  await page.mouse.up();
+  // A moved gesture that returns to its original socket is a no-op.
+  const handle=page.getByRole('button',{name:'导线终点 b10',exact:true}),box=(await handle.boundingBox())!;
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+  const away=await boardPoint(page,320,250),back=await boardPoint(page,320,190);
+  await page.mouse.move(away.x,away.y);await page.mouse.move(back.x,back.y);await page.mouse.up();
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+  await expect(page.locator('.wire-item')).toHaveCount(2);
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+});
+
+test('wire handles expose a keyboard alternative for editing either endpoint',async({page})=>{
+  await open(page,validCircuit());await run(page);
+  await page.getByRole('button',{name:'导线 battery:+ 到 b10',exact:true}).focus();await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'导线起点 battery:+',exact:true}).focus();await page.keyboard.press('Enter');
+  await expect(page.getByLabel('新接点孔位')).toBeFocused();
+  await expect(page.getByLabel('改接端点')).toHaveValue('from');
+  await page.getByLabel('新接点孔位').fill('z99');await page.keyboard.press('Enter');
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByLabel('新接点孔位')).toHaveValue('z99');
+  await page.getByLabel('新接点孔位').fill('top+:1');await page.keyboard.press('Enter');
+  await expect(page.getByRole('button',{name:'导线 top+:1 到 b10',exact:true})).toBeAttached();
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
+});

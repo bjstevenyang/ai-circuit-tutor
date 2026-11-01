@@ -112,3 +112,48 @@ describe('bounded document history', () => {
     expect(undo(history)).toBe(history);
   });
 });
+
+describe('existing wire reconnection',()=>{
+  it.each(['from','to'] as const)('moves only the %s endpoint and preserves identity and appearance',endpoint=>{
+    const document=edited(createEmptyDocument(),{type:'wire',wire:wire({color:'#3d7560',bend:'vertical'})});
+    const before=JSON.stringify(document);
+    const next=edited(document,{type:'reconnect-wire',id:'w1',endpoint,to:'e20'});
+    expect(next.wires).toEqual([{...document.wires[0]!,[endpoint]:'e20'}]);
+    expect(JSON.stringify(document)).toBe(before);
+    expect(next.wires).toHaveLength(1);
+  });
+  it('rejects occupied, invalid or identical endpoints atomically',()=>{
+    let document=edited(createEmptyDocument(),{type:'place',component:resistor()});
+    document=edited(document,{type:'wire',wire:wire()});
+    document=edited(document,{type:'wire',wire:wire({id:'w2',from:'battery:-',to:'a1'})});
+    const before=JSON.stringify(document);
+    for(const to of ['a10','a13','battery:-','a1','battery:+','a31','']) {
+      expect(applyEdit(document,{type:'reconnect-wire',id:'w1',endpoint:'to',to}).ok).toBe(false);
+      expect(JSON.stringify(document)).toBe(before);
+    }
+  });
+  it('allows the original endpoint and frees the vacated hole after a move',()=>{
+    const document=edited(createEmptyDocument(),{type:'wire',wire:wire()});
+    expect(edited(document,{type:'reconnect-wire',id:'w1',endpoint:'to',to:'b10'})).toEqual(document);
+    const moved=edited(document,{type:'reconnect-wire',id:'w1',endpoint:'to',to:'e10'});
+    expect(applyEdit(moved,{type:'wire',wire:wire({id:'w2',from:'b10',to:'e20'})}).ok).toBe(true);
+  });
+  it('allows physically legal electrical mistakes for the tutor to diagnose',()=>{
+    let document=edited(createEmptyDocument(),{type:'wire',wire:wire()});
+    document=edited(document,{type:'wire',wire:wire({id:'w2',from:'battery:-',to:'a20'})});
+    expect(applyEdit(document,{type:'reconnect-wire',id:'w1',endpoint:'to',to:'e20'}).ok).toBe(true);
+  });
+  it('rejects unknown wire IDs instead of creating a new wire',()=>{
+    expect(applyEdit(createEmptyDocument(),{type:'reconnect-wire',id:'missing',endpoint:'from',to:'a1'}).ok).toBe(false);
+  });
+  it('records one reconnection, supports undo/redo, and keeps no-op history unchanged',()=>{
+    const document=edited(createEmptyDocument(),{type:'wire',wire:wire()});
+    const initial=createHistory(document);
+    const moved=edited(document,{type:'reconnect-wire',id:'w1',endpoint:'from',to:'top+:1'});
+    const history=commitDocument(initial,moved);
+    expect(history.past).toHaveLength(1);
+    expect(undo(history).document).toEqual(document);
+    expect(redo(undo(history)).document).toEqual(moved);
+    expect(commitDocument(history,edited(moved,{type:'reconnect-wire',id:'w1',endpoint:'from',to:'top+:1'}))).toBe(history);
+  });
+});

@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity, COMPONENTS, COMPONENT_KINDS, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, createComponent } from '../circuit';
 import type { AnalysisResult, CircuitDocument, ComponentInstance, ComponentKind, Rotation, Wire } from '../circuit';
@@ -6,7 +6,7 @@ import { Breadboard } from '../editor/Breadboard';
 import { PartControls } from '../editor/PartControls';
 import { useBuzzerSound } from './useBuzzerSound';
 import { applyEdit, commitDocument, createHistory, redo, undo } from '../editor/model';
-import type { EditCommand, HistoryState } from '../editor/model';
+import type { EditCommand, HistoryState, WireEnd } from '../editor/model';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import { getDiagnosticCopy } from '../tutor';
 
@@ -107,6 +107,9 @@ export function App() {
   const [moveAnchor, setMoveAnchor] = useState('');
   const [zoom, setZoom] = useState(100);
   const [pressedButtons, setPressedButtons] = useState<string[]>([]);
+  const [wireEnd,setWireEnd]=useState<WireEnd>('to');
+  const [wireTarget,setWireTarget]=useState('');
+  const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
   useEffect(() => {
     const release = () => {
@@ -189,6 +192,18 @@ export function App() {
     setSelected(id); setTool('inspect'); setSelectedEndpoint(null);
     const part = document.components.find(item => item.id === id);
     setMoveAnchor(part?.anchor ?? '');
+    const wire=document.wires.find(item=>item.id===id);
+    if(wire){setWireEnd('to');setWireTarget(wire.to);}
+  };
+  const reconnectWire = (id: string, endpoint: WireEnd, at: string | null) => {
+    const wire=document.wires.find(item=>item.id===id);
+    if(!wire)return;
+    if(!at){setError('当前位置没有有效接点，导线已保留原连接。');return;}
+    const to=normalizeEndpoint(at);
+    if(to===wire[endpoint]){setError('');return;}
+    if(edit({type:'reconnect-wire',id,endpoint,to})){
+      setWireEnd(endpoint);setWireTarget(to);setTool('inspect');setWireFrom('');setWireTo('');
+    }
   };
   const endpointClick = (id: string) => {
     if (tool === 'wire') {
@@ -305,6 +320,8 @@ export function App() {
               preview={preview} previewValid={previewValid}
               {...(state.analysis?.readings ? {readings: state.analysis.readings} : {})} pressedButtons={pressedButtons}
               onEndpoint={endpointClick} onSelect={chooseItem} onHover={setHover}
+              onWireReconnect={reconnectWire}
+              onWireEndSelect={endpoint=>{setWireEnd(endpoint);setWireTarget(selectedWire?.[endpoint]??'');wireTargetRef.current?.focus();}}
               onWireDrag={(from,to)=>{
                 setWireFrom('');setWireTo('');
                 if(!to){setError('请将导线拖到有效孔位或电池端口，当前未添加导线。');return;}
@@ -329,8 +346,13 @@ export function App() {
                 <button className="small-button" onClick={() => { setTool('move'); setRotation(selectedPart.rotation); }}><Icon name="move" size={14} />点选移动</button><span className="drag-tip">也可拖动元件 · Esc 取消</span>
               </div>
             </> : selectedWire ? <>
-              <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><span className="delete-tip">Delete / 退格键删除</span></div>
+              <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><span className="delete-tip">拖动两端圆点改接 · Delete 删除</span></div>
               <div className="selection-controls"><label>颜色 <select aria-label="所选导线颜色" value={selectedWire.color} onChange={event => edit({ type: 'update-wire', id: selectedWire.id, color: event.target.value })}>{COLORS.map(([color, label]) => <option key={color} value={color}>{label}</option>)}</select></label><button className="small-button" onClick={() => edit({ type: 'update-wire', id: selectedWire.id, bend: selectedWire.bend === 'horizontal' ? 'vertical' : 'horizontal' })}>切换折线路径</button></div>
+              <form className="selection-controls reconnect-form" aria-label="修改导线接点" onSubmit={event=>{event.preventDefault();reconnectWire(selectedWire.id,wireEnd,wireTarget);}}>
+                <label>改接端点 <select aria-label="改接端点" value={wireEnd} onChange={event=>{const end=event.target.value as WireEnd;setWireEnd(end);setWireTarget(selectedWire[end]);}}><option value="from">起点</option><option value="to">终点</option></select></label>
+                <label>新接点 <input ref={wireTargetRef} aria-label="新接点孔位" value={wireTarget} onChange={event=>setWireTarget(event.target.value)} placeholder="a1 / battery:+" autoComplete="off"/></label>
+                <button className="small-button" disabled={!wireTarget.trim()}>修改接点</button>
+              </form>
             </> : <form className="connection-inspector" onSubmit={event => {
               event.preventDefault(); const id = normalizeEndpoint(inspectInput);
               if (!ENDPOINT_BY_ID.has(id)) { setError('找不到这个孔位或电池端口，请检查名称。'); return; }
