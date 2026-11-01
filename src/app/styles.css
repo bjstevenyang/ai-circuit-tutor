@@ -316,3 +316,24 @@ h2 { font-size: 13px; font-weight: 650; }
 .component-guide .component-guide-note { margin-top: 12px; }
 .component-guide-prompt { font-size: 11px; line-height: 1.8; color: #526b48; border-bottom: 1px solid #e1e7d8; margin-bottom: 18px; padding-bottom: 14px; }
 @media (max-width: 1000px) { .component-guide, .component-guide-prompt { grid-column: 1 / -1; } }
+.number-editor { flex-basis: 100%; max-width: 340px; }
+.number-editor label { margin: 0 0 4px; }
+.number-editor-fields { display: flex; align-items: center; gap: 6px; }
+.number-editor-fields input, .selection-controls .number-editor-fields input { width: 115px; min-width: 0; flex: 1; }
+.number-editor-fields > span { font-size: 12px; }
+.number-editor > small { display: block; margin-top: 4px; font-size: 10px; color: #5e7257; }
+.number-editor > p { font-size: 11px; color: #944c2d; line-height: 1.6; margin-top: 5px; }
+.number-editor input[aria-invalid="true"] { border-color: #b05c38; }
+.battery-settings { padding: 12px 0; border-bottom: 1px solid #dce3d3; }
+.battery-settings .small-button { padding: 7px; font-size: 10px; }
+.led-polarity text { font-size: 12px; font-weight: 750; paint-order: stroke; stroke: #fafaf5; stroke-width: 3px; stroke-linejoin: round; }
+.led-pin-positive { fill: #9e3e29; }
+.led-pin-negative { fill: #315c78; }
+.led-light, .led-glow { transition: opacity .12s, r .12s; }
+.led-connection-guide { flex-basis: 100%; display: grid; gap: 7px; padding: 12px; background: #fffdf3; border: 1px solid #d8dfc9; border-radius: 6px; font-size: 12px; }
+.led-connection-guide > span { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.led-connection-guide small { font-size: 10px; color: #65745c; }
+.volume-control { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.volume-control input { width: 95px; padding: 0; }
+.volume-control output { font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { .led-light, .led-glow { transition: none; } }

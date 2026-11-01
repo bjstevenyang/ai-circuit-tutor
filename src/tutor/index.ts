@@ -14,7 +14,7 @@ const COPY: Record<DiagnosticCode, DiagnosticCopy> = {
   },
   'insufficient-voltage': {
     title: '电源电压不足以让这条路径导通',
-    description: '串联 LED 和二极管的模型压降之和达到或超过了 4.5 V，不能获得正向电流。',
+    description: '串联 LED 和二极管的模型压降之和达到或超过了当前电池电压，不能获得正向电流。',
     hints: ['串联器件会分担电源电压；每颗红色 LED 在模型中需要约 2 V。','检查同一串联路径上的 LED 与二极管数量。','减少串联的 LED 或二极管；并联 LED 应为每条支路配置限流电阻。'],
   },
   'reversed-diode': {
@@ -31,6 +31,11 @@ const COPY: Record<DiagnosticCode, DiagnosticCopy> = {
     title: '蜂鸣器电压没有达到工作范围',
     description: '本教学蜂鸣器的发声范围为 3–5 V；当前虽有电流，但端电压不足。',
     hints: ['有电流不代表器件已经获得足够工作电压。','检查串联电阻、其他负载及电位器是否分走过多电压。','调整供电路径，使蜂鸣器正向端电压达到 3–5 V；不要把单颗 LED 的限流规则直接套到蜂鸣器上。'],
+  },
+  'buzzer-overvoltage': {
+    title: '蜂鸣器电压超过了工作范围',
+    description: '当前蜂鸣器正向端电压超过模型的 5 V 上限；停止鸣响并提示过压，不模拟烧毁。',
+    hints: ['器件有工作电压范围，电压越高不代表工作得越好。','检查电池设置，以及蜂鸣器是否直接接在高于 5 V 的电源上。','把电池电压调到 3–5 V 后重新检查，或设计合适的分压供电；本实验室默认电池为 4.5 V。'],
   },
   'source-short': {
     title: '电池两极直接相连了',

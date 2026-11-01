@@ -30,7 +30,6 @@ describe('expanded experiment controls',()=>{
     open(switchedCircuit());run();
     expect(screen.queryByRole('heading',{name:'亮起来了！'})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'通断开关，锚点 a8'}));
-    fireEvent.click(screen.getByRole('button',{name:'开关接通'}));
     expect(screen.getByRole('heading',{name:'亮起来了！'})).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).components[2].closed).toBe(true);
     fireEvent.click(screen.getByRole('button',{name:'撤销'}));

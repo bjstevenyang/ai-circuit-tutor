@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
-import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity, COMPONENTS, COMPONENT_KINDS, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, createComponent } from '../circuit';
+import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity, COMPONENTS, COMPONENT_KINDS, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, createComponent, supplyVoltageOf, MIN_SUPPLY_VOLTAGE, MAX_SUPPLY_VOLTAGE } from '../circuit';
 import type { AnalysisResult, CircuitDocument, ComponentInstance, ComponentKind, Rotation, Wire } from '../circuit';
 import { Breadboard } from '../editor/Breadboard';
 import { PartControls } from '../editor/PartControls';
@@ -10,6 +10,7 @@ import type { EditCommand, HistoryState, WireEnd } from '../editor/model';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import { getDiagnosticCopy } from '../tutor';
 import { ComponentGuide } from '../tutor/ComponentGuide';
+import { NumberEditor } from '../editor/NumberEditor';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
 const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
@@ -112,6 +113,7 @@ export function App() {
   const [wireTarget,setWireTarget]=useState('');
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
+  const voltage=supplyVoltageOf(document);
   useEffect(() => {
     const release = () => {
       if (!pressedButtons.length) return;
@@ -146,7 +148,9 @@ export function App() {
     const result = applyEdit(document, command);
     if (!result.ok) { setError(result.error); return false; }
     setError('');
-    dispatch({ type: 'edit', history: commitDocument(state.history, result.document), saveStatus: save(result.document) });
+    const history=commitDocument(state.history,result.document);
+    if(history===state.history)return true;
+    dispatch({ type: 'edit', history, saveStatus: save(result.document) });
     if (live && state.analysis) run(result.document);
     else setPressedButtons([]);
     return true;
@@ -206,6 +210,11 @@ export function App() {
     if(edit({type:'reconnect-wire',id,endpoint,to})){
       setWireEnd(endpoint);setWireTarget(to);setTool('inspect');setWireFrom('');setWireTo('');
     }
+  };
+  const activatePart=(id:string)=>{
+    chooseItem(id);
+    const part=document.components.find(item=>item.id===id);
+    if(part?.kind==='switch'&&state.analysis)edit({type:'configure',id,settings:{closed:!part.closed}},true);
   };
   const endpointClick = (id: string) => {
     if (tool === 'wire') {
@@ -276,7 +285,8 @@ export function App() {
               </button>;
             })}
           </div>
-          <div className="included-source"><span className="tiny-battery">＋ −</span><div><strong>4.5 V 理想电池</strong><small>已在工作台准备好</small></div></div>
+          <div className="included-source"><span className="tiny-battery">＋ −</span><div><strong>{voltage} V 理想电池</strong><small>电压可调 · 1.5–9 V</small></div></div>
+          <div className="battery-settings"><label>常用电压 <select aria-label="电池预设电压" value={voltage} onChange={event=>edit({type:'set-voltage',value:Number(event.target.value)},true)}>{![1.5,3,4.5,6,9].includes(voltage)&&<option value={voltage}>{voltage} V（自定义）</option>}{[1.5,3,4.5,6,9].map(value=><option key={value} value={value}>{value} V</option>)}</select></label><NumberEditor key={`voltage-${voltage}`} label="电池电压" value={voltage} unit="V" min={MIN_SUPPLY_VOLTAGE} max={MAX_SUPPLY_VOLTAGE} onApply={value=>edit({type:'set-voltage',value},true)}/></div>
 
           <details className="control-section" open>
             <summary>精确放置 <span>孔位操作</span></summary>
@@ -321,7 +331,7 @@ export function App() {
               wiring={tool==='wire'} wireStyle={{color:wireColor,bend}}
               preview={preview} previewValid={previewValid}
               {...(state.analysis?.readings ? {readings: state.analysis.readings} : {})} pressedButtons={pressedButtons}
-              onEndpoint={endpointClick} onSelect={chooseItem} onHover={setHover}
+              onEndpoint={endpointClick} onSelect={chooseItem} onActivate={activatePart} onHover={setHover}
               onWireReconnect={reconnectWire}
               onWireEndSelect={endpoint=>{setWireEnd(endpoint);setWireTarget(selectedWire?.[endpoint]??'');wireTargetRef.current?.focus();}}
               onWireDrag={(from,to)=>{
@@ -341,7 +351,7 @@ export function App() {
             {selectedPart ? <>
               <div className="selection-heading"><strong>{COMPONENTS[selectedPart.kind].name}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
               <div className="selection-controls">
-                <PartControls part={selectedPart} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
+                <PartControls key={selectedPart.id} part={selectedPart} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
                 <label>新锚点 <input aria-label="所选元件新锚点" value={moveAnchor} onChange={event => setMoveAnchor(event.target.value)} /></label>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: normalizeEndpoint(moveAnchor), rotation: selectedPart.rotation })}>移动元件</button>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: selectedPart.anchor, rotation: ((selectedPart.rotation + 90) % 360) as Rotation })}><Icon name="rotate" size={14} />旋转 90°</button>
@@ -383,7 +393,7 @@ export function App() {
           {!!state.analysis?.diagnostics.length && <div className="diagnostic-list" aria-label="诊断项目">
             {state.analysis.diagnostics.map((item, index) => <button key={`${item.code}-${index}`} className={index === state.diagnosticIndex ? 'active' : ''} onClick={() => dispatch({ type: 'diagnostic', index })}><span>{String(index + 1).padStart(2, '0')}</span>{getDiagnosticCopy(item.code).title}<Icon name="arrow" size={13} /></button>)}
           </div>}
-          <div className="sound-control"><button className="small-button" aria-pressed={sound.enabled} onClick={() => { void sound.toggle(); }}>{sound.enabled ? '关闭声音' : '启用蜂鸣器声音'}</button>{sound.error && <p role="status">{sound.error}</p>}</div>
+          <div className="sound-control"><button className="small-button" aria-pressed={sound.enabled} onClick={() => { void sound.toggle(); }}>{sound.enabled ? '关闭声音' : '启用蜂鸣器声音'}</button><label className="volume-control">蜂鸣器音量 <input aria-label="蜂鸣器音量" type="range" min="0" max="100" step="1" value={sound.volume} onChange={event=>sound.changeVolume(Number(event.target.value))}/><output>{sound.volume}%</output></label><p>0% 静音；声音还受系统和扬声器音量影响。</p>{sound.error && <p role="status">{sound.error}</p>}</div>
           <div className="hint-section"><div className="hint-section-heading"><h3>给我一点提示</h3><span>{state.hintLevel} / 3</span></div>
             <div className="hint-progress" aria-hidden="true">{[1, 2, 3].map(level => <i key={level} className={state.hintLevel >= level ? 'revealed' : ''} />)}</div>
             {diagnosticCopy && state.hintLevel > 0 ? <ol className="hint-list">{diagnosticCopy.hints.slice(0, state.hintLevel).map((hint, index) => <li key={hint}><span>{['想一想', '看这里', '试着修复'][index]}</span><p>{hint}</p></li>)}</ol> : <p className="hint-placeholder">{state.analysis?.complete ? '试着选中孔位，解释电流经过的路径。' : '先运行电路。每次只揭开一个线索，把发现留给你。'}</p>}
@@ -393,7 +403,7 @@ export function App() {
           <div className="breadboard-tip"><span className="note-label">面包板小知识</span><h3>看起来靠近，不一定相连。</h3><p>同一编号的 a–e 孔内部相连，f–j 是另一组。中央沟槽两侧、电源轨与中间孔位，都需要导线连接。</p><button onClick={() => { setTool('inspect'); setSelected(null); setSelectedEndpoint('a1'); setInspectInput('a1'); }}>查看 a1 的连接 <Icon name="arrow" size={14} /></button></div>
         </aside>
       </div>
-      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池 4.5 V、红色 LED 固定压降 2.0 V；支持最多 24 个元件、120 根导线的小型直流电路，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3 V 发声阈值。20 mA 是每颗 LED 的课程限制。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、元件容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为经过审阅的课程内容，当前未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><span className="version-label">LEARN BY MAKING / V0.2</span></footer>
+      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池可调 1.5–9 V，默认 4.5 V；红色 LED 固定压降 2.0 V，相对亮度按每颗 LED 的电流示意，不是真实光度。支持最多 24 个元件、120 根导线，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3–5 V 发声范围。20 mA 是每颗 LED 的课程限制，超限时亮度封顶并提示。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为预设课程内容，未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><span className="version-label">LEARN BY MAKING / V0.3</span></footer>
     </main>
   </>;
 }

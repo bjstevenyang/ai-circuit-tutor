@@ -157,3 +157,19 @@ describe('existing wire reconnection',()=>{
     expect(commitDocument(history,edited(moved,{type:'reconnect-wire',id:'w1',endpoint:'from',to:'top+:1'}))).toBe(history);
   });
 });
+
+describe('source parameter edits',()=>{
+  it('changes only voltage and records one undoable edit',()=>{
+    const initial=edited(createEmptyDocument(),{type:'wire',wire:wire()});
+    const next=edited(initial,{type:'set-voltage',value:9});
+    expect(next.wires).toEqual(initial.wires);expect(next.components).toEqual(initial.components);
+    expect(initial.supplyVoltage).toBe(4.5);expect(next.supplyVoltage).toBe(9);
+    const history=commitDocument(createHistory(initial),next);
+    expect(history.past).toHaveLength(1);expect(undo(history).document).toEqual(initial);expect(redo(undo(history)).document).toEqual(next);
+  });
+  it('rejects invalid voltage atomically even outside the form',()=>{
+    const document=createEmptyDocument(),before=JSON.stringify(document);
+    for(const value of [NaN,Infinity,0,1.49,9.01])expect(applyEdit(document,{type:'set-voltage',value}).ok).toBe(false);
+    expect(JSON.stringify(document)).toBe(before);
+  });
+});

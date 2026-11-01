@@ -25,8 +25,9 @@ export function loadWorkspace(storage?: WorkspaceStorage): LoadResult {
 }
 export function saveWorkspace(document: CircuitDocument, storage?: WorkspaceStorage): SaveResult {
   try {
-    if (!parseDocument(document)) return { ok: false, message: '当前作品未通过数据校验' };
-    (storage ?? browserStorage()).setItem(STORAGE_KEY, JSON.stringify(document));
+    const canonical=parseDocument(document);
+    if (!canonical) return { ok: false, message: '当前作品未通过数据校验' };
+    (storage ?? browserStorage()).setItem(STORAGE_KEY, JSON.stringify(canonical));
     return { ok: true };
   } catch {
     return { ok: false, message: '浏览器存储不可用或空间不足，作品仍保留在当前工作台' };

@@ -4,7 +4,7 @@ import { buildNets } from './network';
 import { solveDC } from './solver';
 import type { Branch } from './solver';
 import { readCircuitDocument } from './validation';
-import { SUPPLY_VOLTAGE } from './types';
+import { supplyVoltageOf, LED_CURRENT_LIMIT_MA } from './parameters';
 import type { AnalysisResult, CircuitDocument, ComponentReading, Diagnostic, DiagnosticCode, SimulationControls } from './types';
 
 function pathDrop(branches: readonly Branch[], from: string, to: string, oriented: boolean, zeroResistanceOnly=false): {drop:number;parts:string[]} {
@@ -28,6 +28,7 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
   const unsupported=(): AnalysisResult=>({status:'unsupported',complete:false,diagnostics:[{code:'unsupported',entities:[]}]});
   const document=readCircuitDocument(input);
   if(!document)return unsupported();
+  const supplyVoltage=supplyVoltageOf(document);
   const nets=buildNets(document,controls), net=(pin:string)=>nets.get(pin)!;
   const positive=net('battery:+'),negative=net('battery:-');
   const faults: Diagnostic[]=[];
@@ -57,12 +58,12 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
   }
   // Zero-resistance, forward-polarity paths cannot be given a finite load current.
   const unbounded=pathDrop(branches,positive,negative,true,true);
-  if(positive!==negative&&unbounded.drop<SUPPLY_VOLTAGE-1e-7)add('missing-resistor',unbounded.parts);
+  if(positive!==negative&&unbounded.drop<supplyVoltage-1e-7)add('missing-resistor',unbounded.parts);
   const priorities: Partial<Record<DiagnosticCode,number>>={'source-short':0,'resistor-bypassed':1,'missing-resistor':2,'led-bypassed':3,'overcurrent':4};
   const sortFaults=()=>faults.sort((a,b)=>(priorities[a.code]??9)-(priorities[b.code]??9)||a.code.localeCompare(b.code)||a.entities.join().localeCompare(b.entities.join()));
   sortFaults();
   if(faults.length)return {status:'fault',complete:false,diagnostics:faults,...(faults.every(d=>d.code==='led-bypassed')?{ledOn:false}:{})};
-  const solution=solveDC(branches,positive,negative,SUPPLY_VOLTAGE);
+  const solution=solveDC(branches,positive,negative,supplyVoltage);
   if(!solution)return unsupported();
   // GMIN chooses arbitrary potentials for floating, blocked terminals. Only
   // voltages anchored through resistors or genuinely conducting devices can
@@ -99,7 +100,7 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
     if(['resistor','potentiometer','ldr'].includes(part.kind))reading.resistanceOhms=resistanceOf(part);
     if(part.kind==='led') {
       hasLed=true;reading.on=currentMa>0.001;anyLed ||= reading.on;anyOutput ||= reading.on;
-      if(currentMa>20+1e-6)add('overcurrent',[part.id]);
+      if(currentMa>LED_CURRENT_LIMIT_MA+1e-6)add('overcurrent',[part.id]);
       if(!reading.on&&knownVoltage&&voltage < -1e-5)add('reversed-led',[part.id,...pins]);
     }
     if(part.kind==='diode'&&knownVoltage&&voltage < -1e-5)add('reversed-diode',[part.id,...pins]);
@@ -107,6 +108,7 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
       reading.on=voltage>=3-1e-7&&voltage<=5+1e-7&&currentMa>0;
       anyOutput ||= reading.on;
       if(knownVoltage&&voltage < -1e-5)add('buzzer-reversed',[part.id,...pins]);
+      else if(currentMa>0&&voltage>5+1e-7)add('buzzer-overvoltage',[part.id]);
       else if(currentMa>0&&!reading.on)add('buzzer-undervoltage',[part.id]);
     }
     readings[part.id]=reading;
@@ -116,7 +118,7 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
     const route=pathDrop(branches,positive,negative,true);
     const withControls=pathDrop([...branches,...openControls],positive,negative,false);
     const relevantControls=openControls.filter(b=>withControls.parts.includes(b.part));
-    if(route.drop>=SUPPLY_VOLTAGE&&Number.isFinite(route.drop))add('insufficient-voltage',route.parts);
+    if(route.drop>=supplyVoltage&&Number.isFinite(route.drop))add('insufficient-voltage',route.parts);
     else if(withControls.drop===0&&relevantControls.length>0)add('control-open',relevantControls.map(b=>b.part));
     else if(pathDrop(branches,positive,negative,false).drop===0)return unsupported();
     else add('open-circuit',document.components.map(p=>p.id));

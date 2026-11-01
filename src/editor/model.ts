@@ -1,5 +1,6 @@
 import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from '../circuit';
 import { validComponent } from '../circuit/validation';
+import { isSupplyVoltage } from '../circuit/parameters';
 import type { CircuitDocument, ComponentInstance, Rotation, Wire } from '../circuit';
 
 export type WireEnd = 'from' | 'to';
@@ -12,6 +13,7 @@ export type EditCommand =
   | { type: 'reconnect-wire'; id: string; endpoint: WireEnd; to: string }
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
   | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light'> }
+  | { type: 'set-voltage'; value: number }
   | { type: 'reset' };
 
 export type EditResult = { ok: true; document: CircuitDocument } | { ok: false; error: string };
@@ -32,6 +34,7 @@ function overlaps(a: Bounds, b: Bounds) {
 
 /** Physical constraints are independent of electrical correctness. */
 export function validateDocument(document: CircuitDocument): string | null {
+  if(document.schemaVersion===3&&!isSupplyVoltage(document.supplyVoltage))return '电池电压必须是 1.5–9 V 范围内的有限数值。';
   const identities = new Set<string>();
   const occupied = new Set<string>();
   if (document.components.length > MAX_COMPONENTS) return `工作台最多放置 ${MAX_COMPONENTS} 个元件。`;
@@ -98,6 +101,7 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
       break;
     }
     case 'reset': next = createEmptyDocument(); break;
+    case 'set-voltage': next={...document,schemaVersion:3,lessonId:'dc-lab-v2',supplyVoltage:command.value};break;
     case 'configure': {
       if (!document.components.some(p => p.id === command.id)) return { ok: false, error: '找不到要修改的元件。' };
       next = { ...document, components: document.components.map(p => p.id === command.id ? { ...p, ...command.settings } : p) };

@@ -69,7 +69,7 @@ describe('version 2 component workspace compatibility', () => {
     expect(restored).toEqual({status:'loaded',document:current});
     expect(storage.contents.get(STORAGE_KEY)).toBe(raw);
     expect(saveWorkspace(current,storage).ok).toBe(true);
-    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!).schemaVersion).toBe(2);
+    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!).schemaVersion).toBe(3);
   });
   it('round-trips all eight kinds and strips transient/unrecognized fields', async () => {
     const { createComponent }=await import('../circuit');
@@ -92,5 +92,34 @@ describe('version 2 component workspace compatibility', () => {
   ])('rejects invalid new component settings %j', settings=>{
     const value={...createEmptyDocument(),components:[{id:'bad',anchor:'a10',rotation:0,...settings}]};
     expect(parseDocument(value)).toBeNull();
+  });
+});
+
+describe('version 3 electrical parameters',()=>{
+  it.each([1,2])('restores v%s at the original 4.5 V and only upgrades on save',schemaVersion=>{
+    const expected=populated();
+    const old={...expected,schemaVersion,lessonId:schemaVersion===1?'led-series-v1':'dc-lab-v2',supplyVoltage:9};
+    const raw=JSON.stringify(old),storage=memoryStorage(raw);
+    expect(loadWorkspace(storage)).toEqual({status:'loaded',document:expected});
+    expect(storage.contents.get(STORAGE_KEY)).toBe(raw);
+    expect(saveWorkspace(old as unknown as ReturnType<typeof populated>,storage).ok).toBe(true);
+    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!)).toEqual(expected);
+  });
+  it('round-trips custom source and fractional resistor values without derived display or sound state',()=>{
+    const document={...populated(),supplyVoltage:8.5,components:[{...populated().components[0]!,resistance:470.5}]};
+    const storage=memoryStorage(JSON.stringify({...document,brightness:1,volume:100}));
+    expect(loadWorkspace(storage)).toEqual({status:'loaded',document});
+    expect(saveWorkspace(document,storage).ok).toBe(true);
+    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!)).toEqual(document);
+  });
+  it('protects existing work from invalid v3 voltage and future versions',()=>{
+    const saved=JSON.stringify(populated()),storage=memoryStorage(saved);
+    for(const supplyVoltage of [undefined,0,-1,1.49,9.01,NaN,Infinity,'9',null]){
+      const value={...populated(),supplyVoltage};
+      expect(parseDocument(value)).toBeNull();
+      expect(saveWorkspace(value as unknown as ReturnType<typeof populated>,storage).ok).toBe(false);
+      expect(storage.contents.get(STORAGE_KEY)).toBe(saved);
+    }
+    expect(parseDocument({...populated(),schemaVersion:4})).toBeNull();
   });
 });

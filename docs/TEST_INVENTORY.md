@@ -1,24 +1,28 @@
 # 自动化测试清单
 
-盘点日期：2026-10-31，v0.2。本文用于查找“项目有哪些测试、各自检查什么、后来增加了什么”。验收映射、历史执行结果和未完成的发布检查见 [测试计划](TEST_PLAN.md)。
+盘点日期：2026-11-01，v0.3。本文用于查找“项目有哪些测试、各自检查什么、后来增加了什么”。验收映射、历史执行结果和未完成的发布检查见 [测试计划](TEST_PLAN.md)。
 
 ## 1. 总览
 
 | 类别 | 测试源码 | 用例数 |
 | --- | --- | ---: |
 | 电路连接与有限仿真 | [circuit.test.ts](../src/circuit/circuit.test.ts) | 29 |
-| 放置、编辑与撤销历史 | [model.test.ts](../src/editor/model.test.ts) | 19 |
+| 放置、编辑与撤销历史 | [model.test.ts](../src/editor/model.test.ts) | 21 |
 | 新元件、直流网络 | [components.test.ts](../src/circuit/components.test.ts) | 27 |
 | 多引脚与吸附 | [components.test.ts](../src/editor/components.test.ts) | 14 |
-| 本地保存与恢复 | [index.test.ts](../src/storage/index.test.ts) | 15 |
-| 逐级教学提示 | [index.test.ts](../src/tutor/index.test.ts) | 19 |
+| 本地保存与恢复 | [index.test.ts](../src/storage/index.test.ts) | 19 |
+| 逐级教学提示 | [index.test.ts](../src/tutor/index.test.ts) | 20 |
 | 应用界面交互 | [App.test.tsx](../src/app/App.test.tsx) | 13 |
 | 新元件界面控制与声音 | [components.test.tsx](../src/app/components.test.tsx) | 7 |
 | 元件用途与使用说明 | [ComponentGuide.test.tsx](../src/app/ComponentGuide.test.tsx) | 12 |
-| **Vitest 合计** | **9 个测试文件** | **155** |
+| 可调电源与自定义电阻 | [parameters.test.ts](../src/circuit/parameters.test.ts) | 26 |
+| LED 显示、极性与参数解析 | [appearance.test.tsx](../src/editor/appearance.test.tsx) | 27 |
+| 参数应用与亮度交互 | [Parameters.test.tsx](../src/app/Parameters.test.tsx) | 8 |
+| 蜂鸣器增益与音量控制 | [useBuzzerSound.test.tsx](../src/app/useBuzzerSound.test.tsx) | 2 |
+| **Vitest 合计** | **13 个测试文件** | **225** |
 | 原有浏览器流程 | [lesson.spec.ts](../tests/e2e/lesson.spec.ts) | 7 |
-| 元件操作、改接与说明流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 14 |
-| **本次浏览器合计** | **仅 Chromium** | **21** |
+| 元件、参数、改接与开关流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 21 |
+| **本次浏览器合计** | **仅 Chromium** | **28** |
 
 参数化测试按实际展开数量计数；一项用例可能包含多个断言。例如全部 420² 个孔位对的核对属于一个测试用例。Playwright 保留三种引擎配置，按用户最新要求本次仅执行 Chromium；配置数量不是通过数量。
 
@@ -160,7 +164,7 @@ npm run test:e2e -- --project=chromium
 npm run test:e2e -- --project=chromium --grep 'deletion works' --workers=1
 ```
 
-v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试时同步更新本清单及对应验收映射。
+当前实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试时同步更新本清单及对应验收映射。
 
 
 ## 10. v0.2 新增用例明细
@@ -217,7 +221,7 @@ v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试�
 
 | 编号 | 检查内容 |
 | --- | --- |
-| S07 | v1 → v2 迁移保留实体／接线，加载不自动写回 |
+| S07 | 旧版作品迁移保留实体／接线，加载不自动写回（现规范化为 v3） |
 | S08 | 八类器件参数往返，过滤瞬态按压／分析字段 |
 | S09–S15 | 负旋钮、非整数位置、光照越界、非布尔开关、零电阻、过大电阻、错误器件参数逐一拒绝 |
 
@@ -277,7 +281,7 @@ v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试�
 
 ## 12. 元件说明回归（2026-10-31）
 
-新增 12 项模块／界面测试及 2 个 Chromium 场景；当前合计 155 项 Vitest、21 个 Chromium 场景。实际执行结果见测试计划。
+新增 12 项模块／界面测试及 2 个 Chromium 场景；该轮结束时合计 155 项 Vitest、21 个 Chromium 场景。实际执行结果见测试计划。
 
 | 编号 | 文件 | 覆盖内容 |
 | --- | --- | --- |
@@ -288,3 +292,81 @@ v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试�
 | A32 | src/app/ComponentGuide.test.tsx | 元件盒／精确放置切换后替换内容，不沿用旧实例孔位；选择孔位／导线后清除旧说明 |
 | B20 | tests/e2e/components.spec.ts | 键盘浏览八类元件说明、展开常见错误、查看示例，作品不改变；截图用于排版核对 |
 | B21 | tests/e2e/components.spec.ts | 实例按钮四脚显示真实孔位，查阅保留诊断／提示；精确选择与导线选择切换正确 |
+
+
+## 13. v0.3 参数、LED、音量及开关操作（2026-11-01）
+
+在上一轮 155 项 Vitest／21 个 Chromium 场景上，新增 **70 项 Vitest 和 7 个浏览器场景**；当前合计 **225 项／28 个**。参数化用例按实际展开计数。既有 A13、B09 也改为操作开关本体，覆盖运行后直接切换。
+
+### 电气参数：C57–C82（26 项）
+
+源码：[src/circuit/parameters.test.ts](../src/circuit/parameters.test.ts)。
+
+| 编号 | 检查内容 |
+| --- | --- |
+| C57–C62 | 电源 1.5／2／3／4.5／6／9 V 下的手算 LED 电流、截止与超限 |
+| C63 | 三颗串联 LED 在 6 V 截止、9 V 导通，压降与电流正确 |
+| C64–C67 | 自定义 10／470／470.5／1,000,000 Ω 的手算电流 |
+| C68–C73 | 蜂鸣器 1.5／3／4.5／5／6／9 V 的负载电流、欠压／正常／过压状态 |
+| C74–C81 | 非有限、负数、零、越界、缺失及字符串电压被拒绝 |
+| C82 | 9 V 源短路不伪造有限电流 |
+
+### 编辑与呈现：E34–E62（29 项）
+
+源码：[model.test.ts](../src/editor/model.test.ts) 及 [appearance.test.tsx](../src/editor/appearance.test.tsx)。
+
+| 编号 | 检查内容 |
+| --- | --- |
+| E34 | 电源修改原子提交、规范化为 v3、单步撤销／重做 |
+| E35 | 非法电压不改变原文档 |
+| E36–E41 | 六种电流／截止状态对应独立相对亮度期望，并在 20 mA 封顶 |
+| E42 | 未计算与已计算截止区别，非有限／负数不绘制伪造亮度 |
+| E43 | 光晕随电流连续单调，超流显示封顶 |
+| E44–E47 | 四个旋转方向的 A＋／K− 实际孔位、平边、正向文字及可访问说明 |
+| E48 | 放置预览有极性标记且不重复创建实例描述 ID |
+| E49–E58 | 空白、非数字、无穷大、十六进制及越界等十种参数草稿拒绝 |
+| E59–E62 | 四种完整十进制小数／科学计数法输入正确解析 |
+
+### 应用与声音：A33–A42（10 项）
+
+源码：[Parameters.test.tsx](../src/app/Parameters.test.tsx) 及 [useBuzzerSound.test.tsx](../src/app/useBuzzerSound.test.tsx)。
+
+| 编号 | 检查内容 |
+| --- | --- |
+| A33 | 电阻草稿不提交；应用后电流／亮度更新，单步撤销／重做 |
+| A34 | 非法阻值保留作品、结果与原存档 |
+| A35 | 自定义电压同步全部标签、求解、保存和撤销 |
+| A36 | 非法电压拒绝；9 V 合法但 LED 超流时显示诊断和亮度封顶 |
+| A37 | 相同参数应用不保存、不增加历史、不清除结果 |
+| A38 | 未运行时极性说明正确，旋转后孔位更新 |
+| A39 | 电位器 A／W 变阻接法改变电流及 LED 相对亮度 |
+| A40 | 两条独立限流支路的 LED 读取各自电流，不使用总电流 |
+| A41 | 声音须主动启用，默认增益从 0.025 提高至 0.125，停止时清理 |
+| A42 | 实时平滑调节、0% 静音、非法音量拒绝、不重启振荡器，停止／恢复正确 |
+
+### 存储及提示：S16–S19、T20（5 项）
+
+源码：[storage/index.test.ts](../src/storage/index.test.ts)、[tutor/index.test.ts](../src/tutor/index.test.ts)。
+
+| 编号 | 检查内容 |
+| --- | --- |
+| S16–S17 | v1／v2 按原有 4.5 V 迁移，忽略旧格式未知电压字段；加载不写回，下次保存写 v3 |
+| S18 | 自定义电压／小数阻值往返，派生亮度与音量不进入存档 |
+| S19 | 非法 v3 及未来 v4 保留原存档并暂停覆盖 |
+| T20 | 蜂鸣器过压诊断的三层提示内容完整 |
+
+### Chromium：B22–B28（7 个场景）
+
+源码：[tests/e2e/components.spec.ts](../tests/e2e/components.spec.ts)。
+
+| 编号 | 检查内容 |
+| --- | --- |
+| B22 | 电阻草稿／验证、应用电流、单步历史、刷新恢复 |
+| B23 | 电池电压验证、标签、运行、撤销、刷新、过流与欠压 |
+| B24 | LED 四方向极性、预览、随阻值变化的亮度，截图核对 |
+| B25 | 电位器作为变阻器连续调光 |
+| B26 | 并联 LED 逐支路亮度，不由电池总电流控制 |
+| B27 | 浏览器 AudioContext 增益 0.125→0.25→0 平滑调节、过压停声、刷新复位 |
+| B28 | 运行前点击仅选择；运行后点击／Space／Enter 切换，重复按键及拖动不误切换，状态刷新恢复 |
+
+音频 API 检查不等于设备实际响度验证；读屏、学生理解和真实设备试听仍见测试计划中的待办。

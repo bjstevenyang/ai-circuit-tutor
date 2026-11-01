@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { createComponent, createEmptyDocument } from '../../src/circuit';
 import type { CircuitDocument, ComponentKind } from '../../src/circuit';
 import { STORAGE_KEY } from '../../src/storage';
-import { makeWire, switchedCircuit, validCircuit } from '../fixtures/circuits';
+import { makeWire, switchedCircuit, validCircuit, dimmingCircuit, parallelLedCircuit } from '../fixtures/circuits';
 
 async function open(page:Page,document:CircuitDocument){
   await page.addInitScript(({key,document})=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(document));},{key:STORAGE_KEY,document});
@@ -33,7 +33,6 @@ test('place all eight kinds with repeated instances, configure and restore them'
 test('switch recomputes a running circuit and retains its state on reload',async({page})=>{
   await open(page,switchedCircuit());await run(page);
   await page.getByRole('button',{name:'通断开关，锚点 a8',exact:true}).click();
-  await page.getByRole('button',{name:'开关接通'}).click();
   await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
   await page.reload();await run(page);
   await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
@@ -314,4 +313,135 @@ test('placed component guides show actual pins and preserve current diagnostics 
   await page.getByRole('button',{name:'导线 battery:+ 到 b1',exact:true}).focus();await page.keyboard.press('Enter');
   await expect(guide).toHaveCount(0);
   await expect(page.locator('.hint-list li')).toHaveCount(1);
+});
+
+test('custom resistance validates drafts, preserves good results and supports one-step undo and restore',async({page})=>{
+  await open(page,validCircuit());await run(page);
+  await page.getByRole('button',{name:'电阻 330 欧姆，锚点 a10',exact:true}).click();
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  for(const value of ['','abc','0','1000001','Infinity']){
+    await page.getByLabel('电阻阻值',{exact:true}).fill(value);await page.getByRole('button',{name:'应用电阻阻值',exact:true}).click();
+    await expect(page.getByRole('alert')).toContainText('有效数值');
+    expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+    await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+  }
+  await page.getByLabel('电阻阻值',{exact:true}).fill('470.5');await page.getByRole('button',{name:'应用电阻阻值',exact:true}).click();
+  await expect(page.locator('.current-reading strong')).toContainText('5.31');
+  await page.getByRole('button',{name:'撤销',exact:true}).click();
+  await expect(page.getByRole('button',{name:'电阻 330 欧姆，锚点 a10',exact:true})).toBeAttached();
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'重做',exact:true}).click();await page.reload();
+  await expect(page.getByRole('button',{name:'电阻 470.5 欧姆，锚点 a10',exact:true})).toBeAttached();
+});
+
+test('battery voltage validates, recalculates each result, updates labels and survives undo/reload',async({page})=>{
+  await open(page,validCircuit());await run(page);
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  for(const value of ['1.4','9.1','Infinity']){
+    await page.getByLabel('电池电压',{exact:true}).fill(value);await page.getByRole('button',{name:'应用电池电压',exact:true}).click();
+    await expect(page.getByRole('alert')).toContainText('有效数值');
+    expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+  }
+  await page.getByLabel('电池电压',{exact:true}).fill('5.2');await page.getByRole('button',{name:'应用电池电压',exact:true}).click();
+  await expect(page.getByText('5.2 V DC',{exact:true})).toBeVisible();
+  await expect(page.locator('.current-reading strong')).toContainText('9.70');
+  await page.getByRole('button',{name:'撤销',exact:true}).click();
+  await expect(page.getByLabel('电池电压',{exact:true})).toHaveValue('4.5');await run(page);
+  await page.getByLabel('电池预设电压').selectOption('9');
+  await expect(page.getByRole('heading',{name:'电流超过了课程限制'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'红色 LED，锚点 c13',exact:true}).locator('[data-led-level]')).toHaveAttribute('data-led-level','1');
+  await page.reload();await expect(page.getByLabel('电池电压',{exact:true})).toHaveValue('9');await run(page);
+  await expect(page.getByRole('heading',{name:'电流超过了课程限制'})).toBeVisible();
+  await page.getByLabel('电池预设电压').selectOption('1.5');
+  await expect(page.getByRole('heading',{name:'电源电压不足以让这条路径导通'})).toBeVisible();
+});
+
+test('LED polarity is explicit at every orientation and its display responds to its current',async({page})=>{
+  await open(page,validCircuit());
+  const led=page.getByRole('button',{name:'红色 LED，锚点 c13',exact:true});
+  await expect(led).toHaveAccessibleDescription(/阳极 A＋ 在 c13.*阴极 K− 在 c14/);
+  await led.click();
+  await expect(page.getByText('A＋ 阳极 · c13',{exact:true})).toBeVisible();
+  await expect(page.getByText('K− 阴极 · c14',{exact:true})).toBeVisible();
+  await run(page);
+  const normal=Number(await led.locator('[data-led-level]').getAttribute('data-led-level'));
+  await led.screenshot({path:'test-results/led-polarity-current.png'});
+  await page.getByRole('button',{name:'电阻 330 欧姆，锚点 a10',exact:true}).click();
+  await page.getByLabel('所选电阻阻值').selectOption('1000');
+  const dim=Number(await led.locator('[data-led-level]').getAttribute('data-led-level'));
+  expect(dim).toBeCloseTo(.125,6);expect(dim).toBeLessThan(normal);
+  await page.getByRole('button',{name:'重置工作台'}).click();
+  await place(page,'led','c15');
+  const part=page.getByRole('button',{name:'红色 LED，锚点 c15',exact:true});
+  for(const k of ['c16','d15','c14','b15']){
+    await expect(part).toHaveAccessibleDescription(new RegExp(`阳极 A＋ 在 c15.*阴极 K− 在 ${k}`));
+    await page.getByRole('button',{name:'旋转 90°',exact:true}).click();
+  }
+  await page.getByRole('button',{name:'添加红色 LED',exact:true}).click();
+  await page.getByRole('button',{name:'孔位 c20，空闲',exact:true}).hover();
+  await expect(page.locator('.preview.valid .led-pin-positive')).toHaveText('A＋');
+  await expect(page.locator('.preview.valid .led-pin-negative')).toHaveText('K−');
+});
+
+test('potentiometer A-W connection changes LED brightness continuously with a fixed current limiter',async({page})=>{
+  await open(page,dimmingCircuit());await run(page);
+  const led=page.getByRole('button',{name:'红色 LED，锚点 f10',exact:true}).locator('[data-led-level]');
+  const normal=Number(await led.getAttribute('data-led-level'));
+  await page.getByRole('button',{name:'电位器，锚点 c4',exact:true}).click();
+  await page.getByLabel('旋钮位置').fill('0');expect(Number(await led.getAttribute('data-led-level'))).toBeGreaterThan(normal);
+  await page.getByLabel('旋钮位置').fill('100');expect(Number(await led.getAttribute('data-led-level'))).toBeLessThan(normal);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('parallel LEDs use independent branch currents for brightness',async({page})=>{
+  await open(page,parallelLedCircuit());await run(page);
+  const a=Number(await page.getByRole('button',{name:'红色 LED，锚点 c4',exact:true}).locator('[data-led-level]').getAttribute('data-led-level'));
+  const b=Number(await page.getByRole('button',{name:'红色 LED，锚点 c13',exact:true}).locator('[data-led-level]').getAttribute('data-led-level'));
+  expect(a).toBeCloseTo(2500/330/20,6);expect(b).toBeCloseTo(.125,6);
+});
+
+test('buzzer has adjustable live gain, zero-volume mute and overvoltage cutoff',async({page})=>{
+  await page.addInitScript(()=>{
+    const original=AudioContext.prototype.createGain;
+    const gains:GainNode[]=[];
+    Object.defineProperty(window,'testBuzzerGains',{value:gains});
+    AudioContext.prototype.createGain=function(){const node=original.call(this);gains.push(node);return node;};
+  });
+  await open(page,{...createEmptyDocument(),components:[createComponent('buzzer','a1',0,'buzz')],wires:[makeWire('battery:+','b1'),makeWire('b3','battery:-')]});await run(page);
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  await expect(page.getByLabel('蜂鸣器音量')).toHaveValue('50');
+  await page.getByRole('button',{name:'启用蜂鸣器声音'}).click();
+  const gain=()=>page.evaluate(()=>{
+    const nodes=(window as unknown as {testBuzzerGains:GainNode[]}).testBuzzerGains;
+    return nodes.at(-1)?.gain.value??0;
+  });
+  await expect.poll(gain).toBeGreaterThan(.12);
+  await page.getByLabel('蜂鸣器音量').fill('100');await expect.poll(gain).toBeGreaterThan(.24);
+  await page.getByLabel('蜂鸣器音量').fill('0');await expect.poll(gain).toBeLessThan(.001);
+  expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+  await page.getByLabel('电池预设电压').selectOption('9');
+  await expect(page.getByRole('heading',{name:'蜂鸣器电压超过了工作范围'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'蜂鸣器工作了！'})).toHaveCount(0);
+  await page.reload();await expect(page.getByLabel('蜂鸣器音量')).toHaveValue('50');
+  await expect(page.getByRole('button',{name:'启用蜂鸣器声音'})).toHaveAttribute('aria-pressed','false');
+});
+
+test('a running switch toggles by body click or keyboard while dragging only moves it',async({page})=>{
+  await open(page,switchedCircuit());
+  const control=page.getByRole('button',{name:'通断开关，锚点 a8',exact:true});
+  await control.click();await expect(control).toHaveAttribute('aria-pressed','false');
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+  await run(page);await control.click();
+  await expect(control).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+  await control.click();await expect(control).toHaveAttribute('aria-pressed','false');
+  await control.focus();await page.keyboard.press('Space');await expect(control).toHaveAttribute('aria-pressed','true');
+  await page.keyboard.down('Enter');await page.keyboard.down('Enter');await page.keyboard.up('Enter');
+  await expect(control).toHaveAttribute('aria-pressed','false');
+  await page.keyboard.press('Enter');await expect(control).toHaveAttribute('aria-pressed','true');
+  const body=control.locator('.part-shape rect').first();await body.scrollIntoViewIfNeeded();
+  const box=(await body.boundingBox())!,a=await boardPoint(page,0,0),b=await boardPoint(page,60,0);
+  const x=box.x+box.width/2,y=box.y+box.height/2;
+  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+b.x-a.x,y+b.y-a.y,{steps:8});await page.mouse.up();
+  await expect(page.getByRole('button',{name:'通断开关，锚点 a11',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.reload();await expect(page.getByRole('button',{name:'通断开关，锚点 a11',exact:true})).toHaveAttribute('aria-pressed','true');
 });

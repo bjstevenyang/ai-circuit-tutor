@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getDiagnosticCopy, nextHintLevel } from './index';
 import type { DiagnosticCode } from '../circuit';
 
-const codes: DiagnosticCode[] = ['source-short', 'missing-resistor', 'resistor-bypassed', 'led-bypassed', 'open-circuit', 'reversed-led', 'overcurrent', 'unsupported', 'missing-led', 'control-open', 'insufficient-voltage', 'reversed-diode', 'buzzer-reversed', 'buzzer-undervoltage'];
+const codes: DiagnosticCode[] = ['source-short', 'missing-resistor', 'resistor-bypassed', 'led-bypassed', 'open-circuit', 'reversed-led', 'overcurrent', 'unsupported', 'missing-led', 'control-open', 'insufficient-voltage', 'reversed-diode', 'buzzer-reversed', 'buzzer-undervoltage', 'buzzer-overvoltage'];
 
 describe('reviewed progressive teaching guidance', () => {
   it.each(codes)('provides exactly three ordered, distinct hints for %s', code => {

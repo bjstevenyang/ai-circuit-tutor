@@ -28,3 +28,20 @@ export function switchedCircuit(button = false): CircuitDocument {
     wires:[makeWire('battery:+','b1'),makeWire('d5',button?'d8':'b8'),makeWire(button?'j8':'b10','battery:-')],
   };
 }
+
+/** A-W used as a rheostat; B is unconnected, with a fixed 330 ohm series limit. */
+export function dimmingCircuit(): CircuitDocument {
+  return {...createEmptyDocument(),components:[
+    {id:'r',kind:'resistor',anchor:'a1',rotation:0,resistance:330},
+    {id:'pot',kind:'potentiometer',anchor:'c4',rotation:0,resistance:10000,position:50},
+    {id:'led',kind:'led',anchor:'f10',rotation:0},
+  ],wires:[makeWire('battery:+','b1'),makeWire('e5','g10'),makeWire('g11','battery:-')]};
+}
+export function parallelLedCircuit(): CircuitDocument {
+  return {...createEmptyDocument(),components:[
+    {id:'r1',kind:'resistor',anchor:'a1',rotation:0,resistance:330},
+    {id:'l1',kind:'led',anchor:'c4',rotation:0},
+    {id:'r2',kind:'resistor',anchor:'a10',rotation:0,resistance:1000},
+    {id:'l2',kind:'led',anchor:'c13',rotation:0},
+  ],wires:[makeWire('battery:+','top+:1'),makeWire('top+:2','b1'),makeWire('top+:3','b10'),makeWire('battery:-','top-:1'),makeWire('top-:2','d5'),makeWire('top-:3','d14')]};
+}
