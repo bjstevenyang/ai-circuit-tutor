@@ -9,6 +9,7 @@ import { applyEdit, commitDocument, createHistory, redo, undo } from '../editor/
 import type { EditCommand, HistoryState, WireEnd } from '../editor/model';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import { getDiagnosticCopy } from '../tutor';
+import { ComponentGuide } from '../tutor/ComponentGuide';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
 const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
@@ -123,6 +124,7 @@ export function App() {
     return () => { window.removeEventListener('blur',release); window.document.removeEventListener('visibilitychange',visibility); };
   },[pressedButtons,document,state.analysis]);
   const selectedPart = document.components.find(part => part.id === selected);
+  const guideKind=selectedPart?.kind??(isPartTool(tool)?tool:null);
   const selectedWire = document.wires.find(wire => wire.id === selected);
   const diagnostic = state.analysis?.diagnostics[state.diagnosticIndex];
   const diagnosticCopy = diagnostic ? getDiagnosticCopy(diagnostic.code) : null;
@@ -279,7 +281,7 @@ export function App() {
           <details className="control-section" open>
             <summary>精确放置 <span>孔位操作</span></summary>
             <form onSubmit={submitPlacement} aria-label="精确放置">
-              <label htmlFor="part-kind">元件</label><select id="part-kind" value={placeKind} onChange={event => { const kind = event.target.value as ComponentKind; setPlaceKind(kind); setTool(kind); }}>{COMPONENT_KINDS.map(kind => <option key={kind} value={kind}>{COMPONENTS[kind].name}</option>)}</select>
+              <label htmlFor="part-kind">元件</label><select id="part-kind" value={placeKind} onChange={event => partTool(event.target.value as ComponentKind)}>{COMPONENT_KINDS.map(kind => <option key={kind} value={kind}>{COMPONENTS[kind].name}</option>)}</select>
               <div className="field-pair"><div><label htmlFor="anchor">锚点孔位</label><input id="anchor" value={anchor} onChange={event => setAnchor(event.target.value)} placeholder="例如 a10" autoComplete="off" /></div><div><label htmlFor="rotation">方向</label><select id="rotation" value={rotation} onChange={event => setRotation(Number(event.target.value) as Rotation)}><option value="0">向右 →</option><option value="90">向下 ↓</option><option value="180">向左 ←</option><option value="270">向上 ↑</option></select></div></div>
               <button className="secondary-button full-width" disabled={document.components.length >= MAX_COMPONENTS}>放置元件 <Icon name="arrow" size={15} /></button>
             </form>
@@ -365,6 +367,7 @@ export function App() {
         </section>
 
         <aside className="tutor-panel" aria-label="学习指导">
+          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
           <div className="tutor-heading"><span className="tutor-symbol"><Icon name="bulb" size={21} /></span><div><h2>一起想一想</h2><span>先观察，再找到答案</span></div><span className="reviewed-badge">课程提示</span></div>
           <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live="polite">
             {state.analysis?.complete ? <>

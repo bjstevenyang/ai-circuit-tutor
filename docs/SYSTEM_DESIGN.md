@@ -14,7 +14,7 @@ React、TypeScript strict、Vite、SVG 单包静态前端，无后端及新增�
 | circuit/solver、analysis | 有界直流求解、支持范围判断、逐元件读数、结构化诊断；analyzeCircuit |
 | editor/model | 物理校验、applyEdit 原子命令、最多 50 份文档历史 |
 | editor/Breadboard、PartShape、PartControls、drag | SVG、器件图形、控制面板、拖动及吸附 |
-| tutor | 诊断代码映射为经过审阅的三级教学文字 |
+| tutor | 诊断与三级提示；components.ts 的静态元件教学内容及 ComponentGuide 说明视图 |
 | storage | 加载、物理／引用校验、保存和错误反馈 |
 | app | 组合、运行／重新求解、提示进度、选择和声音生命周期 |
 
@@ -69,3 +69,14 @@ Breadboard 使用 Pointer Events 与指针捕获，从 getScreenCTM 的逆矩阵
 蜂鸣器始终有文字／图形状态。主动启用后才在用户手势内创建并恢复 AudioContext；工作时播放低增益 2 kHz 方波。停止工作、结果失效、关闭声音或卸载时清理振荡器；不可用时保留视觉反馈。不会联网，也不保存声音开关。
 
 SVG 孔位支持方向键与 Enter；按钮支持 Space／Enter 按住、松开与失焦释放。关键操作有表单与可见按钮，不依赖拖动或颜色。真实读屏、200% 缩放和学生理解仍需人工验证。未来 AI 接入须另行设计，不能覆盖确定性电气结论。
+
+
+## 元件说明与教学内容
+
+App 根据所选实例或当前放置工具派生说明器件类型；不另存一份元件选择，也不写入 CircuitDocument。点击元件盒、精确放置下拉选择及板上实例共用同一说明入口。无元件上下文时显示使用入口提示。
+
+`tutor/components.ts` 按 ComponentKind 声明八类教学内容：用途、逐脚含义、接入方法、通用示例、操作练习、常见错误、模型近似。`ComponentGuide` 在右侧以独立区域展示；引脚名称读取器件目录，实际孔位调用 getComponentPins 推导，避免复制旋转／安装规则。常见错误和模型说明可展开，切换类型时重置该展开区域。
+
+静态说明不消费分析结果，不请求 AI、不联网、不修改历史、存储、运行结果或提示层级；现有诊断／提示仍同时可用。通用接法示例与当前电路的证据诊断分开。教学参数以 CIRCUIT_MODEL 为准，真实器件原理不能被简化参数取代。
+
+内容核对参考：[SparkFun 电阻与 LED 入门](https://learn.sparkfun.com/tutorials/tinker-kit-circuit-guide/circuit-1-blink-an-led)、[按钮与开关](https://learn.sparkfun.com/tutorials/button-and-switch-basics)、[电位器与分压](https://learn.sparkfun.com/tutorials/voltage-dividers)、[二极管](https://learn.sparkfun.com/tutorials/diodes)、[Adafruit 光敏电阻](https://learn.adafruit.com/photocells/overview)。这些资料支持基础概念；本应用的四脚排列、蜂鸣器负载／阈值、旋钮方向和模拟光照范围仍是自己的教学约定。资料链接仅供文档查阅，应用运行不请求这些站点。

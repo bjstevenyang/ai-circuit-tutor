@@ -294,3 +294,25 @@ h2 { font-size: 13px; font-weight: 650; }
 .wire-end-handle:hover circle:nth-of-type(2), .wire-end-handle:focus-visible circle:nth-of-type(2) { stroke-width: 3; fill: #ffedb5; }
 .wire-item.reconnecting { opacity: .3; }
 .reconnect-form input { width: 125px; }
+.component-guide { padding: 15px 13px; margin-bottom: 20px; border: 1px solid #cbdcc5; border-radius: 8px; background: #f4f8ef; }
+.component-guide-heading { display: flex; align-items: center; gap: 9px; }
+.component-guide-heading > span { font-size: 10px; color: #526f45; border: 1px solid #cbdabe; border-radius: 4px; padding: 3px 5px; }
+.component-guide h2 { font-size: 15px; }
+.component-guide h3 { font-size: 12px; margin: 15px 0 6px; }
+.component-guide p, .component-pin-list { font-size: 11px; line-height: 1.8; color: #465e40; }
+.component-guide .component-about { margin-top: 10px; }
+.component-pin-list { margin: 0; }
+.component-pin-list > div { display: grid; grid-template-columns: 54px minmax(0,1fr); gap: 7px; padding: 5px 0; border-bottom: 1px solid #e0e8d9; }
+.component-pin-list dt { font-weight: 650; color: #345332; }
+.component-pin-list dd { margin: 0; }
+.component-pin-list code { display: block; font-size: 10px; font-weight: 400; }
+.component-example { margin: 10px 0; padding: 9px; border: 1px solid #dce5d2; background: #fffef7; border-radius: 5px; }
+.component-example > span { font-size: 10px; color: #5b7250; }
+.component-example pre { font-family: monospace; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; margin: 5px 0 0; }
+.component-try strong { display: block; font-size: 11px; }
+.component-guide details { margin-top: 12px; font-size: 11px; color: #4e6844; }
+.component-guide details p { margin-top: 8px; }
+.component-guide .component-model-note, .component-guide .component-guide-note { font-size: 10px; color: #596e50; }
+.component-guide .component-guide-note { margin-top: 12px; }
+.component-guide-prompt { font-size: 11px; line-height: 1.8; color: #526b48; border-bottom: 1px solid #e1e7d8; margin-bottom: 18px; padding-bottom: 14px; }
+@media (max-width: 1000px) { .component-guide, .component-guide-prompt { grid-column: 1 / -1; } }

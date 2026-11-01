@@ -14,10 +14,11 @@
 | 逐级教学提示 | [index.test.ts](../src/tutor/index.test.ts) | 19 |
 | 应用界面交互 | [App.test.tsx](../src/app/App.test.tsx) | 13 |
 | 新元件界面控制与声音 | [components.test.tsx](../src/app/components.test.tsx) | 7 |
-| **Vitest 合计** | **8 个测试文件** | **143** |
+| 元件用途与使用说明 | [ComponentGuide.test.tsx](../src/app/ComponentGuide.test.tsx) | 12 |
+| **Vitest 合计** | **9 个测试文件** | **155** |
 | 原有浏览器流程 | [lesson.spec.ts](../tests/e2e/lesson.spec.ts) | 7 |
-| 新元件及拖动／改接流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 12 |
-| **本次浏览器合计** | **仅 Chromium** | **19** |
+| 元件操作、改接与说明流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 14 |
+| **本次浏览器合计** | **仅 Chromium** | **21** |
 
 参数化测试按实际展开数量计数；一项用例可能包含多个断言。例如全部 420² 个孔位对的核对属于一个测试用例。Playwright 保留三种引擎配置，按用户最新要求本次仅执行 Chromium；配置数量不是通过数量。
 
@@ -257,7 +258,7 @@ v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试�
 
 ## 11. 已有导线改接回归（2026-10-31）
 
-在上一轮 134 项模块测试及 16 个浏览器场景上，本次新增 9 项模块／界面测试和 3 个 Chromium 场景；当前合计 143 项 Vitest、19 个 Chromium 场景。
+在上一轮 134 项模块测试及 16 个浏览器场景上，本次新增 9 项模块／界面测试和 3 个 Chromium 场景；该轮结束时为 143 项 Vitest、19 个 Chromium 场景。
 
 | 编号 | 文件 | 覆盖内容 |
 | --- | --- | --- |
@@ -272,3 +273,18 @@ v0.2 实际执行结果见 [测试计划](TEST_PLAN.md)。新增或删除测试�
 | B17 | tests/e2e/components.spec.ts | 缩放后拖动两端，样式与 ID 保持，结果失效、一步撤销、刷新恢复 |
 | B18 | tests/e2e/components.spec.ts | 占用／重合／空白回退，Esc 和 pointercancel 取消，原地改接无历史且结果保留 |
 | B19 | tests/e2e/components.spec.ts | 手柄键盘激活、表单选择起点、无效输入保留及正确改接 |
+
+
+## 12. 元件说明回归（2026-10-31）
+
+新增 12 项模块／界面测试及 2 个 Chromium 场景；当前合计 155 项 Vitest、21 个 Chromium 场景。实际执行结果见测试计划。
+
+| 编号 | 文件 | 覆盖内容 |
+| --- | --- | --- |
+| A21–A28 | src/app/ComponentGuide.test.tsx | 八类器件逐一从元件盒展示用途、引脚与接法，无需放置，不写存储、不产生历史 |
+| A29 | src/app/ComponentGuide.test.tsx | 已放置电位器的 A／W／B 对应旋转后的孔位，移动后同步更新 |
+| A30 | src/app/ComponentGuide.test.tsx | 常开按钮两组永久连接及可展开的虚拟封装说明 |
+| A31 | src/app/ComponentGuide.test.tsx | 查阅时保留运行诊断、已请求提示、文档和历史 |
+| A32 | src/app/ComponentGuide.test.tsx | 元件盒／精确放置切换后替换内容，不沿用旧实例孔位；选择孔位／导线后清除旧说明 |
+| B20 | tests/e2e/components.spec.ts | 键盘浏览八类元件说明、展开常见错误、查看示例，作品不改变；截图用于排版核对 |
+| B21 | tests/e2e/components.spec.ts | 实例按钮四脚显示真实孔位，查阅保留诊断／提示；精确选择与导线选择切换正确 |

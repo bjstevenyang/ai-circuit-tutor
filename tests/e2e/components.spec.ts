@@ -274,3 +274,44 @@ test('wire handles expose a keyboard alternative for editing either endpoint',as
   await expect(page.getByRole('button',{name:'导线 top+:1 到 b10',exact:true})).toBeAttached();
   await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
 });
+
+test('all eight parts explain their purpose and wiring from the tray without editing',async({page})=>{
+  await page.goto('/');
+  for(const [name,pins] of [['电阻',2],['红色 LED',2],['通断开关',2],['常开按钮',4],['电位器',3],['有源蜂鸣器',2],['二极管',2],['光敏电阻',2]] as [string,number][]){
+    const card=page.getByRole('button',{name:`添加${name}`,exact:true});
+    await card.focus();await page.keyboard.press('Enter');
+    const guide=page.getByRole('region',{name:`${name}使用说明`,exact:true});
+    await expect(guide).toBeVisible();
+    await expect(guide.getByRole('heading',{name:'怎么接入电路',exact:true})).toBeVisible();
+    await expect(guide.locator('dt')).toHaveCount(pins);
+    await expect(guide.getByLabel('示例连接路径')).toContainText('电池');
+    if(name==='常开按钮'){
+      await guide.getByText('常见错误与模型说明',{exact:true}).click();
+      await expect(guide.getByText(/封装约定/)).toBeVisible();
+      await guide.screenshot({path:'test-results/component-guide-button.png'});
+    }
+    if(name==='电位器')await guide.screenshot({path:'test-results/component-guide-potentiometer.png'});
+    await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+    expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBeNull();
+    await expect(page.locator('.component-item')).toHaveCount(0);
+  }
+});
+
+test('placed component guides show actual pins and preserve current diagnostics and requested hints',async({page})=>{
+  await open(page,switchedCircuit(true));await run(page);
+  await page.getByRole('button',{name:'揭开第一个线索'}).click();
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  await page.getByRole('button',{name:'常开按钮，锚点 e8',exact:true}).focus();await page.keyboard.press('Enter');
+  const guide=page.getByRole('region',{name:'常开按钮使用说明',exact:true});
+  await expect(guide.locator('dt')).toHaveText(['1e8','2e9','3f8','4f9']);
+  await expect(page.locator('.hint-list li')).toHaveCount(1);
+  await expect(page.getByRole('heading',{name:'开关或按钮当前未接通',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+  expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+  await page.getByLabel('元件',{exact:true}).selectOption('potentiometer');
+  await expect(guide).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'电位器使用说明',exact:true}).locator('code')).toHaveCount(0);
+  await page.getByRole('button',{name:'导线 battery:+ 到 b1',exact:true}).focus();await page.keyboard.press('Enter');
+  await expect(guide).toHaveCount(0);
+  await expect(page.locator('.hint-list li')).toHaveCount(1);
+});
