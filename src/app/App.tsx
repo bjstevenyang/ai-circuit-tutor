@@ -332,7 +332,7 @@ export function App() {
               else {setTool('inspect');run();}
             }}><Icon name={running?'stop':'play'} size={16} />{running?'停止运行':'运行电路'}</button>
           </div>
-          <div id="simulation-status" className={`simulation-status${running?' running':''}`} role="status" aria-label="仿真状态"><span className="status-dot" />{running?'运行中 · 点击开关切换通断，调整参数即时更新。':'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
+          <div id="simulation-status" className={`simulation-status${running?' running':''}`} role="status" aria-label="仿真状态"><span className="status-dot" />{running?'运行中 · 开关点击切换；黄色按钮按住接通。':'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}
@@ -340,6 +340,7 @@ export function App() {
               wiring={tool==='wire'} wireStyle={{color:wireColor,bend}}
               preview={preview} previewValid={previewValid}
               {...(state.analysis?.readings ? {readings: state.analysis.readings} : {})} pressedButtons={pressedButtons}
+              running={running} onButtonPress={pressButton}
               onEndpoint={endpointClick} onSelect={chooseItem} onActivate={activatePart} onHover={setHover}
               onWireReconnect={reconnectWire}
               onWireEndSelect={endpoint=>{setWireEnd(endpoint);setWireTarget(selectedWire?.[endpoint]??'');wireTargetRef.current?.focus();}}
@@ -364,7 +365,7 @@ export function App() {
                 <label>新锚点 <input aria-label="所选元件新锚点" value={moveAnchor} onChange={event => setMoveAnchor(event.target.value)} /></label>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: normalizeEndpoint(moveAnchor), rotation: selectedPart.rotation })}>移动元件</button>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: selectedPart.anchor, rotation: ((selectedPart.rotation + 90) % 360) as Rotation })}><Icon name="rotate" size={14} />旋转 90°</button>
-                <button className="small-button" onClick={() => { setTool('move'); setRotation(selectedPart.rotation); }}><Icon name="move" size={14} />点选移动</button><span className="drag-tip">也可拖动元件 · Esc 取消</span>
+                <button className="small-button" onClick={() => { setTool('move'); setRotation(selectedPart.rotation); }}><Icon name="move" size={14} />点选移动</button><span className="drag-tip">{selectedPart.kind==='button'?'黄色圆钮按住接通 · 拖动灰色外壳移动':'也可拖动元件 · Esc 取消'}</span>
               </div>
             </> : selectedWire ? <>
               <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><span className="delete-tip">拖动两端圆点改接 · Delete 删除</span></div>

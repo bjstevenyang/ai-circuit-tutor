@@ -83,7 +83,7 @@ App 根据所选实例或当前放置工具派生说明器件类型；不另存�
 
 `tutor/components.ts` 按 ComponentKind 声明八类教学内容：用途、逐脚含义、接入方法、通用示例、操作练习、常见错误、模型近似。`ComponentGuide` 在右侧以独立区域展示；引脚名称读取器件目录，实际孔位调用 getComponentPins 推导，避免复制旋转／安装规则。常见错误和模型说明可展开，切换类型时重置该展开区域。
 
-静态说明不消费分析结果，不请求 AI、不联网、不修改历史、存储、运行结果或提示层级；运行中直接点击开关本体是切换操作，会修改文档并重算，纯查阅可使用元件盒；现有诊断／提示仍同时可用。通用接法示例与当前电路的证据诊断分开。教学参数以 CIRCUIT_MODEL 为准，真实器件原理不能被简化参数取代。
+静态说明不消费分析结果，不请求 AI、不联网、不修改历史、存储、运行结果或提示层级；运行中开关本体点击会修改通断参数；黄色按钮的圆钮按压或本体按住 Enter／Space 会临时重新求解；这些都是电路控制操作，纯查阅可使用元件盒或按钮灰色外壳；现有诊断／提示仍同时可用。通用接法示例与当前电路的证据诊断分开。教学参数以 CIRCUIT_MODEL 为准，真实器件原理不能被简化参数取代。
 
 内容核对参考：[SparkFun 电阻与 LED 入门](https://learn.sparkfun.com/tutorials/tinker-kit-circuit-guide/circuit-1-blink-an-led)、[按钮与开关](https://learn.sparkfun.com/tutorials/button-and-switch-basics)、[电位器与分压](https://learn.sparkfun.com/tutorials/voltage-dividers)、[二极管](https://learn.sparkfun.com/tutorials/diodes)、[Adafruit 光敏电阻](https://learn.adafruit.com/photocells/overview)。这些资料支持基础概念；本应用的四脚排列、蜂鸣器负载／阈值、旋钮方向和模拟光照范围仍是自己的教学约定。资料链接仅供文档查阅，应用运行不请求这些站点。
 
@@ -99,3 +99,12 @@ A＋／K− 标记从实际引脚坐标绘制，放在旋转图形外以保持�
 开关区分选择和激活：指针按下仅选择并捕获；普通 click 或 Enter／Space 激活，运行中才提交一次 configure 并重新求解。拖动达到阈值后抑制后续 click，取消或移动不改变通断；忽略重复 keydown。未运行或停止时本体激活只选择。下方开关按钮仍可配置状态，通断持续使用既有历史和自动保存；aria-pressed 与文字描述表达闭合状态。
 
 音频实现参考 [MDN GainNode](https://developer.mozilla.org/en-US/docs/Web/API/GainNode) 和 [AudioParam.setTargetAtTime](https://developer.mozilla.org/en-US/docs/Web/API/AudioParam/setTargetAtTime)。音频幅度验证与人耳实际听感是不同检查，不能用 API 通过代替设备试听。
+
+
+## 黄色按钮本体按压
+
+原先 SVG 本体只选择／拖动元件，未调用按压回调；绿色开关的 click 测试没有覆盖黄色按钮。新增的本体指针按下浏览器测试在修复前失败、修复后通过。
+
+Breadboard 接收 running 与 onButtonPress，直接复用 App 的 pressButton 和既有 SimulationControls，不改变电气模型。黄色圆钮通过 data-button-cap 定义操作区域；运行时按住圆钮捕获指针并提交临时按压，松手（包括在圆钮外松手）释放。灰色外壳维持拖动路径，运行中按圆钮不会启动拖动；停止时可选中或拖动。按压图形与 aria-pressed 读取相同临时状态。
+
+局部 heldButton 仅记录当前指针或键盘手势。Enter／Space 按下接通、匹配的按键释放断开，忽略重复；失焦、Esc、pointercancel 和 lostpointercapture 释放。停止、编辑或窗口失焦清除父状态时同步丢弃局部手势，避免下一次按压被旧状态阻塞。按压不写入作品或历史，释放不锁定为保持开关。下方控件继续作为替代操作路径。

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ENDPOINTS, ENDPOINT_BY_ID, HOLES, getComponentPins, COMPONENTS, componentBody, supplyVoltageOf } from '../circuit';
 import { PartShape } from './PartShape';
 import { relativeLedBrightness, ledDescriptionId } from './ledAppearance';
@@ -22,6 +22,8 @@ type Props = {
   previewValid: boolean;
   readings?: Record<string, ComponentReading>;
   pressedButtons?: readonly string[];
+  running: boolean;
+  onButtonPress: (id: string, pressed: boolean) => void;
   onEndpoint: (id: string) => void;
   onSelect: (id: string) => void;
   onActivate: (id: string) => void;
@@ -41,6 +43,16 @@ export function Breadboard(props: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [focusHole, setFocusHole] = useState('a1');
   const drag = useRef<Drag | null>(null);
+  const heldButton = useRef<{id:string;pointerId?:number;key?:string}|null>(null);
+  useEffect(()=>{
+    if(heldButton.current&&(!props.running||!props.pressedButtons?.includes(heldButton.current.id)))heldButton.current=null;
+  },[props.running,props.pressedButtons]);
+  const releaseButton=()=>{
+    const held=heldButton.current;
+    if(!held)return;
+    heldButton.current=null;
+    props.onButtonPress(held.id,false);
+  };
   const suppressClick = useRef(false);
   const wireDrag = useRef<{from:string;pointerId:number;client:BoardPoint;moved:boolean;reconnect?:Reconnect}|null>(null);
   const [wireView,setWireView] = useState<WireView|null>(null);
@@ -97,6 +109,7 @@ export function Breadboard(props: Props) {
     props.onEndpoint(id);
   };
   const cancelDrag = () => {
+    releaseButton();
     if (drag.current?.moved) suppressClick.current = true;
     if (wireDrag.current?.moved) suppressClick.current = true;
     drag.current = null;
@@ -138,6 +151,7 @@ export function Breadboard(props: Props) {
     role="group" aria-label="交互式面包板，方向键移动孔位，回车选择"
     onPointerMove={event=>{if(wireDrag.current)updateWire(event);else updateDrag(event);}}
     onPointerUp={event => {
+      if(heldButton.current?.pointerId===event.pointerId){releaseButton();return;}
       const connection=wireDrag.current;
       if(connection && connection.pointerId===event.pointerId){
         const to=updateWire(event);
@@ -156,7 +170,7 @@ export function Breadboard(props: Props) {
       setDragView(null);
     }}
     onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag}
-    onKeyDown={event => { if (event.key === 'Escape' && (drag.current||wireDrag.current)) { event.preventDefault(); cancelDrag(); } }}
+    onKeyDown={event => { if (event.key === 'Escape' && (drag.current||wireDrag.current||heldButton.current)) { event.preventDefault(); cancelDrag(); } }}
     onPointerLeave={() => props.onHover(null)}>
     <defs>
       <filter id="board-shadow" x="-20%" y="-20%" width="140%" height="150%">
@@ -257,10 +271,15 @@ export function Breadboard(props: Props) {
     </g>)}
     {circuit.components.map(part => <g key={part.id} role="button" tabIndex={0} className={`component-item ${dragView?.part.id === part.id ? 'dragging' : ''}`}
       aria-label={`${part.kind === 'resistor' ? `电阻 ${part.resistance ?? 330} 欧姆` : COMPONENTS[part.kind].name}，锚点 ${part.anchor}`}
-      aria-describedby={part.kind==='led'?ledDescriptionId(part.id):part.kind==='switch'?`switch-state-${encodeURIComponent(part.id)}`:undefined}
-      aria-pressed={part.kind==='switch'?(part.closed??false):selected === part.id}
+      aria-describedby={part.kind==='led'?ledDescriptionId(part.id):['switch','button'].includes(part.kind)?`control-state-${encodeURIComponent(part.id)}`:undefined}
+      aria-pressed={part.kind==='switch'?(part.closed??false):part.kind==='button'?(props.pressedButtons?.includes(part.id)??false):selected === part.id}
       onPointerDown={event => {
-        if (event.button !== 0 || drag.current) return;
+        if (event.button !== 0 || drag.current || heldButton.current) return;
+        if(part.kind==='button'&&props.running&&event.target instanceof Element&&event.target.closest('[data-button-cap]')){
+          event.preventDefault();event.currentTarget.focus();event.currentTarget.setPointerCapture(event.pointerId);
+          heldButton.current={id:part.id,pointerId:event.pointerId};
+          props.onSelect(part.id);props.onButtonPress(part.id,true);return;
+        }
         const start = boardPoint(event);
         if (!start) return;
         event.preventDefault();
@@ -271,9 +290,17 @@ export function Breadboard(props: Props) {
         props.onSelect(part.id);
       }}
       onClick={event => { if (suppressClick.current && event.detail > 0) { suppressClick.current = false; return; } props.onActivate(part.id); }} onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if(!event.repeat)props.onActivate(part.id); }
-      }}>
-      {part.kind==='switch'&&<desc id={`switch-state-${encodeURIComponent(part.id)}`}>开关当前{part.closed?'已接通':'已断开'}。运行电路后，点击本体或按 Enter／Space 切换通断；拖动仅移动位置。</desc>}
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();if(event.repeat)return;
+          if(part.kind==='button'&&props.running){
+            if(!heldButton.current){heldButton.current={id:part.id,key:event.key};props.onSelect(part.id);props.onButtonPress(part.id,true);}
+          }else props.onActivate(part.id);
+        }
+      }} onKeyUp={event=>{
+        if(heldButton.current?.id===part.id&&heldButton.current.key===event.key){event.preventDefault();releaseButton();}
+      }} onBlur={()=>{if(heldButton.current?.id===part.id)releaseButton();}}>
+      {part.kind==='switch'&&<desc id={`control-state-${encodeURIComponent(part.id)}`}>开关当前{part.closed?'已接通':'已断开'}。运行中点击本体或按 Enter／Space 切换通断；拖动仅移动位置。</desc>}
+      {part.kind==='button'&&<desc id={`control-state-${encodeURIComponent(part.id)}`}>常开按钮当前{props.pressedButtons?.includes(part.id)?'已按下':'已释放'}。运行中按住黄色圆钮或 Enter／Space 接通，松开断开；拖动灰色外壳移动元件。</desc>}
       {selected === part.id && (() => {
         const body=componentBody(part);
         return body ? <rect x={body.cx-body.width/2-5} y={body.cy-body.height/2-5} width={body.width+10} height={body.height+10} rx="5" fill="#edbd62" opacity=".35" transform={`rotate(${part.rotation} ${body.cx} ${body.cy})`}/> : null;

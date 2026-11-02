@@ -55,6 +55,38 @@ describe('expanded experiment controls',()=>{
     expect(hold).toHaveAttribute('aria-pressed','false');
     expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
   });
+  it.each([' ','Enter'])('operates the board button directly with %j without persisting the press',key=>{
+    open(switchedCircuit(true));run();
+    const button=screen.getByRole('button',{name:'常开按钮，锚点 e8'}),saved=localStorage.getItem(STORAGE_KEY);
+    expect(button).toHaveAttribute('aria-pressed','false');
+    fireEvent.keyDown(button,{key});
+    expect(button).toHaveAttribute('aria-pressed','true');
+    expect(screen.getByRole('heading',{name:'亮起来了！'})).toBeInTheDocument();
+    fireEvent.keyDown(button,{key,repeat:true});
+    fireEvent.keyUp(button,{key:key===' '?'Enter':' '});
+    expect(button).toHaveAttribute('aria-pressed','true');
+    fireEvent.keyUp(button,{key});
+    expect(button).toHaveAttribute('aria-pressed','false');
+    fireEvent.keyDown(button,{key});fireEvent.blur(button);
+    expect(button).toHaveAttribute('aria-pressed','false');
+    expect(screen.queryByRole('heading',{name:'亮起来了！'})).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    expect(screen.getByRole('button',{name:'撤销'})).toBeDisabled();
+  });
+  it('clears a board-button hold on Stop and ignores activation while stopped',()=>{
+    open(switchedCircuit(true));run();
+    const button=screen.getByRole('button',{name:'常开按钮，锚点 e8'});
+    fireEvent.keyDown(button,{key:' '});
+    fireEvent.click(screen.getByRole('button',{name:'停止运行'}));
+    expect(button).toHaveAttribute('aria-pressed','false');
+    fireEvent.keyDown(button,{key:' '});
+    expect(button).toHaveAttribute('aria-pressed','false');
+    run();expect(screen.queryByRole('heading',{name:'亮起来了！'})).not.toBeInTheDocument();
+    fireEvent.keyDown(button,{key:' '});
+    expect(screen.getByRole('heading',{name:'亮起来了！'})).toBeInTheDocument();
+    fireEvent.keyDown(button,{key:'Escape'});
+    expect(button).toHaveAttribute('aria-pressed','false');
+  });
   it('recomputes LDR current and overcurrent as simulated light changes',()=>{
     const document={...createEmptyDocument(),components:[createComponent('ldr','a1',0,'ldr'),createComponent('led','c3',0,'led')],wires:[makeWire('battery:+','b1'),makeWire('d4','battery:-')]};
     open(document);run();

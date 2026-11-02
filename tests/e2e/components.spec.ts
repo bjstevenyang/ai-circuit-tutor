@@ -58,6 +58,63 @@ test('button holds with keyboard or pointer, releases on blur and does not persi
   await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
 });
 
+test('pressing the round button body conducts until pointer release',async({page})=>{
+  await open(page,switchedCircuit(true));await run(page);
+  const button=page.getByRole('button',{name:'常开按钮，锚点 e8',exact:true}),body=button.locator('[data-button-cap]');
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  await body.hover();await page.mouse.down();
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible({timeout:1500});
+  await expect(button).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('region',{name:'电路工作台'}).screenshot({path:'test-results/button-body-pressed.png'});
+  const box=(await body.boundingBox())!;
+  await page.mouse.move(box.x+box.width+60,box.y+box.height+50,{steps:5});
+  await expect(page.locator('.drag-preview')).toHaveCount(0);
+  await page.mouse.up();
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+});
+
+test('board button releases on keyboard, blur, cancellation and Stop without latching',async({page})=>{
+  await open(page,switchedCircuit(true));await run(page);
+  const button=page.getByRole('button',{name:'常开按钮，锚点 e8',exact:true});
+  for(const key of ['Space','Enter']){
+    await button.focus();await page.keyboard.down(key);await page.keyboard.down(key);
+    await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+    await page.keyboard.up(key);await expect(button).toHaveAttribute('aria-pressed','false');
+  }
+  await page.keyboard.down('Space');await page.keyboard.press('Escape');await page.keyboard.up('Space');
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await page.keyboard.down('Enter');await page.getByRole('button',{name:'停止运行',exact:true}).focus();await page.keyboard.up('Enter');
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await button.locator('[data-button-cap]').hover();await page.mouse.down();
+  await expect(button).toHaveAttribute('aria-pressed','true');
+  await button.dispatchEvent('pointercancel',{pointerId:1});await page.mouse.up();
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await button.focus();await page.keyboard.down('Space');
+  await page.getByRole('button',{name:'停止运行',exact:true}).click();await page.keyboard.up('Space');
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await button.locator('[data-button-cap]').click();
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await run(page);await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
+});
+
+test('dragging the button housing moves it without pressing the control',async({page})=>{
+  await open(page,switchedCircuit(true));await run(page);
+  const button=page.getByRole('button',{name:'常开按钮，锚点 e8',exact:true});
+  const housing=button.locator('.part-shape > g > rect');await housing.scrollIntoViewIfNeeded();
+  const box=(await housing.boundingBox())!,a=await boardPoint(page,0,0),b=await boardPoint(page,60,0);
+  await page.mouse.move(box.x+2,box.y+2);await page.mouse.down();
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await page.mouse.move(box.x+2+b.x-a.x,box.y+2+b.y-a.y,{steps:8});await page.mouse.up();
+  await expect(page.getByRole('button',{name:'常开按钮，锚点 e11',exact:true})).toHaveAttribute('aria-pressed','false');
+  await expect(page.getByRole('status',{name:'仿真状态'})).toContainText('已停止');
+  await page.getByRole('button',{name:'撤销',exact:true}).click();
+  await expect(button).toHaveAttribute('aria-pressed','false');
+  await expect(page.getByRole('button',{name:'撤销',exact:true})).toBeDisabled();
+});
+
 test('potentiometer controls a loaded divider and LDR light updates an overcurrent diagnosis',async({page})=>{
   const document={...createEmptyDocument(),components:[createComponent('potentiometer','a1',0,'pot'),createComponent('led','c2',0,'led')],wires:[makeWire('battery:+','b1'),makeWire('b3','battery:-')]};
   await open(page,document);await run(page);
@@ -300,7 +357,7 @@ test('placed component guides show actual pins and preserve current diagnostics 
   await open(page,switchedCircuit(true));await run(page);
   await page.getByRole('button',{name:'揭开第一个线索'}).click();
   const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
-  await page.getByRole('button',{name:'常开按钮，锚点 e8',exact:true}).focus();await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'常开按钮，锚点 e8',exact:true}).locator('.part-shape > g > rect').click({position:{x:2,y:2}});
   const guide=page.getByRole('region',{name:'常开按钮使用说明',exact:true});
   await expect(guide.locator('dt')).toHaveText(['1e8','2e9','3f8','4f9']);
   await expect(page.locator('.hint-list li')).toHaveCount(1);
