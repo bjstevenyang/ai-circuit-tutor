@@ -25,6 +25,7 @@ type AppState = {
 type Action =
   | { type: 'edit'; history: HistoryState; saveStatus: string }
   | { type: 'run'; result: AnalysisResult }
+  | { type: 'stop' }
   | { type: 'hint' }
   | { type: 'diagnostic'; index: number }
   | { type: 'save'; message: string }
@@ -46,6 +47,7 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'edit': return { ...state, history: action.history, analysis: null, hintLevel: 0, diagnosticIndex: 0, saveStatus: action.saveStatus };
     case 'run': return { ...state, analysis: action.result, hintLevel: 0, diagnosticIndex: 0 };
+    case 'stop': return { ...state, analysis: null, hintLevel: 0, diagnosticIndex: 0 };
     case 'hint': return { ...state, hintLevel: Math.min(3, state.hintLevel + 1) };
     case 'diagnostic': return { ...state, diagnosticIndex: action.index, hintLevel: 0 };
     case 'save': return { ...state, saveStatus: action.message };
@@ -53,10 +55,11 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-function Icon({ name, size = 18 }: { name: 'circuit' | 'play' | 'wire' | 'eye' | 'undo' | 'redo' | 'reset' | 'arrow' | 'check' | 'bulb' | 'move' | 'rotate' | 'trash'; size?: number }) {
+function Icon({ name, size = 18 }: { name: 'circuit' | 'play' | 'stop' | 'wire' | 'eye' | 'undo' | 'redo' | 'reset' | 'arrow' | 'check' | 'bulb' | 'move' | 'rotate' | 'trash'; size?: number }) {
   const paths: Record<typeof name, ReactNode> = {
     circuit: <><path d="M4 6h8v12h8M4 18h3M17 6h3" /><circle cx="20" cy="6" r="1.6" /><circle cx="4" cy="18" r="1.6" /></>,
     play: <path d="m9 5 10 7-10 7Z" fill="currentColor" strokeWidth="1" />,
+    stop: <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" strokeWidth="1" />,
     wire: <><path d="M5 6h6v12h8" /><circle cx="5" cy="6" r="2" /><circle cx="19" cy="18" r="2" /></>,
     eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
     undo: <><path d="m8 4-5 5 5 5M3 9h10a7 7 0 0 1 7 7v3" /></>,
@@ -114,6 +117,7 @@ export function App() {
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
   const voltage=supplyVoltageOf(document);
+  const running=state.analysis!==null;
   useEffect(() => {
     const release = () => {
       if (!pressedButtons.length) return;
@@ -322,8 +326,13 @@ export function App() {
               <button className="icon-button" aria-label="重置工作台" title="重置工作台（可撤销）" onClick={() => { if (edit({ type: 'reset' })) { setSelected(null); setSelectedEndpoint(null); setWireFrom(''); setTool('inspect'); } }}><Icon name="reset" /></button>
             </div>
             <button className="delete-button" title="删除选中对象（Delete / Backspace）" disabled={!selectedPart && !selectedWire} onClick={deleteSelected}><Icon name="trash" size={16} />删除</button>
-            <button className="run-button" onClick={() => { setError(''); setTool('inspect'); run(); }}><Icon name="play" size={16} />运行电路</button>
+            <button className={`run-button${running?' stop-button':''}`} aria-describedby="simulation-status" onClick={() => {
+              setError('');
+              if(running){setPressedButtons([]);dispatch({type:'stop'});}
+              else {setTool('inspect');run();}
+            }}><Icon name={running?'stop':'play'} size={16} />{running?'停止运行':'运行电路'}</button>
           </div>
+          <div id="simulation-status" className={`simulation-status${running?' running':''}`} role="status" aria-label="仿真状态"><span className="status-dot" />{running?'运行中 · 点击开关切换通断，调整参数即时更新。':'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}

@@ -51,7 +51,7 @@ test('button holds with keyboard or pointer, releases on blur and does not persi
   await page.mouse.up();
   await expect(page.getByRole('heading',{name:'亮起来了！'})).toHaveCount(0);
   await hold.focus();await page.keyboard.down('Space');
-  await page.getByRole('button',{name:'运行电路',exact:true}).focus();
+  await page.getByRole('button',{name:'停止运行',exact:true}).focus();
   await page.keyboard.up('Space');
   await expect(hold).toHaveAttribute('aria-pressed','false');
   await page.reload();await run(page);
@@ -444,4 +444,58 @@ test('a running switch toggles by body click or keyboard while dragging only mov
   await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+b.x-a.x,y+b.y-a.y,{steps:8});await page.mouse.up();
   await expect(page.getByRole('button',{name:'通断开关，锚点 a11',exact:true})).toHaveAttribute('aria-pressed','true');
   await page.reload();await expect(page.getByRole('button',{name:'通断开关，锚点 a11',exact:true})).toHaveAttribute('aria-pressed','true');
+});
+
+test('simulation starts and stops explicitly while retaining switch settings and wiring',async({page})=>{
+  await open(page,switchedCircuit());
+  const status=page.getByRole('status',{name:'仿真状态'}),control=page.getByRole('button',{name:'通断开关，锚点 a8',exact:true});
+  await expect(status).toContainText('已停止');
+  await run(page);await control.click();
+  await expect(status).toContainText('运行中');
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+  await page.getByRole('region',{name:'电路工作台'}).screenshot({path:'test-results/simulation-running.png'});
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  await page.getByRole('button',{name:'停止运行',exact:true}).click();
+  await expect(status).toContainText('已停止');
+  await expect(page.locator('.current-reading')).toHaveCount(0);
+  await expect(page.locator('[data-led-level]')).toHaveAttribute('data-led-level','unknown');
+  await expect(page.getByRole('button',{name:'运行电路',exact:true})).toBeFocused();
+  await control.click();await control.focus();await page.keyboard.press('Enter');
+  await expect(control).toHaveAttribute('aria-pressed','true');
+  expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+  await page.getByRole('button',{name:'运行电路',exact:true}).focus();await page.keyboard.press('Space');
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+  await control.focus();await page.keyboard.press('Enter');await expect(control).toHaveAttribute('aria-pressed','false');
+  await page.getByRole('button',{name:'停止运行',exact:true}).focus();await page.keyboard.press('Enter');
+  await expect(status).toContainText('已停止');
+  await run(page);await page.reload();
+  await expect(status).toContainText('已停止');
+  await expect(control).toHaveAttribute('aria-pressed','false');
+  await expect(page.getByRole('button',{name:'停止运行',exact:true})).toHaveCount(0);
+});
+
+test('stopping simulation silences actual browser audio and preserves session sound settings',async({page})=>{
+  await page.addInitScript(()=>{
+    const original=AudioContext.prototype.createOscillator,counts={started:0,stopped:0};
+    Object.defineProperty(window,'testSimulationAudio',{value:counts});
+    AudioContext.prototype.createOscillator=function(){
+      const node=original.call(this),start=node.start.bind(node),stop=node.stop.bind(node);
+      node.start=(...args:Parameters<OscillatorNode['start']>)=>{counts.started++;start(...args);};
+      node.stop=(...args:Parameters<OscillatorNode['stop']>)=>{counts.stopped++;stop(...args);};
+      return node;
+    };
+  });
+  await open(page,{...createEmptyDocument(),components:[createComponent('buzzer','a1',0,'buzz')],wires:[makeWire('battery:+','b1'),makeWire('b3','battery:-')]});
+  await run(page);await page.getByRole('button',{name:'启用蜂鸣器声音'}).click();
+  const counts=()=>page.evaluate(()=>(window as unknown as {testSimulationAudio:{started:number;stopped:number}}).testSimulationAudio);
+  await expect.poll(counts).toEqual({started:1,stopped:0});
+  const saved=await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  await page.getByRole('button',{name:'停止运行',exact:true}).click();
+  await expect.poll(counts).toEqual({started:1,stopped:1});
+  await expect(page.getByRole('button',{name:'关闭声音'})).toHaveAttribute('aria-pressed','true');
+  expect(await page.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).toBe(saved);
+  await page.getByLabel('电池预设电压').selectOption('3');
+  expect(await counts()).toEqual({started:1,stopped:1});
+  await run(page);await expect.poll(counts).toEqual({started:2,stopped:1});
+  await expect(page.getByRole('heading',{name:'蜂鸣器工作了！'})).toBeVisible();
 });

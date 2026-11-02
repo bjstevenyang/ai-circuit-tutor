@@ -19,10 +19,11 @@
 | LED 显示、极性与参数解析 | [appearance.test.tsx](../src/editor/appearance.test.tsx) | 27 |
 | 参数应用与亮度交互 | [Parameters.test.tsx](../src/app/Parameters.test.tsx) | 8 |
 | 蜂鸣器增益与音量控制 | [useBuzzerSound.test.tsx](../src/app/useBuzzerSound.test.tsx) | 2 |
-| **Vitest 合计** | **13 个测试文件** | **225** |
+| 运行／停止生命周期 | [Simulation.test.tsx](../src/app/Simulation.test.tsx) | 6 |
+| **Vitest 合计** | **14 个测试文件** | **231** |
 | 原有浏览器流程 | [lesson.spec.ts](../tests/e2e/lesson.spec.ts) | 7 |
-| 元件、参数、改接与开关流程 | [components.spec.ts](../tests/e2e/components.spec.ts) | 21 |
-| **本次浏览器合计** | **仅 Chromium** | **28** |
+| 元件、参数、改接与仿真控制 | [components.spec.ts](../tests/e2e/components.spec.ts) | 23 |
+| **本次浏览器合计** | **仅 Chromium** | **30** |
 
 参数化测试按实际展开数量计数；一项用例可能包含多个断言。例如全部 420² 个孔位对的核对属于一个测试用例。Playwright 保留三种引擎配置，按用户最新要求本次仅执行 Chromium；配置数量不是通过数量。
 
@@ -296,7 +297,7 @@ npm run test:e2e -- --project=chromium --grep 'deletion works' --workers=1
 
 ## 13. v0.3 参数、LED、音量及开关操作（2026-11-01）
 
-在上一轮 155 项 Vitest／21 个 Chromium 场景上，新增 **70 项 Vitest 和 7 个浏览器场景**；当前合计 **225 项／28 个**。参数化用例按实际展开计数。既有 A13、B09 也改为操作开关本体，覆盖运行后直接切换。
+在上一轮 155 项 Vitest／21 个 Chromium 场景上，新增 **70 项 Vitest 和 7 个浏览器场景**；该轮结束时合计 **225 项／28 个**。参数化用例按实际展开计数。既有 A13、B09 也改为操作开关本体，覆盖运行后直接切换。
 
 ### 电气参数：C57–C82（26 项）
 
@@ -370,3 +371,20 @@ npm run test:e2e -- --project=chromium --grep 'deletion works' --workers=1
 | B28 | 运行前点击仅选择；运行后点击／Space／Enter 切换，重复按键及拖动不误切换，状态刷新恢复 |
 
 音频 API 检查不等于设备实际响度验证；读屏、学生理解和真实设备试听仍见测试计划中的待办。
+
+
+## 14. 运行／停止操作回归（2026-11-01）
+
+新增 **6 项界面测试和 2 个 Chromium 场景**；当前合计 **231 项 Vitest、30 个 Chromium 场景**。验收来源为 AC-17，同时回归 AC-06／07／11／12。
+
+源码：[Simulation.test.tsx](../src/app/Simulation.test.tsx) 和 [components.spec.ts](../tests/e2e/components.spec.ts)。
+
+| 编号 | 检查内容 |
+| --- | --- |
+| A43 | 初始停止、运行／停止／恢复；停止清除 LED 光效与读数，不改变存档和历史 |
+| A44 | 运行中开关本体点击／键盘控制，停止时只选择；保持开关位置，撤销退出运行 |
+| A45–A46 | 故障、不支持结果均可停止，诊断和已请求提示清除 |
+| A47 | 停止释放瞬时按钮；重新运行不会沿用按压，不改存档和历史 |
+| A48 | 停止清理蜂鸣器振荡器；保留声音许可／音量，停止时修改电压不发声，恢复运行才播放 |
+| B29 | 实际浏览器鼠标／键盘运行停止、开关控制、停止保留作品、恢复计算和刷新保持停止；截图核对状态栏 |
+| B30 | 实际 AudioContext 启动／停止振荡器；停止不保存作品，参数修改不恢复声音，重新运行保留声音许可 |

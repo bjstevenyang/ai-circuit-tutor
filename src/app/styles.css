@@ -98,6 +98,11 @@ h2 { font-size: 13px; font-weight: 650; }
 .history-tools { gap: 1px; margin-left: auto; }
 .toolbar-divider { width: 1px; height: 16px; background: #e1e6d8; margin: 0 5px; }
 .run-button { border: 1px solid #284a36; border-radius: 6px; padding: 9px 13px; background: #2b4f3b; color: #f1f6e8; display: inline-flex; align-items: center; gap: 7px; font-size: 12px; white-space: nowrap; font-weight: 500; }
+.run-button.stop-button { background: #92513d; border-color: #80432f; }
+.simulation-status { display: flex; align-items: center; gap: 7px; padding: 10px 16px; font-size: 11px; line-height: 1.7; color: #65705f; background: #f4f5ef; border-bottom: 1px solid #e3e7da; }
+.simulation-status .status-dot { background: #8b9483; }
+.simulation-status.running { color: #35583a; background: #edf4e4; }
+.simulation-status.running .status-dot { background: #56804a; }
 .tool-message { min-height: 43px; display: flex; align-items: center; gap: 6px; padding: 10px 16px; font-size: 11px; color: #657653; border-bottom: 1px solid #e3e7da; }
 .tool-message-dot { width: 4px; height: 4px; border-radius: 50%; background: #93a47f; }
 .zoom-control { display: flex; align-items: center; gap: 7px; margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding-left: 6px; }

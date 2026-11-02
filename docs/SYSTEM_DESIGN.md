@@ -10,7 +10,7 @@ React、TypeScript strict、Vite、SVG 单包静态前端，无后端及新增�
 | --- | --- |
 | circuit/types、catalog、board | 文档类型、器件默认值／安装定义、稳定孔位、引脚与本体推导 |
 | circuit/network | 板／导线／闭合触点的网络合并；inspectConnectivity |
-| circuit/validation | readCircuitDocument 运行时结构校验和 v1 → v2 规范化 |
+| circuit/validation | readCircuitDocument 运行时结构校验和 v1／v2 → v3 规范化 |
 | circuit/solver、analysis | 有界直流求解、支持范围判断、逐元件读数、结构化诊断；analyzeCircuit |
 | editor/model | 物理校验、applyEdit 原子命令、最多 50 份文档历史 |
 | editor/Breadboard、PartShape、PartControls、drag | SVG、器件图形、控制面板、拖动及吸附 |
@@ -33,10 +33,16 @@ AnalysisResult 为派生状态：status、可用的电池总电流、逐实例 r
 1. 放置、配置、移动、删除或接线产生纯命令。applyEdit 校验完整候选文档，成功后提交；失败保留旧状态和输入。
 2. 文档变化提交历史并尝试保存；无变化不新增历史。参数滑块每次数值变化形成一次可撤销配置。
 3. 拓扑编辑、导线外观编辑、重置、撤销／重做清除分析和提示，释放按钮。首轮必须点击“运行”。
-4. 已运行时应用阻值／电池电压、切换开关、旋钮或光照会对新文档重新求解；按钮按下／释放以临时 controls 重新求解。每次求解重置提示进度，避免引用旧证据。
+4. 运行中应用阻值／电池电压、切换开关、旋钮或光照会对新文档重新求解；按钮按下／释放以临时 controls 重新求解。每次求解重置提示进度，避免引用旧证据。
 5. 诊断按固定优先级显示；用户每次请求一层提示，修复仍由学生执行。
 
 删除按钮与 Delete／Backspace 共用命令。文本框、下拉框、可编辑区域、组合输入及修饰键操作不删除选中对象。删元件只释放其插孔，孔位上的导线保持不动。
+
+## 运行与停止
+
+当前为按事件求解的直流模型，没有持续计时循环。`analysis !== null` 表示运行会话有效，包括正常、故障和不支持结果；不新增重复的 running 状态。运行按钮显示“停止运行”，再次激活派发 stop：清空分析、诊断选择和提示进度，释放 pressedButtons。分析消失后 LED 回到未计算外观，声音 hook 的 active 变为 false 并清理振荡器。作品、保存状态、历史、选择、保持开关位置及音量／声音许可保留。
+
+停止时参数编辑只保存作品、不求解；板上开关激活只选择。重新运行用当前文档及已释放的按钮重新分析；若用户本会话已允许声音且蜂鸣器工作，会恢复声音。刷新不恢复运行状态。拓扑编辑或撤销使分析失效时，同样显示“已停止”。运行／停止都不写入 CircuitDocument 或追加撤销记录。
 
 ## 拖动
 
@@ -77,7 +83,7 @@ App 根据所选实例或当前放置工具派生说明器件类型；不另存�
 
 `tutor/components.ts` 按 ComponentKind 声明八类教学内容：用途、逐脚含义、接入方法、通用示例、操作练习、常见错误、模型近似。`ComponentGuide` 在右侧以独立区域展示；引脚名称读取器件目录，实际孔位调用 getComponentPins 推导，避免复制旋转／安装规则。常见错误和模型说明可展开，切换类型时重置该展开区域。
 
-静态说明不消费分析结果，不请求 AI、不联网、不修改历史、存储、运行结果或提示层级；运行后直接点击开关本体是切换操作，会修改文档并重算，纯查阅可使用元件盒；现有诊断／提示仍同时可用。通用接法示例与当前电路的证据诊断分开。教学参数以 CIRCUIT_MODEL 为准，真实器件原理不能被简化参数取代。
+静态说明不消费分析结果，不请求 AI、不联网、不修改历史、存储、运行结果或提示层级；运行中直接点击开关本体是切换操作，会修改文档并重算，纯查阅可使用元件盒；现有诊断／提示仍同时可用。通用接法示例与当前电路的证据诊断分开。教学参数以 CIRCUIT_MODEL 为准，真实器件原理不能被简化参数取代。
 
 内容核对参考：[SparkFun 电阻与 LED 入门](https://learn.sparkfun.com/tutorials/tinker-kit-circuit-guide/circuit-1-blink-an-led)、[按钮与开关](https://learn.sparkfun.com/tutorials/button-and-switch-basics)、[电位器与分压](https://learn.sparkfun.com/tutorials/voltage-dividers)、[二极管](https://learn.sparkfun.com/tutorials/diodes)、[Adafruit 光敏电阻](https://learn.adafruit.com/photocells/overview)。这些资料支持基础概念；本应用的四脚排列、蜂鸣器负载／阈值、旋钮方向和模拟光照范围仍是自己的教学约定。资料链接仅供文档查阅，应用运行不请求这些站点。
 
@@ -90,6 +96,6 @@ App 根据所选实例或当前放置工具派生说明器件类型；不另存�
 
 A＋／K− 标记从实际引脚坐标绘制，放在旋转图形外以保持文字正向；K 侧使用平边与方形脚标记，A 为圆形脚标记。预览、选中信息和读屏说明共用 getComponentPins；未求解明确显示未计算。符号描述器件身份，不赋予孔位电压。
 
-开关区分选择和激活：指针按下仅选择并捕获；普通 click 或 Enter／Space 激活，运行后才提交一次 configure 并重新求解。拖动达到阈值后抑制后续 click，取消或移动不改变通断；忽略重复 keydown。首次运行前本体激活只选择。下方开关按钮仍可配置状态，通断持续使用既有历史和自动保存；aria-pressed 与文字描述表达闭合状态。
+开关区分选择和激活：指针按下仅选择并捕获；普通 click 或 Enter／Space 激活，运行中才提交一次 configure 并重新求解。拖动达到阈值后抑制后续 click，取消或移动不改变通断；忽略重复 keydown。未运行或停止时本体激活只选择。下方开关按钮仍可配置状态，通断持续使用既有历史和自动保存；aria-pressed 与文字描述表达闭合状态。
 
 音频实现参考 [MDN GainNode](https://developer.mozilla.org/en-US/docs/Web/API/GainNode) 和 [AudioParam.setTargetAtTime](https://developer.mozilla.org/en-US/docs/Web/API/AudioParam/setTargetAtTime)。音频幅度验证与人耳实际听感是不同检查，不能用 API 通过代替设备试听。
