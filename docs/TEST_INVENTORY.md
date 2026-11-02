@@ -14,16 +14,16 @@
 | 逐级教学提示 | [index.test.ts](../src/tutor/index.test.ts) | 20 |
 | 应用界面交互 | [App.test.tsx](../src/app/App.test.tsx) | 13 |
 | 新元件界面控制与声音 | [components.test.tsx](../src/app/components.test.tsx) | 10 |
-| 元件用途与使用说明 | [ComponentGuide.test.tsx](../src/app/ComponentGuide.test.tsx) | 12 |
+| 元件用途与使用说明 | [ComponentGuide.test.tsx](../src/app/ComponentGuide.test.tsx) | 13 |
 | 可调电源与自定义电阻 | [parameters.test.ts](../src/circuit/parameters.test.ts) | 26 |
-| LED 显示、极性与参数解析 | [appearance.test.tsx](../src/editor/appearance.test.tsx) | 27 |
+| LED、电位器引脚显示与参数解析 | [appearance.test.tsx](../src/editor/appearance.test.tsx) | 32 |
 | 参数应用与亮度交互 | [Parameters.test.tsx](../src/app/Parameters.test.tsx) | 8 |
 | 蜂鸣器增益与音量控制 | [useBuzzerSound.test.tsx](../src/app/useBuzzerSound.test.tsx) | 2 |
 | 运行／停止生命周期 | [Simulation.test.tsx](../src/app/Simulation.test.tsx) | 6 |
-| **Vitest 合计** | **14 个测试文件** | **234** |
+| **Vitest 合计** | **14 个测试文件** | **240** |
 | 原有浏览器流程 | [lesson.spec.ts](../tests/e2e/lesson.spec.ts) | 7 |
-| 元件、参数、改接与仿真控制 | [components.spec.ts](../tests/e2e/components.spec.ts) | 26 |
-| **本次浏览器合计** | **仅 Chromium** | **33** |
+| 元件、参数、改接与仿真控制 | [components.spec.ts](../tests/e2e/components.spec.ts) | 28 |
+| **本次浏览器合计** | **仅 Chromium** | **35** |
 
 参数化测试按实际展开数量计数；一项用例可能包含多个断言。例如全部 420² 个孔位对的核对属于一个测试用例。Playwright 保留三种引擎配置，按用户最新要求本次仅执行 Chromium；配置数量不是通过数量。
 
@@ -394,7 +394,7 @@ npm run test:e2e -- --project=chromium --grep 'deletion works' --workers=1
 
 用户明确指出是黄色四脚常开按钮。原先绿色开关本体已能操作，但黄色按钮仅选中／拖动，按压只存在于下方控件。新增复现测试直接按下板上圆钮，在修复前因 LED 未亮而失败；接入临时按压回调后通过。
 
-新增 **3 项界面测试和 3 个 Chromium 场景**；当前合计 **234 项 Vitest、33 个 Chromium 场景**。对应 AC-18，并回归 AC-07／09／11／13／17。
+新增 **3 项界面测试和 3 个 Chromium 场景**；该轮结束时合计 **234 项 Vitest、33 个 Chromium 场景**。对应 AC-18，并回归 AC-07／09／11／13／17。
 
 | 编号 | 源码 | 检查内容 |
 | --- | --- | --- |
@@ -405,3 +405,16 @@ npm run test:e2e -- --project=chromium --grep 'deletion works' --workers=1
 | B33 | [components.spec.ts](../tests/e2e/components.spec.ts) | 运行中拖动灰色外壳移动、不按下；单步撤销恢复 |
 
 B21 的只读说明流程改为点击按钮灰色外壳；运行中本体 Enter／Space 已明确属于按压控制，不能继续把它当作纯阅读步骤。八类说明的键盘阅读仍由元件盒流程 B20 覆盖。
+
+
+## 16. 电位器引脚与接法说明（2026-11-01）
+
+新增 **6 项模块／界面测试和 2 个 Chromium 场景**；当前合计 **240 项 Vitest、35 个 Chromium 场景**。对应 AC-19。
+
+| 编号 | 源码 | 检查内容 |
+| --- | --- | --- |
+| E63–E66 | [appearance.test.tsx](../src/editor/appearance.test.tsx) | 四个方向的独立 A／W／B 标签、预期实际孔位、正向文字和可访问说明 |
+| E67 | [appearance.test.tsx](../src/editor/appearance.test.tsx) | 放置预览保留逐脚标记，不创建重复描述 ID |
+| A52 | [ComponentGuide.test.tsx](../src/app/ComponentGuide.test.tsx) | 接线面板的孔位、无固定正负、滑臂及同组空孔说明；查阅不保存／追加历史，旋钮改变两段阻值，旋转和移动同步孔位 |
+| B34 | [components.spec.ts](../tests/e2e/components.spec.ts) | 四方向标记、实际孔位、可访问描述及预览，截图核对 |
+| B35 | [components.spec.ts](../tests/e2e/components.spec.ts) | 从空板通过表单搭建 A–W 调光电路，B 留空、导线接同组空孔；运行后旋钮端点改变亮度、内部电阻段同步，并检查接线指导截图 |

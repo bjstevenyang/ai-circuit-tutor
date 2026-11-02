@@ -342,3 +342,14 @@ h2 { font-size: 13px; font-weight: 650; }
 .volume-control input { width: 95px; padding: 0; }
 .volume-control output { font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { .led-light, .led-glow { transition: none; } }
+.pot-pin-label { font-size: 13px; font-weight: 750; fill: currentColor; paint-order: stroke; stroke: #fafaf5; stroke-width: 3px; stroke-linejoin: round; }
+.pot-connection-guide { flex-basis: 100%; padding: 12px; border: 1px solid #cddde2; border-radius: 6px; background: #f3f8fa; font-size: 12px; line-height: 1.75; }
+.pot-connection-guide p { margin: 7px 0 0; }
+.pot-pin-list { display: flex; gap: 14px; flex-wrap: wrap; margin: 9px 0; }
+.pot-pin-list dt { font-weight: 750; color: #2b4e5d; }
+.pot-pin-list dd { margin: 0; color: #566b70; font-size: 11px; }
+.pot-connection-guide .pot-segments { font-variant-numeric: tabular-nums; }
+.pot-wiring-example { margin: 10px 0; padding: 10px; background: #fffef8; border: 1px solid #dce3d8; border-radius: 5px; }
+.pot-wiring-example code { display: block; margin-top: 5px; white-space: normal; overflow-wrap: anywhere; font-size: 11px; }
+.pot-connection-guide summary { cursor: pointer; font-weight: 650; }
+.pot-connection-guide .pot-wiring-note { color: #56665a; font-size: 11px; }

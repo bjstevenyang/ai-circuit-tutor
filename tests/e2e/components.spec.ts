@@ -556,3 +556,47 @@ test('stopping simulation silences actual browser audio and preserves session so
   await run(page);await expect.poll(counts).toEqual({started:2,stopped:1});
   await expect(page.getByRole('heading',{name:'蜂鸣器工作了！'})).toBeVisible();
 });
+
+test('potentiometer pins remain individually readable and follow actual holes in every rotation',async({page})=>{
+  await page.goto('/');await place(page,'potentiometer','c13');
+  const part=page.getByRole('button',{name:'电位器，锚点 c13',exact:true});
+  const panel=page.getByRole('region',{name:'电位器引脚与接线'});
+  for(const [index,holes] of [['c13','c14','c15'],['c13','d13','e13'],['c13','c12','c11'],['c13','b13','a13']].entries()){
+    await expect(part.locator('.pot-pin-label')).toHaveText(['A','W','B']);
+    await expect(part).toHaveAccessibleDescription(new RegExp(`A 电阻端在 ${holes[0]}，W 滑臂在 ${holes[1]}，B 电阻端在 ${holes[2]}`));
+    await expect(panel.locator('dt')).toHaveText(holes.map((hole,i)=>`${['A','W','B'][i]} · ${hole}`));
+    await part.screenshot({path:`test-results/pot-pins-${index*90}.png`});
+    await page.getByRole('button',{name:'旋转 90°',exact:true}).click();
+  }
+  await page.getByRole('button',{name:'添加电位器',exact:true}).click();
+  await page.getByRole('button',{name:'孔位 c20，空闲',exact:true}).hover();
+  await expect(page.locator('.preview.valid .pot-pin-label')).toHaveText(['A','W','B']);
+});
+
+test('potentiometer wiring instructions can build the A-W LED dimming example from an empty board',async({page})=>{
+  await page.goto('/');
+  await place(page,'resistor','a1');await place(page,'potentiometer','c4');await place(page,'led','f10');
+  await page.getByRole('button',{name:'电位器，锚点 c4',exact:true}).click();
+  const panel=page.getByRole('region',{name:'电位器引脚与接线'});
+  await expect(panel.locator('dt')).toHaveText(['A · c4','W · c5','B · c6']);
+  await expect(panel).toContainText('同一五孔组的其他空孔');
+  await expect(panel).toContainText('B（c6）不接');
+  await panel.getByText('三脚分压怎么接？',{exact:true}).click();
+  await expect(panel.getByText(/W 接负载/)).toBeVisible();
+  for(const [from,to] of [['battery:+','b1'],['e5','g10'],['g11','battery:-']]){
+    await page.getByLabel('导线起点').fill(from!);await page.getByLabel('导线终点').fill(to!);
+    await page.getByRole('button',{name:'添加导线',exact:true}).click();
+  }
+  await run(page);
+  await expect(page.getByRole('heading',{name:'亮起来了！'})).toBeVisible();
+  await page.getByRole('button',{name:'电位器，锚点 c4',exact:true}).click();
+  await page.getByRole('region',{name:'电路工作台'}).screenshot({path:'test-results/pot-wiring-guide.png'});
+  const level=()=>page.getByRole('button',{name:'红色 LED，锚点 f10',exact:true}).locator('[data-led-level]').getAttribute('data-led-level');
+  const original=Number(await level());
+  await page.getByLabel('旋钮位置').fill('0');
+  expect(Number(await level())).toBeGreaterThan(original);
+  await expect(page.getByLabel('电位器内部电阻段')).toContainText('A–W：0 Ω');
+  await page.getByLabel('旋钮位置').fill('100');
+  expect(Number(await level())).toBeLessThan(original);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

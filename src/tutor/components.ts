@@ -51,7 +51,7 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
   potentiometer: {
     about: '电位器是可以用旋钮调整的电阻。中间滑动端 W 把总电阻分成两段，常用来取得可调电压。',
     pins: ['电阻轨道一端 A', '滑动端 W，从这里取可调输出', '电阻轨道另一端 B'],
-    connection: '练习分压时，A 接电池正极、B 接负极，W 是输出。想接 LED 时，从 W 经过一只限流电阻和正向 LED 接回 B。',
+    connection: 'A、B 是电阻轨两端，W 是滑臂，没有固定正负极。LED 调光可用 A 与 W 串入支路，B 留空并保留固定限流电阻；练习分压可把 A 接正极方向、B 接负极方向，W 接负载。接线用引脚同组的其他空孔。',
     example: '电池＋ → A〔电位器〕B → 电池−\nW → 电阻 → LED → 电池−',
     tryIt: '选中电位器调整“旋钮位置”。先运行后再调节，比较 LED 状态和电流；接上负载后输出会受负载影响。',
     commonMistake: '只连接 A、B 时总阻值不会随旋钮变化；把 W 当作固定中点，或把零阻段跨在电池两极，可能得到错误结果或短路。',

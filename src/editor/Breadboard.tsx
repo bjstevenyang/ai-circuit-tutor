@@ -271,7 +271,7 @@ export function Breadboard(props: Props) {
     </g>)}
     {circuit.components.map(part => <g key={part.id} role="button" tabIndex={0} className={`component-item ${dragView?.part.id === part.id ? 'dragging' : ''}`}
       aria-label={`${part.kind === 'resistor' ? `电阻 ${part.resistance ?? 330} 欧姆` : COMPONENTS[part.kind].name}，锚点 ${part.anchor}`}
-      aria-describedby={part.kind==='led'?ledDescriptionId(part.id):['switch','button'].includes(part.kind)?`control-state-${encodeURIComponent(part.id)}`:undefined}
+      aria-describedby={part.kind==='led'?ledDescriptionId(part.id):part.kind==='potentiometer'?`pot-pins-${encodeURIComponent(part.id)}`:['switch','button'].includes(part.kind)?`control-state-${encodeURIComponent(part.id)}`:undefined}
       aria-pressed={part.kind==='switch'?(part.closed??false):part.kind==='button'?(props.pressedButtons?.includes(part.id)??false):selected === part.id}
       onPointerDown={event => {
         if (event.button !== 0 || drag.current || heldButton.current) return;

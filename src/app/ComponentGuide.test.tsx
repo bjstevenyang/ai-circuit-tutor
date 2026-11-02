@@ -50,6 +50,29 @@ describe('component knowledge at the point of use',()=>{
     expect([...guide.querySelectorAll('dt')].map(pin=>pin.textContent)).toEqual(['Af20','Wg20','Bh20']);
   });
 
+  it('explains actual potentiometer connections and synchronizes segment values, rotation and movement',()=>{
+    const document={...createEmptyDocument(),components:[createComponent('potentiometer','c13',0,'pot')]};
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(document));
+    render(<App/>);
+    const saved=localStorage.getItem(STORAGE_KEY);
+    fireEvent.click(screen.getByRole('button',{name:'电位器，锚点 c13'}));
+    const panel=screen.getByRole('region',{name:'电位器引脚与接线'});
+    expect([...panel.querySelectorAll('dt')].map(pin=>pin.textContent)).toEqual(['A · c13','W · c14','B · c15']);
+    expect(panel).toHaveTextContent('没有固定正负极');
+    expect(panel).toHaveTextContent('LED 调光：用 A 和 W，B 留空');
+    expect(panel).toHaveTextContent('同一五孔组的其他空孔');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    expect(screen.getByRole('button',{name:'撤销'})).toBeDisabled();
+    expect(screen.getByLabelText('电位器内部电阻段')).toHaveTextContent('A–W：5,000 Ω · W–B：5,000 Ω');
+    fireEvent.change(screen.getByLabelText('旋钮位置'),{target:{value:'25'}});
+    expect(screen.getByLabelText('电位器内部电阻段')).toHaveTextContent('A–W：2,500 Ω · W–B：7,500 Ω');
+    fireEvent.click(screen.getByRole('button',{name:'旋转 90°'}));
+    expect([...panel.querySelectorAll('dt')].map(pin=>pin.textContent)).toEqual(['A · c13','W · d13','B · e13']);
+    fireEvent.change(screen.getByLabelText('所选元件新锚点'),{target:{value:'f13'}});
+    fireEvent.click(screen.getByRole('button',{name:'移动元件'}));
+    expect([...panel.querySelectorAll('dt')].map(pin=>pin.textContent)).toEqual(['A · f13','W · g13','B · h13']);
+  });
+
   it('explains the two button groups and distinguishes its virtual footprint',()=>{
     render(<App/>);
     fireEvent.change(screen.getByLabelText('元件',{exact:true}),{target:{value:'button'}});

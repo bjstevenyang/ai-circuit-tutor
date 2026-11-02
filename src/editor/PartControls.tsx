@@ -7,8 +7,18 @@ type Settings=Pick<ComponentInstance,'resistance'|'closed'|'position'|'light'>;
 export function PartControls({part,reading,pressed,onConfigure,onPress}:{part:ComponentInstance;reading?:ComponentReading;pressed:boolean;onConfigure:(settings:Settings)=>void;onPress:(pressed:boolean)=>void}) {
   const pins=getComponentPins(part),brightness=relativeLedBrightness(reading);
   const presets=[100,330,1000,4700,10000,100000];
+  const potTotal=part.resistance??10000,potPosition=part.position??50;
   return <>
     {part.kind==='led'&&pins&&<div className="led-connection-guide" aria-label="LED 极性与接点"><strong>LED 接线方向</strong><span><b>A＋ 阳极 · {pins[0]}</b>朝向电源正极，支路串入限流电阻</span><span><b>K− 阴极 · {pins[1]}</b>朝向电源负极，灯体平边靠近 K</span><small>＋／− 表示引脚极性，不表示已经接通电源。</small><span>相对亮度：{brightness===null?'未计算，请运行电路':`${Math.round(brightness*100)}%（教学示意）`}</span></div>}
+    {part.kind==='potentiometer'&&pins&&<div className="pot-connection-guide" role="region" aria-label="电位器引脚与接线">
+      <strong>认清三个脚，再接线</strong>
+      <dl className="pot-pin-list"><div><dt>A · {pins[0]}</dt><dd>电阻轨一端</dd></div><div><dt>W · {pins[1]}</dt><dd>滑臂，随旋钮移动</dd></div><div><dt>B · {pins[2]}</dt><dd>电阻轨另一端</dd></div></dl>
+      <p>A、B 没有固定正负极。A–B 总阻值不变，旋钮改变 A–W 和 W–B 两段。</p>
+      <p className="pot-segments" aria-label="电位器内部电阻段">A–W：{(potTotal*potPosition/100).toLocaleString()} Ω · W–B：{(potTotal*(100-potPosition)/100).toLocaleString()} Ω</p>
+      <div className="pot-wiring-example"><strong>LED 调光：用 A 和 W，B 留空</strong><code>电池＋ → 固定限流电阻 → A〔电位器〕W → A＋〔LED〕K− → 电池−</code><p>4.5 V 入门实验保留 330 Ω 固定电阻。B（{pins[2]}）不接；旋钮 0% 时 A–W 为零，仍靠固定电阻限流。</p></div>
+      <details><summary>三脚分压怎么接？</summary><p>一种接法：A 接电池正极方向，B 接负极方向，W 接负载，负载另一端回负极。调旋钮可改变输出；接负载后电压还受负载影响。</p></details>
+      <p className="pot-wiring-note">引脚孔已占用，请接到同一五孔组的其他空孔。A、W、B 不要落入同一导电组，也不要用导线直接短接。</p>
+    </div>}
     {part.kind==='resistor'&&<><label>阻值预设 <select aria-label="所选电阻阻值" value={part.resistance??330} onChange={e=>onConfigure({resistance:Number(e.target.value)})}>{!presets.includes(part.resistance??330)&&<option value={part.resistance}>{part.resistance} Ω（自定义）</option>}{presets.map(value=><option key={value} value={value}>{value.toLocaleString()} Ω</option>)}</select></label><NumberEditor key={`${part.id}:${part.resistance??330}`} label="电阻阻值" value={part.resistance??330} unit="Ω" min={MIN_RESISTANCE} max={MAX_RESISTANCE} onApply={resistance=>onConfigure({resistance})}/></>}
     {part.kind==='switch'&&<button className="small-button" aria-label="开关接通" aria-pressed={part.closed??false} onClick={()=>onConfigure({closed:!part.closed})}>{part.closed?'已接通 · 点击断开':'已断开 · 点击接通'}</button>}
     {part.kind==='button'&&<button className="small-button hold-button" aria-label="按住按钮" aria-pressed={pressed}

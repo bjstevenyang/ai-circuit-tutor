@@ -49,3 +49,24 @@ describe('numeric draft parsing',()=>{
     expect(parseParameter(String(text),10,1000000)).toBe(value);
   });
 });
+
+describe('potentiometer pin identification',()=>{
+  it.each([
+    [0,['c13','c14','c15']],
+    [90,['c13','d13','e13']],
+    [180,['c13','c12','c11']],
+    [270,['c13','b13','a13']],
+  ] as [Rotation,string[]][])('labels each actual pin upright at %s degrees',(rotation,holes)=>{
+    const {container}=render(<svg><PartShape part={createComponent('potentiometer','c13',rotation,'pot')}/></svg>);
+    const labels=[...container.querySelectorAll('.pot-pin-label')];
+    expect(labels.map(label=>label.textContent)).toEqual(['A','W','B']);
+    expect(labels.map(label=>label.getAttribute('data-hole'))).toEqual(holes);
+    for(const label of labels)expect(label).not.toHaveAttribute('transform');
+    expect(container.querySelector('desc')).toHaveTextContent(`A 电阻端在 ${holes[0]}，W 滑臂在 ${holes[1]}，B 电阻端在 ${holes[2]}`);
+  });
+  it('keeps individual pin labels in previews without duplicate description IDs',()=>{
+    const {container}=render(<svg><PartShape part={createComponent('potentiometer','c13',0,'pot')} ghost/></svg>);
+    expect(container.querySelectorAll('.pot-pin-label')).toHaveLength(3);
+    expect(container.querySelector('desc')).toBeNull();
+  });
+});
