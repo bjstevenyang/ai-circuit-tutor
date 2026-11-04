@@ -6,6 +6,9 @@ import type { Branch } from './solver';
 import { readCircuitDocument } from './validation';
 import { supplyVoltageOf, LED_CURRENT_LIMIT_MA } from './parameters';
 import type { AnalysisResult, CircuitDocument, ComponentReading, Diagnostic, DiagnosticCode, SimulationControls } from './types';
+import { analyzeExtendedDC, isExtended } from './stage2';
+import { analyzeRC } from './transient';
+import { analyzePiezo } from './piezo';
 
 function pathDrop(branches: readonly Branch[], from: string, to: string, oriented: boolean, zeroResistanceOnly=false): {drop:number;parts:string[]} {
   const costs=new Map<string,number>([[from,0]]), paths=new Map<string,string[]>([[from,[]]]), visited=new Set<string>();
@@ -28,6 +31,9 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
   const unsupported=(): AnalysisResult=>({status:'unsupported',complete:false,diagnostics:[{code:'unsupported',entities:[]}]});
   const document=readCircuitDocument(input);
   if(!document)return unsupported();
+  if(document.components.some(p=>p.kind==='capacitor'))return analyzeRC(document,controls);
+  if(document.sourceMode==='teaching-square')return analyzePiezo(document,controls);
+  if(isExtended(document))return analyzeExtendedDC(document,controls);
   const supplyVoltage=supplyVoltageOf(document);
   const nets=buildNets(document,controls), net=(pin:string)=>nets.get(pin)!;
   const positive=net('battery:+'),negative=net('battery:-');

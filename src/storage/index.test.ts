@@ -69,7 +69,7 @@ describe('version 2 component workspace compatibility', () => {
     expect(restored).toEqual({status:'loaded',document:current});
     expect(storage.contents.get(STORAGE_KEY)).toBe(raw);
     expect(saveWorkspace(current,storage).ok).toBe(true);
-    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!).schemaVersion).toBe(3);
+    expect(JSON.parse(storage.contents.get(STORAGE_KEY)!).schemaVersion).toBe(4);
   });
   it('round-trips all eight kinds and strips transient/unrecognized fields', async () => {
     const { createComponent }=await import('../circuit');
@@ -120,6 +120,6 @@ describe('version 3 electrical parameters',()=>{
       expect(saveWorkspace(value as unknown as ReturnType<typeof populated>,storage).ok).toBe(false);
       expect(storage.contents.get(STORAGE_KEY)).toBe(saved);
     }
-    expect(parseDocument({...populated(),schemaVersion:4})).toBeNull();
+    expect(parseDocument({...populated(),schemaVersion:5})).toBeNull();
   });
 });

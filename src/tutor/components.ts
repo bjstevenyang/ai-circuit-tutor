@@ -12,6 +12,26 @@ export type ComponentGuideCopy = {
 
 /** General component knowledge, separate from evidence-based repair hints. */
 export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
+  'rgb-led': {
+    about:'RGB LED 内有红、绿、蓝三条发光支路，组合电流可混色。',pins:['R 红色阳极','K 三通道共用阴极','G 绿色阳极','B 蓝色阳极'],
+    connection:'K 接负端；R、G、B 各经独立电阻接正端。接同组空孔，不占用引脚孔。',example:'电源＋ → 开关 → 330 Ω → R／G／B；K → 电源−（三条独立支路）',
+    tryIt:'依次开 R、G、B，再开组合；把红色支路改为 1 kΩ，观察混色。',commonMistake:'共用一个电阻可能导致分流非唯一；每通道20 mA课程限值，不是三条总和。',modelNote:'虚拟共阴脚序 R/K/G/B，压降2/3/3 V；颜色按通道电流示意，不是真实光度或通用封装。',
+  },
+  npn: {
+    about:'NPN 晶体管可用较小的基极电流控制集电极负载电流。',pins:['B 基极，需限流','C 集电极，接负载','E 发射极，首批必须接负端'],
+    connection:'E 接负端；正端经330 Ω和LED接C；B经开关和10 kΩ接正端，B经100 kΩ下拉；C经另一个100 kΩ接正端保证截止参考。',example:'P → 330 Ω → LED → C；E → N；P → S → 10 kΩ → B；B → 100 kΩ → N；P → 100 kΩ → C',
+    tryIt:'开关断开／闭合，再把基极10 kΩ改100 kΩ，比较控制与负载电流。',commonMistake:'B直连电源无限流、C/E互换或缺少参考可能无法得到唯一结果。',modelNote:'有限低侧教学模型 VBE=.7 V、VCEsat=.2 V、β=100；不是通用放大器，Ib/Ic课程限值5/50 mA，不模拟损坏。',
+  },
+  capacitor: {
+    about:'电容储存电荷，端电压随时间变化；断开电源后可经电阻放电。',pins:['1 无极性端','2 无极性端；任一端接负端参考'],
+    connection:'一端接负端；另一端经充电开关及10 kΩ到正端，再经10 kΩ与放电开关到负端。',example:'P → S充 → 10 kΩ → X；X → C → N；X → 10 kΩ → S放 → N',
+    tryIt:'100 μF、10 kΩ时τ=1 s；先充电5 s，断充开关再闭放开关，观察电压连续和有符号电流。',commonMistake:'停止仿真不等于放电；两开关都断开会保持电压。直接接理想源无有限电阻不支持。',modelNote:'单一无极性虚拟封装，10–1000 μF；初态0 V、单电容线性RC，不与半导体／压电混接；刷新只恢复配置。',
+  },
+  'piezo-passive': {
+    about:'无源压电需要变化信号，恒定直流不持续发声，与有源蜂鸣器不同。',pins:['1 无极性端','2 无极性端'],
+    connection:'选择实验电源“教学方波”，经开关连接压电，再回负端；首批只支持唯一串联路径。',example:'实验方波输出 → 开关 → 无源压电 → 输出负端',
+    tryIt:'运行500 Hz后主动允许声音，再比较250／1000 Hz；串1 MΩ观察幅度不足，切回DC比较。',commonMistake:'直流不持续响不代表损坏；断开、旁路、未允许声音或0%音量均可能无声音。',modelNote:'实验室提供0/4.5 V、内阻1 kΩ方波；Cp10 nF并联Rp1 MΩ的周期稳态近似。正弦声音仅为频率示意，不预测声压或机械共振。',
+  },
   resistor: {
     about: '电阻像电流路上的“限流阀”，阻碍电流通过。常用来限制 LED 电流，也能与其他电阻一起分配电压。',
     pins: ['无极性，可接任意一侧', '无极性，可接另一侧'],

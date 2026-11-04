@@ -1,7 +1,7 @@
 import type { ComponentInstance, ComponentKind } from './types';
 
 type Definition = { name: string; description: string; offsets: readonly (readonly [number, number])[]; pinNames: readonly string[]; body: readonly [number, number, number, number] };
-export const COMPONENT_KINDS: readonly ComponentKind[] = ['resistor', 'led', 'switch', 'button', 'potentiometer', 'buzzer', 'diode', 'ldr'];
+export const COMPONENT_KINDS: readonly ComponentKind[] = ['resistor', 'led', 'switch', 'button', 'potentiometer', 'buzzer', 'diode', 'ldr', 'rgb-led', 'npn', 'capacitor', 'piezo-passive'];
 export const COMPONENTS: Record<ComponentKind, Definition> = {
   resistor: { name: '电阻', description: '默认 330 Ω · 可调整', offsets: [[0,0],[60,0]], pinNames: ['1','2'], body: [30,0,38,16] },
   led: { name: '红色 LED', description: 'A 阳极 / K 阴极', offsets: [[0,0],[20,0]], pinNames: ['A','K'], body: [10,0,20,20] },
@@ -11,6 +11,10 @@ export const COMPONENTS: Record<ComponentKind, Definition> = {
   buzzer: { name: '有源蜂鸣器', description: '3–5 V 教学模型 · 有极性', offsets: [[0,0],[40,0]], pinNames: ['+','−'], body: [20,0,28,28] },
   diode: { name: '二极管', description: 'A / K · 0.7 V 近似', offsets: [[0,0],[40,0]], pinNames: ['A','K'], body: [20,0,22,12] },
   ldr: { name: '光敏电阻', description: '调节模拟光照', offsets: [[0,0],[40,0]], pinNames: ['1','2'], body: [20,0,24,24] },
+  'rgb-led': { name:'RGB LED', description:'共阴 · R / K / G / B',offsets:[[0,0],[20,0],[40,0],[60,0]],pinNames:['R','K','G','B'],body:[30,-10,66,24]},
+  npn: { name:'NPN 晶体管',description:'低侧开关 · B / C / E',offsets:[[0,0],[20,0],[40,0]],pinNames:['B','C','E'],body:[20,-10,34,24]},
+  capacitor: { name:'电容',description:'无极性 · 100 μF',offsets:[[0,0],[40,0]],pinNames:['1','2'],body:[20,0,28,22]},
+  'piezo-passive': { name:'无源压电',description:'需要变化信号 · 无极性',offsets:[[0,0],[40,0]],pinNames:['1','2'],body:[20,0,28,28]},
 };
 export function createComponent(kind: ComponentKind, anchor: string, rotation: ComponentInstance['rotation'], id: string): ComponentInstance {
   return { id, kind, anchor, rotation,
@@ -18,6 +22,7 @@ export function createComponent(kind: ComponentKind, anchor: string, rotation: C
     ...(kind === 'potentiometer' ? { resistance: 10000, position: 50 } : {}),
     ...(kind === 'switch' ? { closed: false } : {}),
     ...(kind === 'ldr' ? { light: 50 } : {}),
+    ...(kind === 'capacitor' ? { capacitanceF: 100e-6 } : {}),
   };
 }
 export function rotateOffset(x: number, y: number, rotation: ComponentInstance['rotation']): [number, number] {

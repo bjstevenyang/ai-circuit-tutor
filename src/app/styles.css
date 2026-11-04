@@ -353,3 +353,7 @@ h2 { font-size: 13px; font-weight: 650; }
 .pot-wiring-example code { display: block; margin-top: 5px; white-space: normal; overflow-wrap: anywhere; font-size: 11px; }
 .pot-connection-guide summary { cursor: pointer; font-weight: 650; }
 .pot-connection-guide .pot-wiring-note { color: #56665a; font-size: 11px; }
+
+.stage-readings { margin: 1rem 0; padding: .9rem; border: 1px solid #d7ddcc; border-radius: 8px; background: #f4f6ed; color: #304b3d; overflow-wrap: anywhere; font-size: .85rem; }
+.stage-readings > div { padding: .5rem 0; border-top: 1px solid #dce2d2; }
+.stage-readings p { margin: .35rem 0; line-height: 1.6; font-variant-numeric: tabular-nums; }

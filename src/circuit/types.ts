@@ -1,6 +1,6 @@
 export type Rotation = 0 | 90 | 180 | 270;
 export type Resistance = number;
-export type ComponentKind = 'resistor' | 'led' | 'switch' | 'button' | 'potentiometer' | 'buzzer' | 'diode' | 'ldr';
+export type ComponentKind = 'resistor' | 'led' | 'switch' | 'button' | 'potentiometer' | 'buzzer' | 'diode' | 'ldr' | 'rgb-led' | 'npn' | 'capacitor' | 'piezo-passive';
 export type ComponentInstance = {
   id: string;
   kind: ComponentKind;
@@ -10,20 +10,28 @@ export type ComponentInstance = {
   closed?: boolean;
   position?: number;
   light?: number;
+  capacitanceF?: number;
 };
 export type Wire = { id: string; from: string; to: string; color: string; bend: 'horizontal' | 'vertical' };
 export type CircuitDocument = {
-  schemaVersion: 1 | 2 | 3;
+  schemaVersion: 1 | 2 | 3 | 4;
   boardId: 'breadboard-30-v1';
   lessonId: 'led-series-v1' | 'dc-lab-v2';
   supplyVoltage?: number;
+  sourceMode?: 'battery' | 'teaching-square';
+  signalFrequencyHz?: 250 | 500 | 1000;
   components: ComponentInstance[];
   wires: Wire[];
 };
-export type SimulationControls = { pressedButtons?: readonly string[] };
+export type SimulationControls = { pressedButtons?: readonly string[]; timeState?: {timeS:number; voltageV:number}; deltaTimeS?:number };
 export type DiagnosticCode = 'source-short' | 'missing-resistor' | 'resistor-bypassed' | 'led-bypassed' | 'open-circuit' | 'reversed-led' | 'overcurrent' | 'unsupported' | 'missing-led' | 'control-open' | 'insufficient-voltage' | 'reversed-diode' | 'buzzer-reversed' | 'buzzer-undervoltage' | 'buzzer-overvoltage';
-export type Diagnostic = { code: DiagnosticCode; entities: string[] };
-export type ComponentReading = { currentMa: number; voltageV?: number; on?: boolean; resistanceOhms?: number };
+export type Diagnostic = { code: DiagnosticCode; entities: string[]; channel?: 'R' | 'G' | 'B'; pin?: string; reason?: string; timeS?: number };
+export type ChannelReading = { currentMa: number; on: boolean; level: number };
+export type ComponentReading = { currentMa?: number; voltageV?: number; on?: boolean; resistanceOhms?: number;
+  channels?: Record<'R'|'G'|'B', ChannelReading>; rgb?: readonly [number,number,number];
+  baseCurrentMa?: number; collectorCurrentMa?: number; emitterCurrentMa?: number; vceV?: number; region?: 'cutoff'|'controlled'|'saturated';
+  capacitorState?: '充电'|'放电'|'稳态'|'保持'; referencePin?: string; frequencyHz?: number; vppV?: number; driveState?: string;
+};
 export type AnalysisResult = {
   status: 'supported' | 'fault' | 'unsupported';
   currentMa?: number;
@@ -31,6 +39,8 @@ export type AnalysisResult = {
   complete: boolean;
   diagnostics: Diagnostic[];
   readings?: Record<string, ComponentReading>;
+  mode?: 'dc'|'rc'|'periodic';
+  timeS?: number;
 };
 export type BoardEndpoint = { id: string; x: number; y: number; group: string };
 export const MAX_COMPONENTS = 24;

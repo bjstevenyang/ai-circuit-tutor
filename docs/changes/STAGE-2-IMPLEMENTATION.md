@@ -24,12 +24,16 @@
 
 | 验收 | 测试／命令／结果 |
 | --- | --- |
-| EX2-01/02 | 待 RGB 切片 |
-| EX2-03/04 | 待 NPN 切片 |
-| EX2-05/06 | 待 RC 切片 |
-| EX2-07/08 | 待压电切片 |
-| EX2-09/10 | 待编辑／保存回归 |
-| EX2-11 | 待四实验与说明验证 |
+| EX2-01/02 | rgb.test.ts、stage2-regression.test.ts：通道／七组合／限值／唯一性／端点证据；模型通过，浏览器RGB从空板及修复通过 |
+| EX2-03/04 | npn.test.ts：批准三态、源电流、去参考失败／恢复；stage2-regression.test.ts：基极限流／课程超限。模型与NPN浏览器从空板流程通过 |
+| EX2-05/06 | transient.test.ts及Stage2.test.tsx：0/1τ/5τ、连续充放电／保持、停止／重启／后台、R延续及C应用停止；RC浏览器流程通过 |
+| EX2-07/08 | piezo.test.ts：三频率／Vpp／电流守恒／衰减／DC／断开；useBuzzerSound与压电浏览器流程通过，设备试听未做 |
+| EX2-09/10 | stage2-regression.test.ts、Stage2.test.tsx：安装四方向／拒绝重叠、v4往返／剥离瞬态／v1–v3迁移、频率与容量边界；35个旧Chromium场景通过 |
+| EX2-11 | 四实验均有合法物理fixture，从空板表单搭建、错误到修复；新元件说明只读与引脚测试通过。人工门槛未执行 |
 | EX2-12 | 待固定 B／M 基准；硬件不符或工具不可用时明确未验证 |
 
 人工教师／学生、实际辅助技术、设备试听尚未执行。自动化不替代人工教学有效性结论。仅 Chromium，不运行 Firefox／WebKit；不公开部署。
+
+当前验证快照：`npm test -- --reporter=json --outputFile=/tmp/ai-circuit-stage2-tests.json` 298/298；之后声音更新相关2文件11项复验通过。`npm run build`及`npm run lint`通过；既有Chromium35/35，新四实验各通过。尚在补充固定性能规程及最终完整复验，不将当前记录视为完整EX2验收。
+
+本机为Apple M1 Pro／16 GB、macOS 26.5.1，与批准M1／8 GB不同；本机性能只能作为补充，目标设备门槛仍未验证。用户再次明确许可执行性能及两组真实长运行检查。原一次性能命令许可被拒绝，未绕过，得到许可后再继续。

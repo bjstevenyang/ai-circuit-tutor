@@ -10,6 +10,7 @@ import type { EditCommand, HistoryState, WireEnd } from '../editor/model';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import { getDiagnosticCopy } from '../tutor';
 import { ComponentGuide } from '../tutor/ComponentGuide';
+import { StageReadings } from './StageReadings';
 import { NumberEditor } from '../editor/NumberEditor';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
@@ -21,10 +22,16 @@ type AppState = {
   diagnosticIndex: number;
   saveStatus: string;
   storageBlocked: boolean;
+  phase: 'stopped'|'running'|'background-paused'|'fault';
+  sessionId: number;
+  revision: number;
+  hintTimeS: number | null;
 };
 type Action =
   | { type: 'edit'; history: HistoryState; saveStatus: string }
-  | { type: 'run'; result: AnalysisResult }
+  | { type: 'run'; result: AnalysisResult; restart?:boolean }
+  | { type: 'tick'; result: AnalysisResult; sessionId:number; revision:number }
+  | { type: 'pause'; paused:boolean }
   | { type: 'stop' }
   | { type: 'hint' }
   | { type: 'diagnostic'; index: number }
@@ -40,15 +47,23 @@ function initialize(): AppState {
     diagnosticIndex: 0,
     saveStatus: saved.status === 'loaded' ? '已恢复本地作品' : saved.status === 'error' ? saved.message : '本地自动保存已就绪',
     storageBlocked: saved.status === 'error',
+    phase:'stopped',sessionId:0,revision:0,hintTimeS:null,
   };
 }
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case 'edit': return { ...state, history: action.history, analysis: null, hintLevel: 0, diagnosticIndex: 0, saveStatus: action.saveStatus };
-    case 'run': return { ...state, analysis: action.result, hintLevel: 0, diagnosticIndex: 0 };
-    case 'stop': return { ...state, analysis: null, hintLevel: 0, diagnosticIndex: 0 };
-    case 'hint': return { ...state, hintLevel: Math.min(3, state.hintLevel + 1) };
+    case 'edit': return { ...state, history: action.history, analysis: null, phase:'stopped',revision:state.revision+1,hintTimeS:null,hintLevel: 0, diagnosticIndex: 0, saveStatus: action.saveStatus };
+    case 'run': return { ...state, analysis: action.result, phase:action.result.status==='unsupported'||action.result.status==='fault'&&!action.result.readings?'fault':'running',sessionId:state.sessionId+(action.restart?1:0),hintTimeS:null,hintLevel: 0, diagnosticIndex: 0 };
+    case 'tick': {
+      if(action.sessionId!==state.sessionId||action.revision!==state.revision||state.phase!=='running')return state;
+      const identity=(a:AnalysisResult|null)=>JSON.stringify(a?.diagnostics.map(d=>[d.code,d.entities,d.channel,d.pin]));
+      const same=identity(state.analysis)===identity(action.result);
+      return {...state,analysis:action.result,phase:action.result.status==='supported'?'running':'fault',...(same?{}:{hintLevel:0,diagnosticIndex:0,hintTimeS:null})};
+    }
+    case 'pause': return state.phase==='running'&&action.paused?{...state,phase:'background-paused'}:state.phase==='background-paused'&&!action.paused?{...state,phase:'running'}:state;
+    case 'stop': return { ...state, analysis: null, phase:'stopped',sessionId:state.sessionId+1,hintTimeS:null,hintLevel: 0, diagnosticIndex: 0 };
+    case 'hint': return { ...state, hintTimeS:state.hintTimeS??state.analysis?.timeS??null,hintLevel: Math.min(3, state.hintLevel + 1) };
     case 'diagnostic': return { ...state, diagnosticIndex: action.index, hintLevel: 0 };
     case 'save': return { ...state, saveStatus: action.message };
     case 'recover': return { ...state, storageBlocked: false };
@@ -82,7 +97,7 @@ function PartIcon({ kind }: { kind: ComponentKind }) {
       <rect x="29" y="14" width="52" height="22" rx="7" fill="#ddc49b" stroke="#b3966e" />
       <path d="M39 14v22M49 14v22M59 14v22M71 14v22" stroke="#be603c" strokeWidth="5" />
       <path d="M49 14v22" stroke="#664735" strokeWidth="5" /><path d="M71 14v22" stroke="#b49b47" strokeWidth="3" />
-    </> : kind !== 'led' ? <><path d="M12 25h86" stroke="#9ba79d" strokeWidth="2"/><rect x="35" y="8" width="40" height="33" rx="7" fill="#577768"/><text x="55" y="30" textAnchor="middle" fill="#eff5df" fontSize="18">{({switch:'↔',button:'●',potentiometer:'↗',buzzer:'♪',diode:'▷|',ldr:'☀'} as const)[kind]}</text></> : <>
+    </> : kind !== 'led' ? <><path d="M12 25h86" stroke="#9ba79d" strokeWidth="2"/><rect x="35" y="8" width="40" height="33" rx="7" fill="#577768"/><text x="55" y="30" textAnchor="middle" fill="#eff5df" fontSize="18">{({switch:'↔',button:'●',potentiometer:'↗',buzzer:'♪',diode:'▷|',ldr:'☀','rgb-led':'RGB',npn:'NPN',capacitor:'Ⅱ','piezo-passive':'♫'} as const)[kind]}</text></> : <>
       <path d="M48 31v15m14-15v12" stroke="#9ba79d" strokeWidth="2" />
       <path d="M41 30V19a14 14 0 0 1 28 0v11Z" fill="#c96b5e" stroke="#a5473e" strokeWidth="1.5" />
       <rect x="38" y="29" width="34" height="5" rx="2" fill="#a54e44" />
@@ -108,6 +123,7 @@ export function App() {
   const [wireColor, setWireColor] = useState<string>(COLORS[0][0]);
   const [bend, setBend] = useState<Wire['bend']>('horizontal');
   const [error, setError] = useState('');
+  const [announcement,setAnnouncement]=useState('');
   const [inspectInput, setInspectInput] = useState('a1');
   const [moveAnchor, setMoveAnchor] = useState('');
   const [zoom, setZoom] = useState(100);
@@ -117,27 +133,48 @@ export function App() {
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
   const voltage=supplyVoltageOf(document);
-  const running=state.analysis!==null;
+  const running=state.phase!=='stopped';
   useEffect(() => {
     const release = () => {
-      if (!pressedButtons.length) return;
       setPressedButtons([]);
-      if (state.analysis) dispatch({type:'run',result:analyzeCircuit(document)});
+      if (state.analysis&&(state.analysis.mode==='rc'||state.analysis.mode==='periodic')){
+        if(pressedButtons.length){const cap=document.components.find(p=>p.kind==='capacitor');dispatch({type:'run',result:analyzeCircuit(document,{...(cap&&state.analysis.timeS!==undefined?{timeState:{timeS:state.analysis.timeS,voltageV:state.analysis.readings?.[cap.id]?.voltageV??0}}:{})})});}
+        dispatch({type:'pause',paused:true});
+      }else if(state.analysis&&pressedButtons.length)dispatch({type:'run',result:analyzeCircuit(document)});
     };
-    const visibility = () => { if (window.document.hidden) release(); };
+    const resume=()=>{if(!window.document.hidden)dispatch({type:'pause',paused:false});};
+    const visibility = () => { if (window.document.hidden) release();else resume(); };
     window.addEventListener('blur',release);
+    window.addEventListener('focus',resume);
     window.document.addEventListener('visibilitychange',visibility);
-    return () => { window.removeEventListener('blur',release); window.document.removeEventListener('visibilitychange',visibility); };
+    return () => { window.removeEventListener('blur',release);window.removeEventListener('focus',resume); window.document.removeEventListener('visibilitychange',visibility); };
   },[pressedButtons,document,state.analysis]);
+  useEffect(()=>{
+    if(state.phase!=='running'||state.analysis?.mode!=='rc')return;
+    const previous=state.analysis,cap=document.components.find(p=>p.kind==='capacitor');if(!cap)return;
+    const start=performance.now();
+    const timer=window.setTimeout(()=>{
+      const timeS=previous.timeS??0,dt=Math.min(.05,Math.max(0,(performance.now()-start)/1000),60-timeS);
+      if(timeS+dt>=60-1e-9){dispatch({type:'stop'});setPressedButtons([]);setError('已达本次模拟时长（60 s），作品已保留。');return;}
+      const result=analyzeCircuit(document,{pressedButtons,timeState:{timeS,voltageV:previous.readings?.[cap.id]?.voltageV??0},deltaTimeS:dt});
+      dispatch({type:'tick',result,sessionId:state.sessionId,revision:state.revision});
+    },50);
+    return ()=>window.clearTimeout(timer);
+  },[state.phase,state.analysis,state.sessionId,state.revision,document,pressedButtons]);
   const selectedPart = document.components.find(part => part.id === selected);
   const guideKind=selectedPart?.kind??(isPartTool(tool)?tool:null);
   const selectedWire = document.wires.find(wire => wire.id === selected);
   const diagnostic = state.analysis?.diagnostics[state.diagnosticIndex];
-  const diagnosticCopy = diagnostic ? getDiagnosticCopy(diagnostic.code) : null;
+  const diagnosticCopy = diagnostic ? getDiagnosticCopy(diagnostic.code,diagnostic) : null;
   const connected = selectedEndpoint ? inspectConnectivity(document, selectedEndpoint, { pressedButtons }) : [];
 
-  const sound = useBuzzerSound(document.components.some(p => p.kind === 'buzzer' && state.analysis?.readings?.[p.id]?.on));
-  const run = (next = document, pressed = pressedButtons) => dispatch({ type: 'run', result: analyzeCircuit(next, { pressedButtons: pressed }) });
+  const piezo=document.components.find(p=>p.kind==='piezo-passive'),piezoReading=piezo?state.analysis?.readings?.[piezo.id]:undefined;
+  const sound = useBuzzerSound(state.phase==='running'&&(!!piezoReading?.on||document.components.some(p => p.kind === 'buzzer' && state.analysis?.readings?.[p.id]?.on)),{frequency:piezoReading?.frequencyHz??2000,waveform:piezoReading?.frequencyHz?'sine':'square',level:piezoReading?.vppV===undefined?1:Math.min(piezoReading.vppV/4.5,1)});
+  const run = (next = document, pressed = pressedButtons) => {
+    const cap=next.components.find(p=>p.kind==='capacitor'),old=state.analysis;
+    const result=analyzeCircuit(next,{pressedButtons:pressed,...(cap&&old?.mode==='rc'&&old.timeS!==undefined?{timeState:{timeS:old.timeS,voltageV:old.readings?.[cap.id]?.voltageV??0}}:{})});
+    dispatch({type:'run',result,restart:!running});
+  };
   const pressButton = (id: string, pressed: boolean) => {
     const next = pressed ? [...new Set([...pressedButtons, id])] : pressedButtons.filter(item => item !== id);
     setPressedButtons(next);
@@ -155,7 +192,7 @@ export function App() {
     const history=commitDocument(state.history,result.document);
     if(history===state.history)return true;
     dispatch({ type: 'edit', history, saveStatus: save(result.document) });
-    if (live && state.analysis) run(result.document);
+    if (live && state.phase==='running'&&!(command.type==='configure'&&command.settings.capacitanceF!==undefined)) run(result.document);
     else setPressedButtons([]);
     return true;
   };
@@ -260,7 +297,7 @@ export function App() {
 
     <main onKeyDown={handleDeleteKey}>
       <section className="lesson-heading" aria-labelledby="lesson-title">
-        <div><div className="eyebrow"><span className="lesson-number">01</span> 直流电路探索 <span className="level-tag">入门</span></div><h1 id="lesson-title">搭出你的电路<span className="heading-dot">.</span></h1><p>8 类元件，自由组合；看懂连接，试验你的想法。</p></div>
+        <div><div className="eyebrow"><span className="lesson-number">01</span> 直流电路探索 <span className="level-tag">入门</span></div><h1 id="lesson-title">搭出你的电路<span className="heading-dot">.</span></h1><p>12 类元件，按支持范围试验连接；看懂变化，解释原因。</p></div>
         <div className="lesson-goal"><span className="goal-icon"><Icon name="check" /></span><div><small>本次目标</small><p>搭建并检查小型直流串并联电路</p></div></div>
       </section>
 
@@ -277,7 +314,7 @@ export function App() {
 
       <div className="workspace">
         <aside className="parts-panel" aria-label="元件和精确操作">
-          <div className="panel-heading"><h2>元件盒</h2><span className="mono">08 PARTS</span></div>
+          <div className="panel-heading"><h2>元件盒</h2><span className="mono">12 PARTS</span></div>
           <p className="panel-intro">选择元件，再点击孔位放置。</p>
           <div className="part-list">
             {COMPONENT_KINDS.map(kind => {
@@ -289,8 +326,8 @@ export function App() {
               </button>;
             })}
           </div>
-          <div className="included-source"><span className="tiny-battery">＋ −</span><div><strong>{voltage} V 理想电池</strong><small>电压可调 · 1.5–9 V</small></div></div>
-          <div className="battery-settings"><label>常用电压 <select aria-label="电池预设电压" value={voltage} onChange={event=>edit({type:'set-voltage',value:Number(event.target.value)},true)}>{![1.5,3,4.5,6,9].includes(voltage)&&<option value={voltage}>{voltage} V（自定义）</option>}{[1.5,3,4.5,6,9].map(value=><option key={value} value={value}>{value} V</option>)}</select></label><NumberEditor key={`voltage-${voltage}`} label="电池电压" value={voltage} unit="V" min={MIN_SUPPLY_VOLTAGE} max={MAX_SUPPLY_VOLTAGE} onApply={value=>edit({type:'set-voltage',value},true)}/></div>
+          <div className="included-source"><span className="tiny-battery">＋ −</span><div><strong>{document.sourceMode==='teaching-square'?'实验室方波信号源':`${voltage} V 理想电池`}</strong><small>电压可调 · 1.5–9 V</small></div></div>
+          <div className="battery-settings"><label>实验电源模式 <select aria-label="实验电源模式" value={document.sourceMode??'battery'} onChange={e=>edit({type:'set-source',mode:e.target.value as 'battery'|'teaching-square'})}><option value="battery">直流电池</option><option value="teaching-square">教学方波</option></select></label>{document.sourceMode==='teaching-square'&&<><p>实验室提供的驱动信号 · 0/4.5 V · 内阻1 kΩ · 仅单压电串联路径；保留直流电池设定。</p><label>驱动频率 <select aria-label="驱动频率" value={document.signalFrequencyHz??500} onChange={e=>edit({type:'set-frequency',value:Number(e.target.value) as 250|500|1000},true)}>{[250,500,1000].map(f=><option key={f} value={f}>{f} Hz</option>)}</select></label></>}<label>常用电压 <select aria-label="电池预设电压" value={voltage} onChange={event=>edit({type:'set-voltage',value:Number(event.target.value)},true)}>{![1.5,3,4.5,6,9].includes(voltage)&&<option value={voltage}>{voltage} V（自定义）</option>}{[1.5,3,4.5,6,9].map(value=><option key={value} value={value}>{value} V</option>)}</select></label><NumberEditor key={`voltage-${voltage}`} label="电池电压" value={voltage} unit="V" min={MIN_SUPPLY_VOLTAGE} max={MAX_SUPPLY_VOLTAGE} onApply={value=>edit({type:'set-voltage',value},true)}/></div>
 
           <details className="control-section" open>
             <summary>精确放置 <span>孔位操作</span></summary>
@@ -332,7 +369,7 @@ export function App() {
               else {setTool('inspect');run();}
             }}><Icon name={running?'stop':'play'} size={16} />{running?'停止运行':'运行电路'}</button>
           </div>
-          <div id="simulation-status" className={`simulation-status${running?' running':''}`} role="status" aria-label="仿真状态"><span className="status-dot" />{running?'运行中 · 开关点击切换；黄色按钮按住接通。':'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
+          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?'后台已暂停 · 返回前台继续，不补算离开时间。':state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?'运行中 · 开关点击切换；黄色按钮按住接通。':'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}
@@ -389,31 +426,33 @@ export function App() {
         <aside className="tutor-panel" aria-label="学习指导">
           {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
           <div className="tutor-heading"><span className="tutor-symbol"><Icon name="bulb" size={21} /></span><div><h2>一起想一想</h2><span>先观察，再找到答案</span></div><span className="reviewed-badge">课程提示</span></div>
-          <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live="polite">
+          <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live={state.analysis?.mode==='rc'?'off':'polite'}>
             {state.analysis?.complete ? <>
-              <span className="result-icon success-icon"><Icon name="check" size={24} /></span><span className="eyebrow">CIRCUIT COMPLETE</span><h3>{state.analysis.ledOn ? '亮起来了！' : '蜂鸣器工作了！'}</h3><p>至少一个 LED 或蜂鸣器正常工作，当前没有检测到模型内的电气问题。此结果不代表已匹配某张目标电路图。</p>
+              <span className="result-icon success-icon"><Icon name="check" size={24} /></span><span className="eyebrow">CIRCUIT COMPLETE</span><h3>{state.analysis.mode==='periodic'?'压电受到驱动！':state.analysis.ledOn ? '亮起来了！' : '蜂鸣器工作了！'}</h3><p>至少一个 LED 或蜂鸣器正常工作，当前没有检测到模型内的电气问题。此结果不代表已匹配某张目标电路图。</p>
             </> : state.analysis ? <>
-              <span className="eyebrow">{state.analysis.status === 'unsupported' ? 'MODEL LIMIT' : 'LET’S INVESTIGATE'}</span><h3>{diagnosticCopy?.title ?? '直流电路已求解'}</h3><p>{diagnosticCopy?.description ?? '可选中各元件查看电流；开关、按钮、旋钮和光照在运行后会即时更新结果。'}</p>
+              <span className="eyebrow">{state.analysis.status === 'unsupported' ? 'MODEL LIMIT' : 'LET’S INVESTIGATE'}</span><h3>{diagnostic?.reason??diagnosticCopy?.title ?? (state.analysis.mode==='rc'?'RC 电路已求解':'直流电路已求解')}</h3><p>{diagnostic?.reason??diagnosticCopy?.description ?? '可选中各元件查看电流；开关、按钮、旋钮和光照在运行后会即时更新结果。'}</p>
             </> : <>
               <div className="empty-circuit-illustration"><span>＋</span><i /><span className="mini-led" /><i /><span>−</span></div><span className="eyebrow">A LITTLE EXPERIMENT</span><h3>电流会走哪条路？</h3><p>放好电阻和 LED，接通电池，再运行电路。遇到问题时，我们一步一步寻找线索。</p>
             </>}
             {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>估算电池总电流</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
             {state.analysis && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '电路检测通过' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? (state.analysis.currentMa === undefined ? '未计算 LED 状态' : '查看各元件的工作状态') : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
           </div>
+          {state.analysis?.mode&&<><StageReadings result={state.analysis} document={document}/><button className="small-button" onClick={()=>setAnnouncement(window.document.querySelector('.stage-readings')?.textContent??'暂无读数')}>播报当前实验状态</button><p role="status">{announcement}</p></>}
           {!!state.analysis?.diagnostics.length && <div className="diagnostic-list" aria-label="诊断项目">
-            {state.analysis.diagnostics.map((item, index) => <button key={`${item.code}-${index}`} className={index === state.diagnosticIndex ? 'active' : ''} onClick={() => dispatch({ type: 'diagnostic', index })}><span>{String(index + 1).padStart(2, '0')}</span>{getDiagnosticCopy(item.code).title}<Icon name="arrow" size={13} /></button>)}
+            {state.analysis.diagnostics.map((item, index) => <button key={`${item.code}-${index}`} className={index === state.diagnosticIndex ? 'active' : ''} onClick={() => dispatch({ type: 'diagnostic', index })}><span>{String(index + 1).padStart(2, '0')}</span>{getDiagnosticCopy(item.code,item).title}<Icon name="arrow" size={13} /></button>)}
           </div>}
           <div className="sound-control"><button className="small-button" aria-pressed={sound.enabled} onClick={() => { void sound.toggle(); }}>{sound.enabled ? '关闭声音' : '启用蜂鸣器声音'}</button><label className="volume-control">蜂鸣器音量 <input aria-label="蜂鸣器音量" type="range" min="0" max="100" step="1" value={sound.volume} onChange={event=>sound.changeVolume(Number(event.target.value))}/><output>{sound.volume}%</output></label><p>0% 静音；声音还受系统和扬声器音量影响。</p>{sound.error && <p role="status">{sound.error}</p>}</div>
           <div className="hint-section"><div className="hint-section-heading"><h3>给我一点提示</h3><span>{state.hintLevel} / 3</span></div>
             <div className="hint-progress" aria-hidden="true">{[1, 2, 3].map(level => <i key={level} className={state.hintLevel >= level ? 'revealed' : ''} />)}</div>
             {diagnosticCopy && state.hintLevel > 0 ? <ol className="hint-list">{diagnosticCopy.hints.slice(0, state.hintLevel).map((hint, index) => <li key={hint}><span>{['想一想', '看这里', '试着修复'][index]}</span><p>{hint}</p></li>)}</ol> : <p className="hint-placeholder">{state.analysis?.complete ? '试着选中孔位，解释电流经过的路径。' : '先运行电路。每次只揭开一个线索，把发现留给你。'}</p>}
             <button className="hint-button" disabled={!diagnosticCopy || state.hintLevel === 3} onClick={() => dispatch({ type: 'hint' })}><Icon name="bulb" size={17} />{state.hintLevel === 3 ? '全部线索已揭开' : state.hintLevel ? '再给我一个线索' : '揭开第一个线索'}<Icon name="arrow" size={15} /></button>
-            {diagnostic && <p className="evidence-caption">检查对象：{diagnostic.entities.length ? diagnostic.entities.map(id => ENDPOINT_BY_ID.has(id) ? id : document.components.find(part => part.id === id) ? COMPONENTS[document.components.find(part => part.id === id)!.kind].name : document.wires.some(wire => wire.id === id) ? '导线' : id).join(' · ') : '整个回路'}</p>}
+            {state.hintTimeS!==null&&state.hintLevel>0&&<p>提示证据快照：{state.hintTimeS.toFixed(3)} s；实时读数另示。</p>}
+            {diagnostic && <p className="evidence-caption">检查对象：{diagnostic.channel?`${diagnostic.channel} 通道 · `:''}{diagnostic.pin?`${diagnostic.pin} 脚 · `:''}{diagnostic.entities.length ? diagnostic.entities.map(id => ENDPOINT_BY_ID.has(id) ? id : document.components.find(part => part.id === id) ? COMPONENTS[document.components.find(part => part.id === id)!.kind].name : document.wires.some(wire => wire.id === id) ? '导线' : id).join(' · ') : '整个回路'}</p>}
           </div>
           <div className="breadboard-tip"><span className="note-label">面包板小知识</span><h3>看起来靠近，不一定相连。</h3><p>同一编号的 a–e 孔内部相连，f–j 是另一组。中央沟槽两侧、电源轨与中间孔位，都需要导线连接。</p><button onClick={() => { setTool('inspect'); setSelected(null); setSelectedEndpoint('a1'); setInspectInput('a1'); }}>查看 a1 的连接 <Icon name="arrow" size={14} /></button></div>
         </aside>
       </div>
-      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池可调 1.5–9 V，默认 4.5 V；红色 LED 固定压降 2.0 V，相对亮度按每颗 LED 的电流示意，不是真实光度。支持最多 24 个元件、120 根导线，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3–5 V 发声范围。20 mA 是每颗 LED 的课程限制，超限时亮度封顶并提示。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为预设课程内容，未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><span className="version-label">LEARN BY MAKING / V0.3</span></footer>
+      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池可调 1.5–9 V，默认 4.5 V；红色 LED 固定压降 2.0 V，相对亮度按每颗 LED 的电流示意，不是真实光度。支持最多 24 个元件、120 根导线，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3–5 V 发声范围。20 mA 是每颗 LED 的课程限制，超限时亮度封顶并提示。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为预设课程内容，未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><p>阶段2范围：共阴RGB每通道独立限流；NPN仅低侧；单电容RC仅线性网络且一脚接负端，初态0 V、最长60 s；教学方波仅单压电串联路径。新DC按展开P≤6、NPN≤2、最多576候选限制；未知或非唯一状态不造读数。</p><span className="version-label">LEARN BY MAKING / V0.4</span></footer>
     </main>
   </>;
 }

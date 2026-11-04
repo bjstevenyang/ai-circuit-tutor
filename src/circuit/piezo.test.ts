@@ -1,0 +1,6 @@
+import {it,expect} from 'vitest';
+import {analyzeCircuit} from './index';
+import {piezoWave} from './piezo';
+import {piezoExperiment} from '../../tests/fixtures/stage2';
+it.each([250,500,1000] as const)('EX2-07 periodic response and exact configured frequency %i',f=>{const d=piezoExperiment();d.signalFrequencyHz=f;const a=analyzeCircuit(d);expect(a.status).toBe('supported');expect(a.readings!.piezo).toMatchObject({frequencyHz:f,on:true});expect(a.readings!.piezo!.vppV).toBeCloseTo(4.495504496,6);const wave=piezoWave(0,f);for(const t of [0,.000003,.00001,.0007]){const x=wave.sample(t);expect(x.sourceA-x.leakA-x.capacitorA).toBeCloseTo(0,12);}});
+it('EX2-07 attenuation, DC contrast and open state',()=>{expect(analyzeCircuit(piezoExperiment(1e6)).readings!.piezo!.vppV).toBeCloseTo(.224029701,6);expect(analyzeCircuit(piezoExperiment(1e6)).readings!.piezo!.on).toBe(false);const d=piezoExperiment();d.sourceMode='battery';const a=analyzeCircuit(d);expect(a.readings!.piezo!.currentMa).toBeCloseTo(.0045,8);expect(a.readings!.piezo!.on).toBe(false);d.sourceMode='teaching-square';d.components.find(p=>p.id==='s')!.closed=false;const b=analyzeCircuit(d);expect(b.readings!.piezo!.frequencyHz).toBeUndefined();expect(b.readings!.piezo!.on).toBe(false);});

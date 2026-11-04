@@ -1,8 +1,9 @@
 import { componentBody, ENDPOINT_BY_ID, getComponentPins, rotateOffset } from '../circuit';
-import type { ComponentInstance } from '../circuit';
+import { COMPONENTS } from '../circuit';
+import type { ComponentInstance, ComponentReading } from '../circuit';
 import { ledDescriptionId } from './ledAppearance';
 
-export function PartShape({part,ghost=false,lit=false,activated=false,brightness=null}:{part:ComponentInstance;ghost?:boolean;lit?:boolean;activated?:boolean;brightness?:number|null}) {
+export function PartShape({part,ghost=false,lit=false,activated=false,brightness=null,reading}:{part:ComponentInstance;ghost?:boolean;lit?:boolean;activated?:boolean;brightness?:number|null;reading?:ComponentReading}) {
   const pins=getComponentPins(part),body=componentBody(part);
   if(!pins||!body)return null;
   const points=pins.map(pin=>ENDPOINT_BY_ID.get(pin)!);
@@ -20,8 +21,13 @@ export function PartShape({part,ghost=false,lit=false,activated=false,brightness
       {part.kind==='buzzer'&&<><circle r="14" fill="#34463f" stroke="#182f27"/><circle r="5" fill="#172a22"/><text x="-11" y="-17" className="pin-mark">+</text>{lit&&<><path d="M17-7q8 7 0 14m5-19q12 12 0 24" fill="none" stroke="#65934d" strokeWidth="2"/><text x="-10" y="25" className="pin-mark">鸣响</text></>}</>}
       {part.kind==='diode'&&<><rect x="-11" y="-6" width="22" height="12" rx="3" fill="#454b4a" stroke="#252f2b"/><path d="M6-6v12" stroke="#d8dbcf" strokeWidth="4"/><text x="-21" y="-11" className="pin-mark">A</text><text x="14" y="-11" className="pin-mark">K</text></>}
       {part.kind==='ldr'&&<><circle r="12" fill="#d7b080" stroke="#957249"/><path d="M-8-6h14l-12 4h12L-6 2H6L-6 6H8" fill="none" stroke="#a35d43" strokeWidth="1.7"/><path d="m-18-20 7 7m-16 0 7 7" stroke="#bf9d42" strokeWidth="2"/></>}
+      {part.kind==='rgb-led'&&<><ellipse rx="33" ry="12" fill={reading?.rgb?`rgb(${reading.rgb.join(',')})`:'#52645a'} stroke="#283b35"/><text textAnchor="middle" y="4" fontSize="10" fill="white">RGB</text></>}
+      {part.kind==='npn'&&<><rect x="-17" y="-12" width="34" height="24" rx="9" fill="#34463f"/><text textAnchor="middle" y="4" fill="white" fontSize="10">NPN</text></>}
+      {part.kind==='capacitor'&&<><rect x="-14" y="-11" width="28" height="22" rx="4" fill="#7297a2"/><path d="M-3-7v14M3-7v14" stroke="white" strokeWidth="2"/></>}
+      {part.kind==='piezo-passive'&&<><circle r="14" fill="#d6b977" stroke="#846c32"/><circle r="8" fill="#b2a88e"/>{lit&&<path d="M17-7q8 7 0 14" stroke="#60953e" strokeWidth="2" fill="none"/>}</>}
     </g>
     {points.map(p=><circle key={p.id} cx={p.x} cy={p.y} r="3" fill="#6c797a"/>)}
+    {['rgb-led','npn','capacitor','piezo-passive'].includes(part.kind)&&points.map((p,i)=>{const [dx,dy]=rotateOffset(0,16,part.rotation);return <text key={p.id} x={p.x+dx} y={p.y+dy} data-hole={p.id} textAnchor="middle" className="pin-mark" pointerEvents="none">{COMPONENTS[part.kind].pinNames[i]}</text>;})}
     {part.kind==='potentiometer'&&points.map((p,index)=>{
       const [dx,dy]=rotateOffset(0,14,part.rotation),name=['A','W','B'][index]!;
       return <g key={name} className="pot-pin" pointerEvents="none" aria-hidden="true" style={{color:['#315f83','#8c5717','#6b4a81'][index]}}>

@@ -2,25 +2,38 @@ import { useEffect, useRef, useState } from 'react';
 
 export const DEFAULT_BUZZER_VOLUME=50;
 export const MAX_BUZZER_GAIN=0.25;
-export function useBuzzerSound(active: boolean) {
+export function useBuzzerSound(active: boolean,drive={frequency:2000,waveform:'square' as OscillatorType,level:1}) {
   const context=useRef<AudioContext|null>(null),gainNode=useRef<GainNode|null>(null);
+  const oscillatorNode=useRef<OscillatorNode|null>(null);
+  const {frequency,waveform,level}=drive;
+  const driveRef=useRef(drive),appliedDrive=useRef(drive);
+  useEffect(()=>{driveRef.current={frequency,waveform,level};},[frequency,waveform,level]);
   const volumeRef=useRef(DEFAULT_BUZZER_VOLUME);
   const [enabled,setEnabled]=useState(false),[error,setError]=useState(''),[volume,setVolume]=useState(DEFAULT_BUZZER_VOLUME);
   useEffect(()=>{
     const audio=context.current;
     if(!enabled||!active||!audio)return;
     const oscillator=audio.createOscillator(),gain=audio.createGain();
-    oscillator.type='square';oscillator.frequency.value=2000;
-    gain.gain.value=MAX_BUZZER_GAIN*volumeRef.current/100;gainNode.current=gain;
+    const initial=driveRef.current;appliedDrive.current=initial;
+    oscillator.type=initial.waveform;oscillator.frequency.value=initial.frequency;oscillatorNode.current=oscillator;
+    gain.gain.value=MAX_BUZZER_GAIN*volumeRef.current/100*initial.level;gainNode.current=gain;
     oscillator.connect(gain);gain.connect(audio.destination);oscillator.start();
-    return ()=>{gainNode.current=null;oscillator.stop();oscillator.disconnect();gain.disconnect();};
+    return ()=>{oscillatorNode.current=null;gainNode.current=null;oscillator.stop();oscillator.disconnect();gain.disconnect();};
   },[active,enabled]);
-  useEffect(()=>()=>{void context.current?.close();},[]);
+  useEffect(()=>{
+    const audio=context.current,node=oscillatorNode.current,gain=gainNode.current;if(!audio||!node||!gain)return;
+    const previous=appliedDrive.current;if(previous.frequency===frequency&&previous.waveform===waveform&&previous.level===level)return;
+    node.type=waveform;
+    if(node.frequency.setTargetAtTime)node.frequency.setTargetAtTime(frequency,audio.currentTime,.015);else node.frequency.value=frequency;
+    gain.gain.cancelScheduledValues(audio.currentTime);gain.gain.setTargetAtTime(MAX_BUZZER_GAIN*volumeRef.current/100*level,audio.currentTime,.015);
+    appliedDrive.current={frequency,waveform,level};
+  },[frequency,waveform,level,active,enabled]);
+  useEffect(()=>{const close=()=>{void context.current?.close();};window.addEventListener('pagehide',close);return ()=>{window.removeEventListener('pagehide',close);close();};},[]);
   const changeVolume=(value:number)=>{
     if(!Number.isInteger(value)||value<0||value>100)return;
     volumeRef.current=value;setVolume(value);
     const audio=context.current,gain=gainNode.current;
-    if(audio&&gain){gain.gain.cancelScheduledValues(audio.currentTime);gain.gain.setTargetAtTime(MAX_BUZZER_GAIN*value/100,audio.currentTime,0.015);}
+    if(audio&&gain){gain.gain.cancelScheduledValues(audio.currentTime);gain.gain.setTargetAtTime(MAX_BUZZER_GAIN*value/100*level,audio.currentTime,0.015);}
   };
   const toggle=async()=>{
     if(enabled){setEnabled(false);return;}
