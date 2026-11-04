@@ -145,3 +145,29 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 ## 两 PR 流程同步验证：2026-11-03
 
 本次替换单 PR 规则并同步流程、CR 模板、PR 模板、阶段草案和 PR 描述；D44 仅保留为已被 D45 取代的历史。检查两类 PR 的边界、先合并需求再实施、固定主线需求 SHA、squash／rebase 对应、三个阶段和微小变更例外的一致性，执行本地 Markdown 链接检查、旧规则检索与 `git diff --check`。产品验收无变化；纯文档调整不运行应用／浏览器测试。新触发器及自动化交接未配置、未验证。
+
+
+## 阶段 2 需求提案验证：2026-11-03
+
+新增 EX2-01–12 均为待批准验收，不是已执行测试；AC-01–19 不修改，EX1-01–05 保持暂缓。产品行为提案见 PRD；模型、生命周期、存档和驱动源待决见 CR-STAGE-2 Q1–Q6。现有测试不构成新增器件覆盖。
+
+| ID | 拟测试位置／独立场景 | 未来命令 | 本次实际结果 |
+| --- | --- | --- | --- |
+| EX2-01 | circuit、appearance、Chromium：四方向映射、单通道／组合混色；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-02 | circuit、tutor：逐通道错误、共阻非唯一；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-03 | circuit：基极断开、有效驱动及负载手算；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-04 | circuit、tutor：缺限流、反接、不支持区；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-05 | circuit：RC 在 0/1τ/5τ，R/C 变化，误差与重复运行；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-06 | app、Chromium：停止、重启、编辑、撤销、刷新、后台逐场景；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-07 | circuit、app：DC、有效／越界频率、驱动移除；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-08 | useBuzzerSound、Chromium：许可、静音、清理、API 不可用；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-09 | editor、Chromium：四器件非拖动编辑、物理拒绝及合法错误；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-10 | storage、editor：新参数往返、旧格式迁移及失败保护；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-11 | ComponentGuide、Chromium：说明只读及四参考实验；教师／学生另验；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-12 | circuit、Chromium：批准规模边界、超限与运行预算；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+
+回归映射：AC-01/03 网络端点；02/09 安装编辑与键盘；04/05 数值／诊断；06 证据提示；07/08 历史／存档；10/13 教学说明；11/15/16/19 控制与显示；12 音频；14 参数；17/18 停止与按钮释放。AC-11/17 对动态器件的差异仍须确定，不以新增 ID 隐式替换旧要求。
+
+本轮纯文档检查：`git diff --check`、本地 Markdown 文件引用检查、EX2 定义唯一性与 12 项逐项映射检查、`git diff` 人工审阅；实际结果见 PR 及交付报告。应用类型／构建／模块／Chromium 测试未运行，因无业务代码变化；Firefox／WebKit 不运行。真实读屏、设备试听、教师审阅和教学有效性未执行。独立 Work 审查、新事件触发器和分支保护均未在本轮配置或验证；不预报远端 CI 结果。
+
+实际执行：`python3 /tmp/ai-circuit-stage2/check_docs.py` 通过（6 份文档边界、本地文件引用、12 项 EX2 唯一定义与逐项映射、既有 AC／EX1 表行不变、HEAD 业务代码与功能基线一致）；`git diff --check` 通过；已审阅全部文档差异。校验脚本为本轮临时工具，不是仓库测试依赖。
