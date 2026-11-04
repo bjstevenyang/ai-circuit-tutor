@@ -127,3 +127,7 @@ EX1-01–EX1-05 全部暂缓，不删除、不计入下一轮交付门槛；恢�
 
 - [BC Science 9](https://curriculum.gov.bc.ca/curriculum/science/9/core)
 - [BC Hydro 串并联实验](https://schools.bchydro.com/activities/electricity/investigating-series-and-parallel-circuits)
+
+### 三阶段 PR 交付
+
+阶段 2、3、4 各使用独立功能分支和一个 PR，顺序交付；同一 PR 内先需求与只读影响分析，用户批准明确需求版本后再实施，最终由用户验收合并。操作入口见 [PR 流程](changes/README.md)。本次只落地流程与草案，不补定器件参数或授权功能实施。
