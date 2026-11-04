@@ -182,3 +182,33 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 新 EX2 数值／模型／生命周期／迁移／性能测试仍全部未执行，产品待决选择未获批准。纯文档分析不运行本地类型、构建、Vitest 或浏览器测试，Firefox／WebKit 不运行；没有性能测量、设备试听、独立 Work 审查或学生试用。报告新提交的 CI 结果须另行核对，不预先写为通过。
 
 实际执行：`python3 /tmp/ai-circuit-stage2-impact/check_impact.py` 通过（允许的三个文档、SHA／分支／upstream、功能基线业务树及配置不变、AC／EX1／EX2 不变、12 项影响及拟测试映射、Q1–Q6／R1–R8、Markdown 引用和固定 SHA 代码链接）；`git diff --check` 通过。校验脚本仅为本轮临时工具。
+
+
+## 阶段2教学方向收敛后的具体规格检查：2026-11-04
+
+本节为当前提案证据计划；上述2026-11-03的“Q项待决／文件待定”为历史输入记录，不能覆盖本轮已同意方向。实际产品仍未实现；完整参数／验收版本待用户审阅。输入head `537bc86ee6b737dc50ca7a76b3538d951331e10e`，功能基线`06ab7572452f8b078ec06f62c55ed54543f5c75c`。来源为当前PRD、模型、设计及 [四实验脚本](changes/CR-STAGE-2-EXPERIMENTS.md)。
+
+差异：EX2-01–12相对功能基线全部新增、相对原草案全部细化；无删除。AC-06/11/17新增动态模式适用规则，旧八类DC回归不变；其他AC-01–19继续回归；EX1-01–05暂缓。固定信号源有限模式属于用户同意的教学方向，具体电压／频率／负载模型和保存字段仍是作者待审阅提案。
+
+| ID | 拟测试文件／具体独立场景 | 未来执行命令 | 本轮产品结果 |
+| --- | --- | --- | --- |
+| EX2-01 | src/circuit/rgb.test.ts、appearance.test.tsx、tests/e2e/components.spec.ts：E2-RGB七组合、330Ω及1kΩ电流／颜色、四方向和预览 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-02 | rgb.test.ts、tutor/index.test.ts：R100Ω超流、通道反向／旁路／无限流、等Vf共阻非唯一与不同Vf区别、修复证据 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-03 | src/circuit/npn.test.ts：E2-NPN的10k饱和／100k受控／断开截止，Ib/Ic/Ie、VCE、KCL与重合边界 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-04 | npn.test.ts、tutor/index.test.ts：直连基极、反接、悬空、未支持拓扑、5/50mA限值及提示 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-05 | src/circuit/transient.test.ts：E2-RC 0/1τ/5τ、充转放连续、同时闭合／断开、R/C变化、稳态／保持、零R／浮置／多C／混接限制、两脚交换等价 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-06 | src/app/Simulation.test.tsx、Chromium：设计事件表每一行、旧回调、后台／失焦、60s、提示快照，AC-06/11/17差异和旧DC原规则 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-07 | src/circuit/piezo.test.ts、app：E2-PIEZO三频率／稳态Vpp、串1MΩ、交换脚、断开／旁路／DC、互斥源及频率非法输入 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-08 | src/app/useBuzzerSound.test.tsx、Chromium：模型频率／幅度、许可、音量0、API不可用、100ms更新及停止／后台／退出清理，旧有源回归 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-09 | src/editor/components.test.ts、model.test.ts、Chromium：四封装全部方向占孔／重叠／取消及真实安装，四实验非拖动搭建、合法错误可保留 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-10 | src/storage/index.test.ts、editor/model.test.ts、Chromium：v4新字段往返及瞬态剥离、v1/v2/v3迁移、50步历史／撤销、未知／损坏／写失败、超预算配置可恢复 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-11 | src/app/ComponentGuide.test.tsx、tests/e2e/components.spec.ts：四脚本及错误修复，真实孔位／说明只读／文字输出状态；教师学生人工任务另记 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-12 | 模型预算测试、Chromium性能场景：P/T/候选/矩阵/器件线数量边界及超限、四实验、指定环境P95和10会话后内存 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+
+上述新增文件名为确定的拟落地位置，当前不存在，不能声称已有覆盖。模块期望由脚本公式／独立计算器产生，不调用项目求解器自证；时间测试使用显式模拟时间，Chromium补真实事件命中和音频API。安装脚本是逻辑网表，后续必须补经物理校验的实际孔位与完整学生操作。性能基准必须报告硬件／浏览器版本、预热／样本数、原始耗时分布／P95及内存采样，不能只写测试数量。
+
+回归逐项映射沿用本文件现有AC表；额外对AC-06快照、AC-11状态延续、AC-17暂停／停止逐事件验证，同时原DC断言不删。AC-01/03网络等价、02/09编辑、04/05数值诊断、07/08保存历史、10/13说明、12音频、14参数、15/16/19旧LED／电位器、18释放均需重跑。数学容差按模型，UI舍入允许显示精度但不得把小值说成物理零。
+
+人工证据按四实验末节分别记录教师、至少3名学生任务、真实读屏／200%缩放和设备试听；未执行时报告交付边界。当前全未执行，不推断教学有效性。Firefox／WebKit不运行；不公开部署。本轮仅文档，不运行应用类型／构建／Vitest／Chromium，不预报CI。
+
+本轮实际执行：`python3 /tmp/ai-circuit-stage2-decisions/check.py` 通过（8份纯文档、本地链接、12项EX2定义／映射、原AC及EX1表行保留、AC-06/11/17显式差异、方向批准引用、业务代码不变）；RGB／NPN／RC／压电公式独立重算与文档数值核对通过，包含连续放电初态、下拉电阻基极电流、压电幅度衰减及RGB颜色映射；`git diff --check` 通过，已审阅全部文档差异。临时脚本不入仓库、不构成应用测试或运行依赖。
