@@ -171,3 +171,14 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 本轮纯文档检查：`git diff --check`、本地 Markdown 文件引用检查、EX2 定义唯一性与 12 项逐项映射检查、`git diff` 人工审阅；实际结果见 PR 及交付报告。应用类型／构建／模块／Chromium 测试未运行，因无业务代码变化；Firefox／WebKit 不运行。真实读屏、设备试听、教师审阅和教学有效性未执行。独立 Work 审查、新事件触发器和分支保护均未在本轮配置或验证；不预报远端 CI 结果。
 
 实际执行：`python3 /tmp/ai-circuit-stage2/check_docs.py` 通过（6 份文档边界、本地文件引用、12 项 EX2 唯一定义与逐项映射、既有 AC／EX1 表行不变、HEAD 业务代码与功能基线一致）；`git diff --check` 通过；已审阅全部文档差异。校验脚本为本轮临时工具，不是仓库测试依赖。
+
+
+## 阶段 2 只读技术影响分析：2026-11-03
+
+报告见 [CR-STAGE-2-IMPACT](changes/CR-STAGE-2-IMPACT.md)，输入需求 head `27c39b523264e86defce2683648e71a1308a322b`，实际实现基线 `06ab7572452f8b078ec06f62c55ed54543f5c75c`。本轮将逐项拟测试位置、独立基准、时间／性能边界和 Q1–Q6 阻塞映射集中在报告第 9–11 节；不改写 AC-01–AC-19、暂缓 EX1 或 EX2-01–EX2-12 的权威验收行，不新增业务测试文件。
+
+实际检查：本地分支／SHA／远端 refs 与 GitHub PR head 一致；从功能基线到输入 head 的业务源码、测试及依赖／入口配置无差异；`src`／`tests` 树相同；逐模块静态检查和独立 Python RC 解析值计算完成；交付执行 `git diff --check`、本地 Markdown 引用、验收唯一性与映射、只含文档及业务树不变检查。输入 head 的 GitHub PR Verify run #22 已读取为 success，仅为旧功能／现有工作流证据。
+
+新 EX2 数值／模型／生命周期／迁移／性能测试仍全部未执行，产品待决选择未获批准。纯文档分析不运行本地类型、构建、Vitest 或浏览器测试，Firefox／WebKit 不运行；没有性能测量、设备试听、独立 Work 审查或学生试用。报告新提交的 CI 结果须另行核对，不预先写为通过。
+
+实际执行：`python3 /tmp/ai-circuit-stage2-impact/check_impact.py` 通过（允许的三个文档、SHA／分支／upstream、功能基线业务树及配置不变、AC／EX1／EX2 不变、12 项影响及拟测试映射、Q1–Q6／R1–R8、Markdown 引用和固定 SHA 代码链接）；`git diff --check` 通过。校验脚本仅为本轮临时工具。
