@@ -4,7 +4,7 @@
 
 - 当前状态：Proposed / Specification Review；教学方向已同意，完整具体规格待批准，未实施。
 - 需求PR：[Draft #2](https://github.com/bjstevenyang/ai-circuit-tutor/pull/2)；分支 codex/stage-2-requirements；实现PR／分支尚未创建。
-- 本轮修改前仓库 bjstevenyang/ai-circuit-tutor，分支 codex/stage-2-requirements，HEAD `537bc86ee6b737dc50ca7a76b3538d951331e10e`，工作区干净；远端head一致，master仍`bbbe54f76aa7fb991a4fb91ab3fd7a76d7a48614`。
+- 本次复核修订前仓库 bjstevenyang/ai-circuit-tutor，分支 codex/stage-2-requirements，HEAD `08266956fca5a9439fdddcc2dbd82d35ce835042`，工作区干净；远端head一致，master仍`bbbe54f76aa7fb991a4fb91ab3fd7a76d7a48614`。
 - 实际功能基线 `06ab7572452f8b078ec06f62c55ed54543f5c75c`，TEST_PLAN历史记录240项Vitest／35个Chromium通过；后续文档提交不是功能实现，本轮未复验应用。
 - 初始授权：2026-11-03用户仅要求需求文档并明确授权独立需求分支、提交推送及Draft PR，原文保留于PR描述。
 - 新授权：2026-11-04用户回复“同意你提出的取舍决定”，所指完整教学建议和边界已转录到 [可访问记录](https://github.com/bjstevenyang/ai-circuit-tutor/pull/2#issuecomment-6624299769)。批准者为当前会话任务提出者，不推定其GitHub身份；同意范围是Q1–Q6教学方向及最小信号源能力，不是尚未形成的参数／完整需求SHA或业务代码授权。
@@ -59,3 +59,13 @@
 ## 验证与交付
 
 12项EX2对应未来测试位置、命令、逐场景输入／期望见TEST_PLAN及四实验；全部业务测试仍未执行、功能未实现。旧历史通过及旧CI不证明新规格通过。文档一致性／链接／ID／独立数学算例及差异检查记录在TEST_PLAN本轮节；教学／读屏／试听单列待人工执行。2026-11-04已完成前版需求审查的 [评论](https://github.com/bjstevenyang/ai-circuit-tutor/pull/2#issuecomment-6624139803) 保留为历史，不将其“修改后再审”当成本版批准。代理不自行批准或合并。
+
+
+## 完整规格复核后的修订（2026-11-04）
+
+输入为 [Codex复核评论](https://github.com/bjstevenyang/ai-circuit-tutor/pull/2#issuecomment-6624787668)，固定复核head `08266956fca5a9439fdddcc2dbd82d35ce835042`；用户把该结论带回当前需求准备任务。本轮沿用已授权需求文档／同一分支交付，不新增产品方向或实施授权。
+
+- P1：选择调整参考接线，在C与P之间增100 kΩ参考电阻，保留严格端电压唯一性／整会话失败契约。断开时C唯一为4.5 V，LED两端0 V；接通时重新计入参考电流、LED电流、Ic/Ie和源总电流。新增移除参考电阻且断开的非唯一反例。脚本资源从6变7件，仍P=1/T=1／6候选；不是靠GMIN或部分量接口放宽掩盖问题。
+- P2：新增 [固定性能规程](CR-STAGE-2-BENCHMARKS.md)，列四实验、24件/P6/T2最大有效组合、超限输入、核心／UI／音频／停止计时、P95和两组实际墙钟60 s会话的回收采样步骤；阈值不变，无实测结论。
+- 受影响验收：EX2-03修改正常断开接线与全部接通数值；EX2-04新增缺C参考的非唯一回归；EX2-11更新NPN四实验脚本；EX2-12细化固定性能输入／采样方法。EX2-01/02/05–10及原AC/EX1不改验收行为，仅回归核对；没有新增／删除ID。模型方程、NPN参数、唯一性与失败契约不改变，源模式／保存／时间教学方向不改变。
+- 文档涉及PRD、模型、系统设计、实验／性能脚本、测试计划、决策和影响增补；无代码或测试实现。新完整head提交后记录PR，仍需复核，不把作者修订声明当审阅者已关闭问题；需求未批准合并。

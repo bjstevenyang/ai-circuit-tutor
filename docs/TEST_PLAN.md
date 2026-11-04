@@ -194,8 +194,8 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 | --- | --- | --- | --- |
 | EX2-01 | src/circuit/rgb.test.ts、appearance.test.tsx、tests/e2e/components.spec.ts：E2-RGB七组合、330Ω及1kΩ电流／颜色、四方向和预览 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 | EX2-02 | rgb.test.ts、tutor/index.test.ts：R100Ω超流、通道反向／旁路／无限流、等Vf共阻非唯一与不同Vf区别、修复证据 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
-| EX2-03 | src/circuit/npn.test.ts：E2-NPN的10k饱和／100k受控／断开截止，Ib/Ic/Ie、VCE、KCL与重合边界 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
-| EX2-04 | npn.test.ts、tutor/index.test.ts：直连基极、反接、悬空、未支持拓扑、5/50mA限值及提示 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-03 | src/circuit/npn.test.ts：E2-NPN含C至P的100k参考：断开唯一VC4.5 V；10k饱和／100k受控的LED/参考/Ib/Ic/Ie/源电流及KCL与重合边界 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-04 | npn.test.ts、tutor/index.test.ts：直连基极、反接、悬空、未支持拓扑、移除C参考且断开的非唯一反例、5/50mA限值及提示 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 | EX2-05 | src/circuit/transient.test.ts：E2-RC 0/1τ/5τ、充转放连续、同时闭合／断开、R/C变化、稳态／保持、零R／浮置／多C／混接限制、两脚交换等价 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 | EX2-06 | src/app/Simulation.test.tsx、Chromium：设计事件表每一行、旧回调、后台／失焦、60s、提示快照，AC-06/11/17差异和旧DC原规则 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 | EX2-07 | src/circuit/piezo.test.ts、app：E2-PIEZO三频率／稳态Vpp、串1MΩ、交换脚、断开／旁路／DC、互斥源及频率非法输入 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
@@ -203,7 +203,7 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 | EX2-09 | src/editor/components.test.ts、model.test.ts、Chromium：四封装全部方向占孔／重叠／取消及真实安装，四实验非拖动搭建、合法错误可保留 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 | EX2-10 | src/storage/index.test.ts、editor/model.test.ts、Chromium：v4新字段往返及瞬态剥离、v1/v2/v3迁移、50步历史／撤销、未知／损坏／写失败、超预算配置可恢复 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 | EX2-11 | src/app/ComponentGuide.test.tsx、tests/e2e/components.spec.ts：四脚本及错误修复，真实孔位／说明只读／文字输出状态；教师学生人工任务另记 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
-| EX2-12 | 模型预算测试、Chromium性能场景：P/T/候选/矩阵/器件线数量边界及超限、四实验、指定环境P95和10会话后内存 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-12 | 模型预算测试及CR-STAGE-2-BENCHMARKS固定场景B-RGB/B-NPN/B-RC/B-PIEZO/B-MAX/B-OVER与P/T超限／128/129维合成预检；计时P95、M-RC/M-PIEZO真实墙钟及GC采样 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
 
 上述新增文件名为确定的拟落地位置，当前不存在，不能声称已有覆盖。模块期望由脚本公式／独立计算器产生，不调用项目求解器自证；时间测试使用显式模拟时间，Chromium补真实事件命中和音频API。安装脚本是逻辑网表，后续必须补经物理校验的实际孔位与完整学生操作。性能基准必须报告硬件／浏览器版本、预热／样本数、原始耗时分布／P95及内存采样，不能只写测试数量。
 
@@ -212,3 +212,19 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 人工证据按四实验末节分别记录教师、至少3名学生任务、真实读屏／200%缩放和设备试听；未执行时报告交付边界。当前全未执行，不推断教学有效性。Firefox／WebKit不运行；不公开部署。本轮仅文档，不运行应用类型／构建／Vitest／Chromium，不预报CI。
 
 本轮实际执行：`python3 /tmp/ai-circuit-stage2-decisions/check.py` 通过（8份纯文档、本地链接、12项EX2定义／映射、原AC及EX1表行保留、AC-06/11/17显式差异、方向批准引用、业务代码不变）；RGB／NPN／RC／压电公式独立重算与文档数值核对通过，包含连续放电初态、下拉电阻基极电流、压电幅度衰减及RGB颜色映射；`git diff --check` 通过，已审阅全部文档差异。临时脚本不入仓库、不构成应用测试或运行依赖。
+
+
+## 完整规格复核问题修订验证：2026-11-04
+
+来源 [完整复核意见](https://github.com/bjstevenyang/ai-circuit-tutor/pull/2#issuecomment-6624787668)，输入head `08266956fca5a9439fdddcc2dbd82d35ce835042`。EX2-03/04/11/12修订：NPN新增C–P参考电阻、三态及源电流重新计算、移除参考电阻的非唯一回归；性能固定输入与测量过程见 [规程](changes/CR-STAGE-2-BENCHMARKS.md)。其余EX2、AC和暂缓EX1不增删／改行为。
+
+| 验收 | 未来文件／场景 | 执行命令／本轮实际状态 |
+| --- | --- | --- |
+| EX2-03 | npn.test.ts／E2-NPN：7件新网表三态、LED与R_ref电流、源电流及全部节点唯一性 | 未来npm test；本轮仅独立数学核对，未实现 |
+| EX2-04 | npn.test.ts：去R_ref且断开，VC3/4.5两个合法解；恢复后唯一VC4.5 | 未来npm test；本轮独立约束反例核对，未跑业务测试 |
+| EX2-11 | 四实验Chromium：NPN新增参考电阻的合法安装、控制与错误修复，其他三实验回归 | 未来npm run test:e2e -- --project=chromium；本轮未执行 |
+| EX2-12 | 固定性能规程全部B场景、合成预算及M-RC/M-PIEZO采样 | 实现PR补实际runner命令／版本／fixtures与数据；本轮未测性能 |
+
+上一版独立算例通过仅表明原接通数学正确，不表明断开唯一性已验证。当前已增加不依赖GMIN的唯一性正／反例检查，不能把数学核对当作求解器实现测试。真实安装、实际矩阵规模、Chromium、读屏／试听和学生试用仍未执行；原教学方向无需重复批准，完整新head仍待复核。
+
+本次实际执行：`python3 /tmp/ai-circuit-stage2-review-fix/check.py`通过（9份纯文档、本地引用、12个EX2 ID、未受影响验收与业务代码不变、精确有理数NPN三态／KCL／源电流、原浮置反例与新增参考支路唯一性论证、24件／576候选基准及测量步骤字段）；`git diff --check`通过，已审阅差异。全部是文档／数学验证，没有性能或产品实测；临时脚本不入仓库。
