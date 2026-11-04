@@ -1,6 +1,6 @@
 # CR-STAGE-4：可编程控制板
 
-状态：Proposed，规划草案，未批准实施。对应阶段 PR 尚未创建。
+状态：Proposed，规划草案，未批准实施。对应需求 PR 与实现 PR 均尚未创建；先批准并合并需求 PR，再建立独立实现分支与 PR。
 
 范围来源：[PRD](../PRD.md) 的阶段 4；器件：micro:bit、Arduino Uno R3。阶段 1 基础测量继续暂缓。
 

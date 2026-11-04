@@ -1,10 +1,19 @@
+## PR 类型
+
+- 类型：Requirement Change / Implementation / 小型变更例外
+- 关联需求 PR：
+- 关联实现 PR（需求阶段未创建可写待创建）：
+- 小型变更例外理由（如适用）：
+
 ## 需求与版本
 
 - CR 路径／ID：
 - 本次阶段：Proposed / Impact Analysis / Approved / Implemented / Verified
 - PRD 差异及范围：
 - 实现基线 commit 与验证依据：
-- 待批准／已批准需求完整 commit SHA：
+- 需求 PR：待批准 head SHA／批准记录（需求 PR 填写）：
+- 实现 PR：已合并需求基线完整 SHA／合并状态（实现 PR 必填）：
+- 原批准 head 与主线基线对应关系（squash／rebase 时）：
 - 用户批准记录链接与覆盖范围（未批准则写明）：
 
 ## 技术影响与实施前确认
@@ -26,4 +35,6 @@
 
 ## 最终验收
 
-用户验收后决定合并。需求批准不代表最终代码批准；不自动合并。仅 Chromium，不公开部署。
+需求 PR：只包含需求及影响分析文档，由用户批准并合并后才建立实现 PR。
+
+实现 PR：确认需求基线已合并、范围一致，用户最终验收后决定合并。需求批准不代表代码验收；不自动合并。仅 Chromium，不公开部署。
