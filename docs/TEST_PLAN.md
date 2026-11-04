@@ -145,3 +145,86 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 ## 两 PR 流程同步验证：2026-11-03
 
 本次替换单 PR 规则并同步流程、CR 模板、PR 模板、阶段草案和 PR 描述；D44 仅保留为已被 D45 取代的历史。检查两类 PR 的边界、先合并需求再实施、固定主线需求 SHA、squash／rebase 对应、三个阶段和微小变更例外的一致性，执行本地 Markdown 链接检查、旧规则检索与 `git diff --check`。产品验收无变化；纯文档调整不运行应用／浏览器测试。新触发器及自动化交接未配置、未验证。
+
+
+## 阶段 2 需求提案验证：2026-11-03
+
+新增 EX2-01–12 均为待批准验收，不是已执行测试；AC-01–19 不修改，EX1-01–05 保持暂缓。产品行为提案见 PRD；模型、生命周期、存档和驱动源待决见 CR-STAGE-2 Q1–Q6。现有测试不构成新增器件覆盖。
+
+| ID | 拟测试位置／独立场景 | 未来命令 | 本次实际结果 |
+| --- | --- | --- | --- |
+| EX2-01 | circuit、appearance、Chromium：四方向映射、单通道／组合混色；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-02 | circuit、tutor：逐通道错误、共阻非唯一；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-03 | circuit：基极断开、有效驱动及负载手算；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-04 | circuit、tutor：缺限流、反接、不支持区；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-05 | circuit：RC 在 0/1τ/5τ，R/C 变化，误差与重复运行；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-06 | app、Chromium：停止、重启、编辑、撤销、刷新、后台逐场景；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-07 | circuit、app：DC、有效／越界频率、驱动移除；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-08 | useBuzzerSound、Chromium：许可、静音、清理、API 不可用；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-09 | editor、Chromium：四器件非拖动编辑、物理拒绝及合法错误；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-10 | storage、editor：新参数往返、旧格式迁移及失败保护；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-11 | ComponentGuide、Chromium：说明只读及四参考实验；教师／学生另验；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+| EX2-12 | circuit、Chromium：批准规模边界、超限与运行预算；具体测试文件／名称待规格确定后建立 | `npm test`；涉及浏览器时 `npm run test:e2e -- --project=chromium` | 未执行，尚无实现；不是通过记录 |
+
+回归映射：AC-01/03 网络端点；02/09 安装编辑与键盘；04/05 数值／诊断；06 证据提示；07/08 历史／存档；10/13 教学说明；11/15/16/19 控制与显示；12 音频；14 参数；17/18 停止与按钮释放。AC-11/17 对动态器件的差异仍须确定，不以新增 ID 隐式替换旧要求。
+
+本轮纯文档检查：`git diff --check`、本地 Markdown 文件引用检查、EX2 定义唯一性与 12 项逐项映射检查、`git diff` 人工审阅；实际结果见 PR 及交付报告。应用类型／构建／模块／Chromium 测试未运行，因无业务代码变化；Firefox／WebKit 不运行。真实读屏、设备试听、教师审阅和教学有效性未执行。独立 Work 审查、新事件触发器和分支保护均未在本轮配置或验证；不预报远端 CI 结果。
+
+实际执行：`python3 /tmp/ai-circuit-stage2/check_docs.py` 通过（6 份文档边界、本地文件引用、12 项 EX2 唯一定义与逐项映射、既有 AC／EX1 表行不变、HEAD 业务代码与功能基线一致）；`git diff --check` 通过；已审阅全部文档差异。校验脚本为本轮临时工具，不是仓库测试依赖。
+
+
+## 阶段 2 只读技术影响分析：2026-11-03
+
+报告见 [CR-STAGE-2-IMPACT](changes/CR-STAGE-2-IMPACT.md)，输入需求 head `27c39b523264e86defce2683648e71a1308a322b`，实际实现基线 `06ab7572452f8b078ec06f62c55ed54543f5c75c`。本轮将逐项拟测试位置、独立基准、时间／性能边界和 Q1–Q6 阻塞映射集中在报告第 9–11 节；不改写 AC-01–AC-19、暂缓 EX1 或 EX2-01–EX2-12 的权威验收行，不新增业务测试文件。
+
+实际检查：本地分支／SHA／远端 refs 与 GitHub PR head 一致；从功能基线到输入 head 的业务源码、测试及依赖／入口配置无差异；`src`／`tests` 树相同；逐模块静态检查和独立 Python RC 解析值计算完成；交付执行 `git diff --check`、本地 Markdown 引用、验收唯一性与映射、只含文档及业务树不变检查。输入 head 的 GitHub PR Verify run #22 已读取为 success，仅为旧功能／现有工作流证据。
+
+新 EX2 数值／模型／生命周期／迁移／性能测试仍全部未执行，产品待决选择未获批准。纯文档分析不运行本地类型、构建、Vitest 或浏览器测试，Firefox／WebKit 不运行；没有性能测量、设备试听、独立 Work 审查或学生试用。报告新提交的 CI 结果须另行核对，不预先写为通过。
+
+实际执行：`python3 /tmp/ai-circuit-stage2-impact/check_impact.py` 通过（允许的三个文档、SHA／分支／upstream、功能基线业务树及配置不变、AC／EX1／EX2 不变、12 项影响及拟测试映射、Q1–Q6／R1–R8、Markdown 引用和固定 SHA 代码链接）；`git diff --check` 通过。校验脚本仅为本轮临时工具。
+
+
+## 阶段2教学方向收敛后的具体规格检查：2026-11-04
+
+本节为当前提案证据计划；上述2026-11-03的“Q项待决／文件待定”为历史输入记录，不能覆盖本轮已同意方向。实际产品仍未实现；完整参数／验收版本待用户审阅。输入head `537bc86ee6b737dc50ca7a76b3538d951331e10e`，功能基线`06ab7572452f8b078ec06f62c55ed54543f5c75c`。来源为当前PRD、模型、设计及 [四实验脚本](changes/CR-STAGE-2-EXPERIMENTS.md)。
+
+差异：EX2-01–12相对功能基线全部新增、相对原草案全部细化；无删除。AC-06/11/17新增动态模式适用规则，旧八类DC回归不变；其他AC-01–19继续回归；EX1-01–05暂缓。固定信号源有限模式属于用户同意的教学方向，具体电压／频率／负载模型和保存字段仍是作者待审阅提案。
+
+| ID | 拟测试文件／具体独立场景 | 未来执行命令 | 本轮产品结果 |
+| --- | --- | --- | --- |
+| EX2-01 | src/circuit/rgb.test.ts、appearance.test.tsx、tests/e2e/components.spec.ts：E2-RGB七组合、330Ω及1kΩ电流／颜色、四方向和预览 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-02 | rgb.test.ts、tutor/index.test.ts：R100Ω超流、通道反向／旁路／无限流、等Vf共阻非唯一与不同Vf区别、修复证据 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-03 | src/circuit/npn.test.ts：E2-NPN含C至P的100k参考：断开唯一VC4.5 V；10k饱和／100k受控的LED/参考/Ib/Ic/Ie/源电流及KCL与重合边界 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-04 | npn.test.ts、tutor/index.test.ts：直连基极、反接、悬空、未支持拓扑、移除C参考且断开的非唯一反例、5/50mA限值及提示 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-05 | src/circuit/transient.test.ts：E2-RC 0/1τ/5τ、充转放连续、同时闭合／断开、R/C变化、稳态／保持、零R／浮置／多C／混接限制、两脚交换等价 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-06 | src/app/Simulation.test.tsx、Chromium：设计事件表每一行、旧回调、后台／失焦、60s、提示快照，AC-06/11/17差异和旧DC原规则 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-07 | src/circuit/piezo.test.ts、app：E2-PIEZO三频率／稳态Vpp、串1MΩ、交换脚、断开／旁路／DC、互斥源及频率非法输入 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-08 | src/app/useBuzzerSound.test.tsx、Chromium：模型频率／幅度、许可、音量0、API不可用、100ms更新及停止／后台／退出清理，旧有源回归 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-09 | src/editor/components.test.ts、model.test.ts、Chromium：四封装全部方向占孔／重叠／取消及真实安装，四实验非拖动搭建、合法错误可保留 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-10 | src/storage/index.test.ts、editor/model.test.ts、Chromium：v4新字段往返及瞬态剥离、v1/v2/v3迁移、50步历史／撤销、未知／损坏／写失败、超预算配置可恢复 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-11 | src/app/ComponentGuide.test.tsx、tests/e2e/components.spec.ts：四脚本及错误修复，真实孔位／说明只读／文字输出状态；教师学生人工任务另记 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+| EX2-12 | 模型预算测试及CR-STAGE-2-BENCHMARKS固定场景B-RGB/B-NPN/B-RC/B-PIEZO/B-MAX/B-OVER与P/T超限／128/129维合成预检；计时P95、M-RC/M-PIEZO真实墙钟及GC采样 | `npm test`；涉及浏览器用 `npm run test:e2e -- --project=chromium --workers=1`；12另采性能数据 | 未执行／无阶段2实现 |
+
+上述新增文件名为确定的拟落地位置，当前不存在，不能声称已有覆盖。模块期望由脚本公式／独立计算器产生，不调用项目求解器自证；时间测试使用显式模拟时间，Chromium补真实事件命中和音频API。安装脚本是逻辑网表，后续必须补经物理校验的实际孔位与完整学生操作。性能基准必须报告硬件／浏览器版本、预热／样本数、原始耗时分布／P95及内存采样，不能只写测试数量。
+
+回归逐项映射沿用本文件现有AC表；额外对AC-06快照、AC-11状态延续、AC-17暂停／停止逐事件验证，同时原DC断言不删。AC-01/03网络等价、02/09编辑、04/05数值诊断、07/08保存历史、10/13说明、12音频、14参数、15/16/19旧LED／电位器、18释放均需重跑。数学容差按模型，UI舍入允许显示精度但不得把小值说成物理零。
+
+人工证据按四实验末节分别记录教师、至少3名学生任务、真实读屏／200%缩放和设备试听；未执行时报告交付边界。当前全未执行，不推断教学有效性。Firefox／WebKit不运行；不公开部署。本轮仅文档，不运行应用类型／构建／Vitest／Chromium，不预报CI。
+
+本轮实际执行：`python3 /tmp/ai-circuit-stage2-decisions/check.py` 通过（8份纯文档、本地链接、12项EX2定义／映射、原AC及EX1表行保留、AC-06/11/17显式差异、方向批准引用、业务代码不变）；RGB／NPN／RC／压电公式独立重算与文档数值核对通过，包含连续放电初态、下拉电阻基极电流、压电幅度衰减及RGB颜色映射；`git diff --check` 通过，已审阅全部文档差异。临时脚本不入仓库、不构成应用测试或运行依赖。
+
+
+## 完整规格复核问题修订验证：2026-11-04
+
+来源 [完整复核意见](https://github.com/bjstevenyang/ai-circuit-tutor/pull/2#issuecomment-6624787668)，输入head `08266956fca5a9439fdddcc2dbd82d35ce835042`。EX2-03/04/11/12修订：NPN新增C–P参考电阻、三态及源电流重新计算、移除参考电阻的非唯一回归；性能固定输入与测量过程见 [规程](changes/CR-STAGE-2-BENCHMARKS.md)。其余EX2、AC和暂缓EX1不增删／改行为。
+
+| 验收 | 未来文件／场景 | 执行命令／本轮实际状态 |
+| --- | --- | --- |
+| EX2-03 | npn.test.ts／E2-NPN：7件新网表三态、LED与R_ref电流、源电流及全部节点唯一性 | 未来npm test；本轮仅独立数学核对，未实现 |
+| EX2-04 | npn.test.ts：去R_ref且断开，VC3/4.5两个合法解；恢复后唯一VC4.5 | 未来npm test；本轮独立约束反例核对，未跑业务测试 |
+| EX2-11 | 四实验Chromium：NPN新增参考电阻的合法安装、控制与错误修复，其他三实验回归 | 未来npm run test:e2e -- --project=chromium；本轮未执行 |
+| EX2-12 | 固定性能规程全部B场景、合成预算及M-RC/M-PIEZO采样 | 实现PR补实际runner命令／版本／fixtures与数据；本轮未测性能 |
+
+上一版独立算例通过仅表明原接通数学正确，不表明断开唯一性已验证。当前已增加不依赖GMIN的唯一性正／反例检查，不能把数学核对当作求解器实现测试。真实安装、实际矩阵规模、Chromium、读屏／试听和学生试用仍未执行；原教学方向无需重复批准，完整新head仍待复核。
+
+本次实际执行：`python3 /tmp/ai-circuit-stage2-review-fix/check.py`通过（9份纯文档、本地引用、12个EX2 ID、未受影响验收与业务代码不变、精确有理数NPN三态／KCL／源电流、原浮置反例与新增参考支路唯一性论证、24件／576候选基准及测量步骤字段）；`git diff --check`通过，已审阅差异。全部是文档／数学验证，没有性能或产品实测；临时脚本不入仓库。
