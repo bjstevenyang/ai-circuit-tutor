@@ -8,7 +8,7 @@ for(const mode of ['RC','PIEZO'] as const)test(`M-${mode}: ten real foreground 6
   const cdp=await context.newCDPSession(page);await cdp.send('Performance.enable');await cdp.send('HeapProfiler.enable');
   const samples:{session:number;heap:number;simulatedEnd:string|null;audio:unknown}[]=[];
   for(let i=1;i<=10;i++){
-    await run(page);await page.waitForTimeout(60000);const simulatedEnd=await page.getByTestId('simulation-time').textContent().catch(()=>null);
+    await run(page);await page.waitForTimeout(60000);const simulatedEnd=mode==='RC'?await page.getByTestId('simulation-time').textContent():null;
     if(await page.getByRole('button',{name:'停止运行',exact:true}).count())await stop(page);await waitStopped(page);
     await page.waitForTimeout(1000);await cdp.send('HeapProfiler.collectGarbage');await page.waitForTimeout(100);await cdp.send('HeapProfiler.collectGarbage');await page.waitForTimeout(100);
     const metrics=await cdp.send('Performance.getMetrics'),heap=metrics.metrics.find(m=>m.name==='JSHeapUsedSize')!.value;

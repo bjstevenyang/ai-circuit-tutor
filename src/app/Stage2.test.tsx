@@ -5,7 +5,7 @@ import {App} from './App';
 import {PartShape} from '../editor/PartShape';
 import {createComponent,getComponentPins} from '../circuit';
 import {STORAGE_KEY} from '../storage';
-import {rcExperiment,rgbExperiment} from '../../tests/fixtures/stage2';
+import {rcExperiment,rgbExperiment,circuitFixture} from '../../tests/fixtures/stage2';
 beforeEach(()=>{localStorage.clear();});
 afterEach(()=>{cleanup();vi.useRealTimers();});
 const run=()=>fireEvent.click(screen.getByRole('button',{name:'运行电路'}));
@@ -30,3 +30,10 @@ it.each(['rgb-led','npn','capacitor','piezo-passive'] as const)('EX2-09 labels f
   for(const rotation of [0,90,180,270] as const){const part=createComponent(kind,rotation===90?'a15':rotation===270?'e15':'c15',rotation,'p');const view=render(<svg><PartShape part={part}/></svg>);const pins=getComponentPins(part)!;for(const pin of pins){const label=view.container.querySelector(`text[data-hole="${pin}"]`);expect(label).toBeTruthy();expect(label?.getAttribute('transform')).toBeNull();}view.unmount();}
 });
 it('EX2-11 new components explain each actual pin via keyboard-accessible tray',()=>{render(<App/>);for(const name of ['RGB LED','NPN 晶体管','电容','无源压电']){fireEvent.click(screen.getByRole('button',{name:`添加${name}`}));expect(within(screen.getByRole('region',{name:`${name}使用说明`})).getByText('怎么接入电路')).toBeInTheDocument();}});
+it('review regression: releasing a shorting button never restarts a faulted RC session',async()=>{
+  vi.useFakeTimers();const d=circuitFixture([{id:'c',kind:'capacitor',nets:['X','N']},{id:'r',kind:'resistor',nets:['P','X'],settings:{resistance:10000}},{id:'button',kind:'button',nets:['P','P','N','N']}]);localStorage.setItem(STORAGE_KEY,JSON.stringify(d));render(<App/>);run();await advance(100);
+  const p=d.components.find(p=>p.id==='button')!;fireEvent.click(screen.getByRole('button',{name:`常开按钮，锚点 ${p.anchor}`}));const control=screen.getByRole('button',{name:'按住按钮'});fireEvent.keyDown(control,{key:'Enter'});expect(screen.getByLabelText('仿真状态')).toHaveTextContent('运行受限');fireEvent.keyUp(control,{key:'Enter'});fireEvent(window,new Event('blur'));await advance(500);expect(screen.getByLabelText('仿真状态')).toHaveTextContent('运行受限');expect(screen.queryByTestId('simulation-time')).not.toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'停止运行'}));run();expect(screen.getByTestId('simulation-time')).toHaveTextContent('0.000');
+});
+it('review regression: selected RC resistors do not automatically announce changing currents',()=>{
+  const d=rcExperiment();localStorage.setItem(STORAGE_KEY,JSON.stringify(d));render(<App/>);run();const r=d.components.find(p=>p.id==='charge')!;fireEvent.click(screen.getByRole('button',{name:`电阻 10000 欧姆，锚点 ${r.anchor}`}));expect(document.querySelector('.part-reading')).toHaveAttribute('aria-live','off');expect(screen.getByRole('button',{name:'播报当前实验状态'})).toBeInTheDocument();
+});

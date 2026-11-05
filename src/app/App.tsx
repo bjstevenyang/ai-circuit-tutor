@@ -137,10 +137,10 @@ export function App() {
   useEffect(() => {
     const release = () => {
       setPressedButtons([]);
-      if (state.analysis&&(state.analysis.mode==='rc'||state.analysis.mode==='periodic')){
-        if(pressedButtons.length){const cap=document.components.find(p=>p.kind==='capacitor');dispatch({type:'run',result:analyzeCircuit(document,{...(cap&&state.analysis.timeS!==undefined?{timeState:{timeS:state.analysis.timeS,voltageV:state.analysis.readings?.[cap.id]?.voltageV??0}}:{})})});}
+      if (state.phase!=='fault'&&state.analysis&&(state.analysis.mode==='rc'||state.analysis.mode==='periodic')){
+        if(pressedButtons.length){const cap=document.components.find(p=>p.kind==='capacitor');dispatch({type:'tick',sessionId:state.sessionId,revision:state.revision,result:analyzeCircuit(document,{...(cap&&state.analysis.timeS!==undefined?{timeState:{timeS:state.analysis.timeS,voltageV:state.analysis.readings?.[cap.id]?.voltageV??0}}:{})})});}
         dispatch({type:'pause',paused:true});
-      }else if(state.analysis&&pressedButtons.length)dispatch({type:'run',result:analyzeCircuit(document)});
+      }else if(state.phase==='running'&&state.analysis&&pressedButtons.length)dispatch({type:'run',result:analyzeCircuit(document)});
     };
     const resume=()=>{if(!window.document.hidden)dispatch({type:'pause',paused:false});};
     const visibility = () => { if (window.document.hidden) release();else resume(); };
@@ -148,7 +148,7 @@ export function App() {
     window.addEventListener('focus',resume);
     window.document.addEventListener('visibilitychange',visibility);
     return () => { window.removeEventListener('blur',release);window.removeEventListener('focus',resume); window.document.removeEventListener('visibilitychange',visibility); };
-  },[pressedButtons,document,state.analysis]);
+  },[pressedButtons,document,state.analysis,state.phase,state.sessionId,state.revision]);
   useEffect(()=>{
     if(state.phase!=='running'||state.analysis?.mode!=='rc')return;
     const previous=state.analysis,cap=document.components.find(p=>p.kind==='capacitor');if(!cap)return;
@@ -178,7 +178,7 @@ export function App() {
   const pressButton = (id: string, pressed: boolean) => {
     const next = pressed ? [...new Set([...pressedButtons, id])] : pressedButtons.filter(item => item !== id);
     setPressedButtons(next);
-    if (state.analysis) run(document, next);
+    if (state.phase==='running') run(document, next);
   };
   const save = (next: CircuitDocument) => {
     if (state.storageBlocked) return '未保存：请先处理原有存档';
@@ -398,7 +398,7 @@ export function App() {
             {selectedPart ? <>
               <div className="selection-heading"><strong>{COMPONENTS[selectedPart.kind].name}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
               <div className="selection-controls">
-                <PartControls key={selectedPart.id} part={selectedPart} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
+                <PartControls key={selectedPart.id} part={selectedPart} autoAnnounce={state.analysis?.mode!=='rc'} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
                 <label>新锚点 <input aria-label="所选元件新锚点" value={moveAnchor} onChange={event => setMoveAnchor(event.target.value)} /></label>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: normalizeEndpoint(moveAnchor), rotation: selectedPart.rotation })}>移动元件</button>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: selectedPart.anchor, rotation: ((selectedPart.rotation + 90) % 360) as Rotation })}><Icon name="rotate" size={14} />旋转 90°</button>
@@ -434,6 +434,7 @@ export function App() {
             </> : <>
               <div className="empty-circuit-illustration"><span>＋</span><i /><span className="mini-led" /><i /><span>−</span></div><span className="eyebrow">A LITTLE EXPERIMENT</span><h3>电流会走哪条路？</h3><p>放好电阻和 LED，接通电池，再运行电路。遇到问题时，我们一步一步寻找线索。</p>
             </>}
+            {state.analysis?.notes?.map(note=><p key={note} className="model-note">{note}</p>)}
             {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>估算电池总电流</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
             {state.analysis && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '电路检测通过' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? (state.analysis.currentMa === undefined ? '未计算 LED 状态' : '查看各元件的工作状态') : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
           </div>

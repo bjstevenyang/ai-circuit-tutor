@@ -40,6 +40,7 @@ export function compileNetwork(d:CircuitDocument,controls:SimulationControls={})
 }
 export type CompiledNetwork=ReturnType<typeof compileNetwork>;
 function baseReachable(c:CompiledNetwork,start:string):Set<string>{
+  if(start===c.positive||start===c.negative)return new Set();
   const set=new Set([start]);let change=true;
   while(change){change=false;for(const b of c.branches.filter(b=>!b.polar)){if(set.has(b.from)&&!set.has(b.to)&&b.to!==c.positive&&b.to!==c.negative){set.add(b.to);change=true;}if(set.has(b.to)&&!set.has(b.from)&&b.from!==c.positive&&b.from!==c.negative){set.add(b.from);change=true;}}}
   return set;
@@ -96,5 +97,9 @@ export function analyzeExtendedDC(d:CircuitDocument,controls:SimulationControls=
   }
   let source=0;for(const b of c.branches){if(b.from===c.positive)source+=s.currents.get(b.id)??0;if(b.to===c.positive)source-=s.currents.get(b.id)??0;}
   const output=Object.entries(readings).some(([id,r])=>r.on&&['led','rgb-led','buzzer'].includes(d.components.find(p=>p.id===id)!.kind));
-  return {status:diagnostics.length?'fault':'supported',mode:'dc',complete:output&&!diagnostics.length,currentMa:cleanCurrent(source),readings,diagnostics,ledOn:d.components.some(p=>['led','rgb-led'].includes(p.kind)&&readings[p.id]?.on)};
+  const parallelChannels=new Map<string,Branch[]>();
+  for(const b of c.branches.filter(b=>d.components.find(p=>p.id===b.part)?.kind==='rgb-led')){const key=JSON.stringify([b.from,b.to]);parallelChannels.set(key,[...(parallelChannels.get(key)??[]),b]);}
+  const sharedLimit=[...parallelChannels.values()].some(edges=>new Set(edges.map(b=>b.drop)).size>1&&edges.some(b=>(s.currents.get(b.id)??0)>1e-9));
+  const notes=sharedLimit?['不同压降的RGB通道共用限流路径：当前读数唯一，但不能保证预期混色；请为每通道独立串入限流电阻。']:[];
+  return {status:diagnostics.length?'fault':'supported',mode:'dc',complete:output&&!diagnostics.length,currentMa:cleanCurrent(source),readings,diagnostics,...(notes.length?{notes}:{}),ledOn:d.components.some(p=>['led','rgb-led'].includes(p.kind)&&readings[p.id]?.on)};
 }

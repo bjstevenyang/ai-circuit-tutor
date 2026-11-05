@@ -1,12 +1,29 @@
 import {describe,it,expect} from 'vitest';
 import {analyzeCircuit,createComponent,getComponentPins} from './index';
 import {readCircuitDocument} from './validation';
-import {matrixBudget} from './boundedSolver';
+import {matrixBudget,solveBounded} from './boundedSolver';
 import {parseDocument,saveWorkspace,loadWorkspace,STORAGE_KEY} from '../storage';
 import {applyEdit,validateDocument} from '../editor/model';
 import {rgbExperiment,npnExperiment,rcExperiment,piezoExperiment,circuitFixture} from '../../tests/fixtures/stage2';
 
 describe('EX2 safety, equivalence and configuration contracts',()=>{
+  it('review regression: grounded NPN base does not mistake independent LEDs for a semiconductor driver',()=>{
+    const d=circuitFixture([{id:'t',kind:'npn',nets:['N','C','N']},{id:'rc',kind:'resistor',nets:['P','C'],settings:{resistance:1000}},{id:'led',kind:'led',nets:['A','N']},{id:'rl',kind:'resistor',nets:['P','A'],settings:{resistance:330}}]);
+    const a=analyzeCircuit(d);expect(a.status).toBe('supported');expect(a.readings!.t).toMatchObject({region:'cutoff',collectorCurrentMa:0,vceV:4.5});expect(a.readings!.led!.currentMa).toBeCloseTo(7.575757576,6);
+  });
+  it('review regression: unique different-drop shared RGB keeps readings but explains mixing limits',()=>{
+    const d=circuitFixture([{id:'u',kind:'rgb-led',nets:['X','N','X','unused']},{id:'r',kind:'resistor',nets:['P','X'],settings:{resistance:330}}]);
+    const a=analyzeCircuit(d);expect(a.status).toBe('supported');expect(a.readings!.u!.channels!.R.currentMa).toBeCloseTo(7.575757576,6);expect(a.notes?.join()).toContain('不能保证预期混色');expect(analyzeCircuit(rgbExperiment()).notes).toBeUndefined();
+  });
+  it('review regression: piezo permits open stubs but rejects a closed loop attached at one node',()=>{
+    for(const closed of [false,true]){const d=circuitFixture([{id:'p',kind:'piezo-passive',nets:['P','N']},{id:'r1',kind:'resistor',nets:['P','X']},{id:'r2',kind:'resistor',nets:['X','Y']},{id:'r3',kind:'resistor',nets:['Y',closed?'P':'Z']}]);d.sourceMode='teaching-square';expect(analyzeCircuit(d).status).toBe(closed?'unsupported':'supported');}
+  });
+  it('review regression: independent cathode resistors are not falsely described as a shared RGB limit',()=>{
+    const d=circuitFixture([{id:'u1',kind:'rgb-led',nets:['P','K1','g1','b1']},{id:'u2',kind:'rgb-led',nets:['r2','K2','P','b2']},{id:'r1',kind:'resistor',nets:['K1','N'],settings:{resistance:330}},{id:'r2',kind:'resistor',nets:['K2','N'],settings:{resistance:330}}]);const a=analyzeCircuit(d);expect(a.status).toBe('supported');expect(a.notes).toBeUndefined();expect(a.readings!.u1!.channels!.R.currentMa).toBeCloseTo(7.575757576,6);expect(a.readings!.u2!.channels!.G.currentMa).toBeCloseTo(4.545454545,6);
+  });
+  it('review regression: opening the drive cannot hide an unsupported closed side loop',()=>{
+    const d=circuitFixture([{id:'p',kind:'piezo-passive',nets:['OFF','N']},{id:'r1',kind:'resistor',nets:['P','X']},{id:'r2',kind:'resistor',nets:['X','Y']},{id:'r3',kind:'resistor',nets:['Y','P']}]);d.sourceMode='teaching-square';expect(analyzeCircuit(d).status).toBe('unsupported');
+  });
   it('RGB equal-drop common resistor rejects current sharing, different drops can be unique',()=>{
     for(const equal of [true,false]){const d=circuitFixture([{id:'u',kind:'rgb-led',nets:[equal?'unused':'X','N','X',equal?'X':'unused']},{id:'r',kind:'resistor',nets:['P','X'],settings:{resistance:330}}]);const a=analyzeCircuit(d);expect(a.status).toBe(equal?'unsupported':'supported');if(equal)expect(a.readings).toBeUndefined();}
   });
@@ -50,4 +67,12 @@ describe('EX2 safety, equivalence and configuration contracts',()=>{
   it.each([0,9e-6,1001e-6,NaN,Infinity])('rejects malformed capacitor configuration %s',capacitanceF=>{const d=rcExperiment();d.components.find(p=>p.id==='cap')!.capacitanceF=capacitanceF;expect(readCircuitDocument(d)).toBeNull();});
   it.each([0,2000,NaN,Infinity])('rejects unsupported persisted frequency %s',frequency=>{expect(readCircuitDocument({...piezoExperiment(),signalFrequencyHz:frequency})).toBeNull();});
   it('budget excess is retained as configuration but refused before analysis',()=>{const d=circuitFixture([1,2,3].map(i=>({id:`rgb${i}`,kind:'rgb-led',nets:[`R${i}`,'N',`G${i}`,`B${i}`]})));expect(parseDocument(d)).not.toBeNull();expect(analyzeCircuit(d).status).toBe('unsupported');expect(matrixBudget(128)).toBe(true);expect(matrixBudget(129)).toBe(false);expect(applyEdit(piezoExperiment(),{type:'set-frequency',value:2000 as 500}).ok).toBe(false);});
+  it('synthetic compiler matrix boundary accepts 128 unknowns and rejects 129 before allocation',()=>{
+    const chain=(n:number)=>Array.from({length:n+1},(_,i)=>({id:`r${i}`,part:`r${i}`,from:i===0?'P':`n${i}`,to:i===n?'N':`n${i+1}`,resistance:1000,drop:0,polar:false}));
+    const good=solveBounded(chain(128),'P','N',4.5);expect(good.ok).toBe(true);if(good.ok){expect(good.solution.unknowns).toBe(128);expect(good.solution.currents.get('r0')).toBeCloseTo(4.5/129000,12);}
+    expect(solveBounded(chain(129),'P','N',4.5)).toMatchObject({ok:false,reason:expect.stringContaining('128')});
+  });
+  it('unrelated floating resistor islands do not introduce fictitious RC leakage',()=>{
+    const d=circuitFixture([{id:'c',kind:'capacitor',nets:['X','N']},{id:'r',kind:'resistor',nets:['X','Y']},{id:'island',kind:'resistor',nets:['Z','Q']}]);const a=analyzeCircuit(d,{timeState:{timeS:1,voltageV:3},deltaTimeS:1});expect(a.readings!.c).toMatchObject({voltageV:3,currentMa:0,capacitorState:'保持'});
+  });
 });

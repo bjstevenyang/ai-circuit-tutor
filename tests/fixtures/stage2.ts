@@ -11,6 +11,7 @@ export function circuitFixture(specs:PartSpec[]):CircuitDocument {
     for(const row of ['a','e','f','j','c','h','b','d','g','i'])for(let n=1;n<=30&&!chosen;n++){
       const p={...createComponent(spec.kind,`${row}${n}`,0,spec.id),...spec.settings},pins=getComponentPins(p);
       if(!pins||pins.some(pin=>groups.has(ENDPOINT_BY_ID.get(pin)!.group)))continue;
+      if(new Set(pins.map(pin=>ENDPOINT_BY_ID.get(pin)!.group)).size!==pins.length)continue;
       if(!validateDocument({...d,components:[...d.components,p]}))chosen=p;
     }
     if(!chosen)throw new Error(`Cannot physically place fixture ${spec.id}`);

@@ -84,6 +84,11 @@ export function solveBounded(branches:readonly Branch[],positive:string,negative
       currents.set(`${t.id}:Ib`,Math.max(0,ib));currents.set(`${t.id}:Ic`,Math.max(0,ic));
     });
     if(!valid)continue;
+    const residual=new Map<string,number>();
+    const inject=(node:string,current:number)=>residual.set(node,(residual.get(node)??0)+current);
+    for(const b of branches){const current=currents.get(b.id)??0;inject(b.from,current);inject(b.to,-current);}
+    for(const t of transistors){const ib=currents.get(`${t.id}:Ib`)!,ic=currents.get(`${t.id}:Ic`)!;inject(t.base,ib);inject(t.collector,ic);inject(t.emitter,-ib-ic);}
+    if(nodes.some(node=>Math.abs(residual.get(node)??0)>1e-8))continue;
     // GMIN is numerical stabilization, not a reference for transistor terminals.
     const links=branches.filter(b=>!b.polar||(currents.get(b.id)??0)>1e-9).map(b=>[b.from,b.to]);
     for(const t of transistors){if(regions.get(t.id)!=='cutoff')links.push([t.base,t.emitter]);if(regions.get(t.id)==='saturated')links.push([t.collector,t.emitter]);}

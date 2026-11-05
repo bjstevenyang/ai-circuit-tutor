@@ -15,8 +15,13 @@ export function analyzePiezo(d:CircuitDocument,controls:SimulationControls={}):A
   const budget=analysisBudget(d);if(budget)return limitation(budget,d.components.map(p=>p.id));
   const p=d.components.find(p=>p.kind==='piezo-passive');
   if(!p||d.components.some(p=>!['piezo-passive','resistor','switch','button'].includes(p.kind)))return limitation('教学方波仅支持一只无源压电与电阻、开关、按钮的唯一串联路径',d.components.map(p=>p.id));
+  if(c.diagnostics.length)return {status:'fault',mode:'periodic',complete:false,diagnostics:c.diagnostics};
   const [a,b]=getComponentPins(p)!.map(c.net);
   if(a===b)return {status:'fault',mode:'periodic',complete:false,diagnostics:[{code:'led-bypassed',entities:[p.id],reason:'压电两端被旁路，无有效驱动'}]};
+  // The whole document must be series/tree-shaped even while a switch is open.
+  const parents=new Map<string,string>();
+  const root=(n:string):string=>{const parent=parents.get(n);if(!parent||parent===n)return n;const result=root(parent);parents.set(n,result);return result;};
+  for(const edge of c.branches){const a=root(edge.from),b=root(edge.to);if(a===b)return limitation('串联压电路径之外仅支持开路线，不支持闭合或并联支路',[p.id,edge.part]);parents.set(a,b);}
   const paths:string[][]=[];
   const walk=(node:string,visited:Set<string>,edges:string[])=>{if(paths.length>1)return;if(node===c.negative){paths.push(edges);return;}for(const edge of c.branches){const next=edge.from===node?edge.to:edge.to===node?edge.from:null;if(next!==null&&!visited.has(next))walk(next,new Set([...visited,next]),[...edges,edge.id]);}};
   walk(c.positive,new Set([c.positive]),[]);

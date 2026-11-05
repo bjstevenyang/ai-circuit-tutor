@@ -41,6 +41,7 @@ export type AnalysisResult = {
   readings?: Record<string, ComponentReading>;
   mode?: 'dc'|'rc'|'periodic';
   timeS?: number;
+  notes?: string[];
 };
 export type BoardEndpoint = { id: string; x: number; y: number; group: string };
 export const MAX_COMPONENTS = 24;
