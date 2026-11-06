@@ -3,12 +3,13 @@ import {act,cleanup,fireEvent,render,screen,within} from '@testing-library/react
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {App} from './App';
 import {PartShape} from '../editor/PartShape';
+import * as breadboardModule from '../editor/Breadboard';
 import {createComponent,getComponentPins} from '../circuit';
 import {STORAGE_KEY} from '../storage';
 import {applyEdit} from '../editor/model';
 import {rcExperiment,rgbExperiment,piezoExperiment,circuitFixture} from '../../tests/fixtures/stage2';
 beforeEach(()=>{localStorage.clear();});
-afterEach(()=>{cleanup();vi.useRealTimers();});
+afterEach(()=>{cleanup();vi.useRealTimers();vi.restoreAllMocks();});
 const run=()=>fireEvent.click(screen.getByRole('button',{name:'运行电路'}));
 async function advance(ms:number){for(let elapsed=0;elapsed<ms;elapsed+=50)await act(async()=>{await vi.advanceTimersByTimeAsync(Math.min(50,ms-elapsed));});}
 it('EX2-06/10 ordinary RC ticks do not write history or storage; stop invalidates callbacks and restarts zero',async()=>{
@@ -44,6 +45,9 @@ it.each(['Delete','Backspace'])('parameter radio focus protects the selected com
   for(const name of ['教学方波','500 Hz']){const control=screen.getByRole('radio',{name});control.focus();fireEvent.keyDown(control,{key});expect(localStorage.getItem(STORAGE_KEY)).toBe(before);expect(screen.getByRole('button',{name:`无源压电，锚点 ${part.anchor}`})).toBeInTheDocument();}
 });
 it('EX2-06 automatically stops at sixty simulated seconds and restarts from zero',async()=>{
+  // This checks the app's session/timer lifecycle, not 1,200 redraws of 420 SVG sockets.
+  // Real breadboard rendering is covered by the separate pin-mapping and Chromium tests.
+  vi.spyOn(breadboardModule,'Breadboard').mockImplementation(()=><svg/>);
   vi.useFakeTimers();localStorage.setItem(STORAGE_KEY,JSON.stringify(rcExperiment()));render(<App/>);run();await advance(59950);expect(screen.getByTestId('simulation-time')).toHaveTextContent('59.950');await advance(50);expect(screen.getByLabelText('仿真状态')).toHaveTextContent('已停止');expect(screen.queryByTestId('simulation-time')).not.toBeInTheDocument();await advance(1000);expect(screen.getByLabelText('仿真状态')).toHaveTextContent('已停止');run();expect(screen.getByTestId('simulation-time')).toHaveTextContent('0.000');
 },20000);
 it('EX2-05/06 resistance and source voltage edits preserve Vc then follow the new analytic trajectory',async()=>{
