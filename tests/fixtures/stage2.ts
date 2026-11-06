@@ -50,3 +50,12 @@ export function maxExperiment():CircuitDocument {
   for(let i=1;i<=4;i++)specs.push(r(`d${i}a`,1000,'P',`z${i}`),r(`d${i}b`,1000,`z${i}`,'N'));
   return circuitFixture(specs);
 }
+/** Deliberately over the document budget; new 1 kΩ branch is physically clear at j27–j30. */
+export function overExperiment():CircuitDocument {
+  const d=maxExperiment();d.components.push({...createComponent('resistor','j27',0,'over'),resistance:1000});
+  d.wires.push({id:'overP',from:'top+:1',to:'i27',color:'#b45b49',bend:'horizontal'},{id:'overP-link',from:'top+:2',to:'d15',color:'#b45b49',bend:'horizontal'},{id:'overN',from:'h30',to:'d2',color:'#315f83',bend:'horizontal'});return d;
+}
+/** Fixed 23-part P=9/T=2 preflight negative; U3 shares U1's R/K/G/B nets through unused row-e holes. */
+export function overPolarExperiment():CircuitDocument {
+  const d=maxExperiment();d.components=d.components.filter(p=>!['d4a','d4b'].includes(p.id));d.components.push(createComponent('rgb-led','e1',0,'u3'));return d;
+}

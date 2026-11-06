@@ -10,6 +10,7 @@ import type { EditCommand, HistoryState, WireEnd } from '../editor/model';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import { getDiagnosticCopy } from '../tutor';
 import { ComponentGuide } from '../tutor/ComponentGuide';
+import { ChoiceGroup } from '../editor/ChoiceGroup';
 import { StageReadings } from './StageReadings';
 import { NumberEditor } from '../editor/NumberEditor';
 
@@ -136,7 +137,7 @@ export function App() {
   const running=state.phase!=='stopped';
   useEffect(() => {
     const release = () => {
-      setPressedButtons([]);
+      if(pressedButtons.length)setPressedButtons([]);
       if (state.phase!=='fault'&&state.analysis&&(state.analysis.mode==='rc'||state.analysis.mode==='periodic')){
         if(pressedButtons.length){const cap=document.components.find(p=>p.kind==='capacitor');dispatch({type:'tick',sessionId:state.sessionId,revision:state.revision,result:analyzeCircuit(document,{...(cap&&state.analysis.timeS!==undefined?{timeState:{timeS:state.analysis.timeS,voltageV:state.analysis.readings?.[cap.id]?.voltageV??0}}:{})})});}
         dispatch({type:'pause',paused:true});
@@ -207,7 +208,7 @@ export function App() {
     if (!selected || event.repeat || event.nativeEvent.isComposing || event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     const target = event.target;
-    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+    if (target instanceof Element && target.closest('input, textarea, select, [role="radio"], [contenteditable]:not([contenteditable="false"])')) return;
     event.preventDefault();
     deleteSelected();
   };
@@ -327,7 +328,7 @@ export function App() {
             })}
           </div>
           <div className="included-source"><span className="tiny-battery">＋ −</span><div><strong>{document.sourceMode==='teaching-square'?'实验室方波信号源':`${voltage} V 理想电池`}</strong><small>电压可调 · 1.5–9 V</small></div></div>
-          <div className="battery-settings"><label>实验电源模式 <select aria-label="实验电源模式" value={document.sourceMode??'battery'} onChange={e=>edit({type:'set-source',mode:e.target.value as 'battery'|'teaching-square'})}><option value="battery">直流电池</option><option value="teaching-square">教学方波</option></select></label>{document.sourceMode==='teaching-square'&&<><p>实验室提供的驱动信号 · 0/4.5 V · 内阻1 kΩ · 仅单压电串联路径；保留直流电池设定。</p><label>驱动频率 <select aria-label="驱动频率" value={document.signalFrequencyHz??500} onChange={e=>edit({type:'set-frequency',value:Number(e.target.value) as 250|500|1000},true)}>{[250,500,1000].map(f=><option key={f} value={f}>{f} Hz</option>)}</select></label></>}<label>常用电压 <select aria-label="电池预设电压" value={voltage} onChange={event=>edit({type:'set-voltage',value:Number(event.target.value)},true)}>{![1.5,3,4.5,6,9].includes(voltage)&&<option value={voltage}>{voltage} V（自定义）</option>}{[1.5,3,4.5,6,9].map(value=><option key={value} value={value}>{value} V</option>)}</select></label><NumberEditor key={`voltage-${voltage}`} label="电池电压" value={voltage} unit="V" min={MIN_SUPPLY_VOLTAGE} max={MAX_SUPPLY_VOLTAGE} onApply={value=>edit({type:'set-voltage',value},true)}/></div>
+          <div className="battery-settings"><ChoiceGroup label="实验电源模式" value={document.sourceMode??'battery'} choices={[{value:'battery',label:'直流电池'},{value:'teaching-square',label:'教学方波'}] as const} onChange={mode=>edit({type:'set-source',mode})}/>{document.sourceMode==='teaching-square'&&<><p>实验室提供的驱动信号 · 0/4.5 V · 内阻1 kΩ · 仅单压电串联路径；保留直流电池设定。</p><ChoiceGroup label="驱动频率" value={document.signalFrequencyHz??500} choices={[250,500,1000].map(f=>({value:f as 250|500|1000,label:`${f} Hz`}))} onChange={value=>edit({type:'set-frequency',value},true)}/></>}<label>常用电压 <select aria-label="电池预设电压" value={voltage} onChange={event=>edit({type:'set-voltage',value:Number(event.target.value)},true)}>{![1.5,3,4.5,6,9].includes(voltage)&&<option value={voltage}>{voltage} V（自定义）</option>}{[1.5,3,4.5,6,9].map(value=><option key={value} value={value}>{value} V</option>)}</select></label><NumberEditor key={`voltage-${voltage}`} label="电池电压" value={voltage} unit="V" min={MIN_SUPPLY_VOLTAGE} max={MAX_SUPPLY_VOLTAGE} onApply={value=>edit({type:'set-voltage',value},true)}/></div>
 
           <details className="control-section" open>
             <summary>精确放置 <span>孔位操作</span></summary>
@@ -453,7 +454,7 @@ export function App() {
           <div className="breadboard-tip"><span className="note-label">面包板小知识</span><h3>看起来靠近，不一定相连。</h3><p>同一编号的 a–e 孔内部相连，f–j 是另一组。中央沟槽两侧、电源轨与中间孔位，都需要导线连接。</p><button onClick={() => { setTool('inspect'); setSelected(null); setSelectedEndpoint('a1'); setInspectInput('a1'); }}>查看 a1 的连接 <Icon name="arrow" size={14} /></button></div>
         </aside>
       </div>
-      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池可调 1.5–9 V，默认 4.5 V；红色 LED 固定压降 2.0 V，相对亮度按每颗 LED 的电流示意，不是真实光度。支持最多 24 个元件、120 根导线，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3–5 V 发声范围。20 mA 是每颗 LED 的课程限制，超限时亮度封顶并提示。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为预设课程内容，未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p></details><p>阶段2范围：共阴RGB每通道独立限流；NPN仅低侧；单电容RC仅线性网络且一脚接负端，初态0 V、最长60 s；教学方波仅单压电串联路径。新DC按展开P≤6、NPN≤2、最多576候选限制；未知或非唯一状态不造读数。</p><span className="version-label">LEARN BY MAKING / V0.4</span></footer>
+      <footer className="app-footer"><span>小小连接，大大发现。</span><details><summary>关于本课程的仿真模型</summary><p>教学近似：理想电池可调 1.5–9 V，默认 4.5 V；红色 LED 固定压降 2.0 V，相对亮度按每颗 LED 的电流示意，不是真实光度。支持最多 24 个元件、120 根导线，LED／二极管／蜂鸣器合计最多 6 个；二极管压降 0.7 V，蜂鸣器采用 1 kΩ 有极性负载及 3–5 V 发声范围。20 mA 是每颗 LED 的课程限制，超限时亮度封顶并提示。电位器为理想分压电阻；光照仅为模拟百分比。忽略电源内阻、容差、发热、击穿和损坏；数值不用于预测真实器件安全性。提示为预设课程内容，未接入生成式 AI。作品只保存在此浏览器；多标签编辑采用最后保存的内容。</p><p>阶段2范围：共阴RGB每通道独立限流；NPN仅低侧；单电容RC仅线性网络且一脚接负端，初态0 V、最长60 s；教学方波仅单压电串联路径。新DC按展开P≤6、NPN≤2、最多576候选限制；未知或非唯一状态不造读数。</p></details><span className="version-label">LEARN BY MAKING / V0.4</span></footer>
     </main>
   </>;
 }

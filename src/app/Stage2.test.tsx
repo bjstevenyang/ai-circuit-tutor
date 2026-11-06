@@ -5,7 +5,8 @@ import {App} from './App';
 import {PartShape} from '../editor/PartShape';
 import {createComponent,getComponentPins} from '../circuit';
 import {STORAGE_KEY} from '../storage';
-import {rcExperiment,rgbExperiment,circuitFixture} from '../../tests/fixtures/stage2';
+import {applyEdit} from '../editor/model';
+import {rcExperiment,rgbExperiment,piezoExperiment,circuitFixture} from '../../tests/fixtures/stage2';
 beforeEach(()=>{localStorage.clear();});
 afterEach(()=>{cleanup();vi.useRealTimers();});
 const run=()=>fireEvent.click(screen.getByRole('button',{name:'运行电路'}));
@@ -36,4 +37,28 @@ it('review regression: releasing a shorting button never restarts a faulted RC s
 });
 it('review regression: selected RC resistors do not automatically announce changing currents',()=>{
   const d=rcExperiment();localStorage.setItem(STORAGE_KEY,JSON.stringify(d));render(<App/>);run();const r=d.components.find(p=>p.id==='charge')!;fireEvent.click(screen.getByRole('button',{name:`电阻 10000 欧姆，锚点 ${r.anchor}`}));expect(document.querySelector('.part-reading')).toHaveAttribute('aria-live','off');expect(screen.getByRole('button',{name:'播报当前实验状态'})).toBeInTheDocument();
+});
+it.each(['Delete','Backspace'])('parameter radio focus protects the selected component from %s',key=>{
+  const d=piezoExperiment();localStorage.setItem(STORAGE_KEY,JSON.stringify(d));render(<App/>);const part=d.components.find(p=>p.kind==='piezo-passive')!;
+  fireEvent.click(screen.getByRole('button',{name:`无源压电，锚点 ${part.anchor}`}));const before=localStorage.getItem(STORAGE_KEY);
+  for(const name of ['教学方波','500 Hz']){const control=screen.getByRole('radio',{name});control.focus();fireEvent.keyDown(control,{key});expect(localStorage.getItem(STORAGE_KEY)).toBe(before);expect(screen.getByRole('button',{name:`无源压电，锚点 ${part.anchor}`})).toBeInTheDocument();}
+});
+it('EX2-06 automatically stops at sixty simulated seconds and restarts from zero',async()=>{
+  vi.useFakeTimers();localStorage.setItem(STORAGE_KEY,JSON.stringify(rcExperiment()));render(<App/>);run();await advance(59950);expect(screen.getByTestId('simulation-time')).toHaveTextContent('59.950');await advance(50);expect(screen.getByLabelText('仿真状态')).toHaveTextContent('已停止');expect(screen.queryByTestId('simulation-time')).not.toBeInTheDocument();await advance(1000);expect(screen.getByLabelText('仿真状态')).toHaveTextContent('已停止');run();expect(screen.getByTestId('simulation-time')).toHaveTextContent('0.000');
+},20000);
+it('EX2-05/06 resistance and source voltage edits preserve Vc then follow the new analytic trajectory',async()=>{
+  vi.useFakeTimers();const d=rcExperiment();localStorage.setItem(STORAGE_KEY,JSON.stringify(d));render(<App/>);run();await advance(1000);const r=d.components.find(p=>p.id==='charge')!;fireEvent.click(screen.getByRole('button',{name:`电阻 10000 欧姆，锚点 ${r.anchor}`}));fireEvent.change(screen.getByLabelText('所选电阻阻值'),{target:{value:'100000'}});await advance(1000);
+  const voltage=()=>Number(screen.getByLabelText('实验读数').textContent!.match(/Vc ([^ ]+) V/)![1]);const v1=4.5*(1-Math.exp(-1)),v2=4.5+(v1-4.5)*Math.exp(-.1);expect(voltage()).toBeCloseTo(v2,5);fireEvent.change(screen.getByLabelText('电池预设电压'),{target:{value:'6'}});expect(voltage()).toBeCloseTo(v2,5);await advance(1000);expect(voltage()).toBeCloseTo(6+(v2-6)*Math.exp(-.1),5);
+});
+it.each([
+  ['rgb-led',['R','K','G','B'],[['c15','c16','c17','c18'],['a15','b15','c15','d15'],['c15','c14','c13','c12'],['e15','d15','c15','b15']]],
+  ['npn',['B','C','E'],[['c15','c16','c17'],['a15','b15','c15'],['c15','c14','c13'],['e15','d15','c15']]],
+  ['capacitor',['1','2'],[['c15','c17'],['a15','c15'],['c15','c13'],['e15','c15']]],
+  ['piezo-passive',['1','2'],[['c15','c17'],['a15','c15'],['c15','c13'],['e15','c15']]],
+] as const)('EX2-01/09 independent named pin mapping survives rotation, preview and movement: %s',(kind,names,expected)=>{
+  for(const [i,rotation] of ([0,90,180,270] as const).entries()){
+    const part=createComponent(kind,expected[i]![0]!,rotation,'p');expect(getComponentPins(part)).toEqual(expected[i]);
+    const view=render(<svg><PartShape part={part} ghost/></svg>);expected[i]!.forEach((hole,index)=>expect(view.container.querySelector(`text[data-hole="${hole}"]`)).toHaveTextContent(names[index]!));
+    const moved=applyEdit({...rcExperiment(),components:[part],wires:[]},{type:'move',id:'p',anchor:part.anchor.replace('15','20'),rotation});expect(moved.ok).toBe(true);if(moved.ok){const p=moved.document.components[0]!;expect(getComponentPins(p)).toEqual(expected[i]!.map(h=>h.replace(/\d+/,n=>String(Number(n)+5))));view.rerender(<svg><PartShape part={p}/></svg>);getComponentPins(p)!.forEach((hole,index)=>expect(view.container.querySelector(`text[data-hole="${hole}"]`)).toHaveTextContent(names[index]!));}view.unmount();
+  }
 });

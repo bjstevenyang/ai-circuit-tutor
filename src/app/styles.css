@@ -357,3 +357,10 @@ h2 { font-size: 13px; font-weight: 650; }
 .stage-readings { margin: 1rem 0; padding: .9rem; border: 1px solid #d7ddcc; border-radius: 8px; background: #f4f6ed; color: #304b3d; overflow-wrap: anywhere; font-size: .85rem; }
 .stage-readings > div { padding: .5rem 0; border-top: 1px solid #dce2d2; }
 .stage-readings p { margin: .35rem 0; line-height: 1.6; font-variant-numeric: tabular-nums; }
+
+.choice-group { border: 0; padding: 0; margin: .7rem 0; min-width: 0; }
+.choice-group legend { font-size: .8rem; font-weight: 600; margin-bottom: .5rem; }
+.choice-group [role="radiogroup"] { display: flex; gap: .4rem; flex-wrap: wrap; }
+.choice-group button { border: 1px solid #c7d3bf; border-radius: 5px; padding: .4rem .6rem; background: #f6f7f0; color: #34523e; cursor: pointer; font: inherit; font-size: .8rem; }
+.choice-group button[aria-checked="true"] { background: #345b43; color: #fff; border-color: #345b43; }
+.choice-group button:focus-visible { outline: 3px solid #c1943c; outline-offset: 2px; }

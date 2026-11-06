@@ -1,6 +1,6 @@
 # 自动化测试清单
 
-盘点日期：2026-11-01，v0.3。本文用于查找“项目有哪些测试、各自检查什么、后来增加了什么”。验收映射、历史执行结果和未完成的发布检查见 [测试计划](TEST_PLAN.md)。
+最新增补：2026-11-05，阶段2实现PR #3；下表及第2–16节保留v0.3历史清单，阶段2见第17节。原盘点日期：2026-11-01，v0.3。本文用于查找“项目有哪些测试、各自检查什么、后来增加了什么”。验收映射、历史执行结果和未完成的发布检查见 [测试计划](TEST_PLAN.md)。
 
 ## 1. 总览
 
@@ -418,3 +418,31 @@ B21 的只读说明流程改为点击按钮灰色外壳；运行中本体 Enter�
 | A52 | [ComponentGuide.test.tsx](../src/app/ComponentGuide.test.tsx) | 接线面板的孔位、无固定正负、滑臂及同组空孔说明；查阅不保存／追加历史，旋钮改变两段阻值，旋转和移动同步孔位 |
 | B34 | [components.spec.ts](../tests/e2e/components.spec.ts) | 四方向标记、实际孔位、可访问描述及预览，截图核对 |
 | B35 | [components.spec.ts](../tests/e2e/components.spec.ts) | 从空板通过表单搭建 A–W 调光电路，B 留空、导线接同组空孔；运行后旋钮端点改变亮度、内部电阻段同步，并检查接线指导截图 |
+
+
+## 17. 阶段2新增测试（2026-11-05）
+
+v0.3原有240项全部保留；本轮增加95项，共335项／21个Vitest文件。参数化用例按实际展开统计，实际执行与未验证项见[实施证据](changes/STAGE-2-IMPLEMENTATION.md)。
+
+| 文件 | 数量／变化 | 检查内容 |
+| --- | ---: | --- |
+| [rgb.test.ts](../src/circuit/rgb.test.ts) | 新10 | 电流／颜色、8开关组合、改变R／25mA逐通道超流 |
+| [npn.test.ts](../src/circuit/npn.test.ts) | 新8 | 三态独立算例、严格参考与恢复、重合边界、独立Ic超流及修复、B-MAX |
+| [transient.test.ts](../src/circuit/transient.test.ts) | 新5 | 0/1τ/5τ、连续充放电／保持／带载、时间限制、R/C改变τ |
+| [piezo.test.ts](../src/circuit/piezo.test.ts) | 新5 | 三频率/Vpp、衰减/DC/断开、KCL及独立C·dv/dt |
+| [stage2-regression.test.ts](../src/circuit/stage2-regression.test.ts) | 新41 | 电气负例／等价性、四封装、v4与旧格式、静态fixture哈希、预算与128/129真实矩阵、120/121合法孔位边界、审查缺陷回归 |
+| [Stage2.test.tsx](../src/app/Stage2.test.tsx) | 新19 | 运行／暂停／零初态、参数后解析轨迹、60s自动停止、四类说明与独立引脚映射、误删保护 |
+| [ChoiceGroup.test.tsx](../src/editor/ChoiceGroup.test.tsx) | 新3 | 单一Tab停靠、方向／首尾与焦点、点击不提交外层表单 |
+| [useBuzzerSound.test.tsx](../src/app/useBuzzerSound.test.tsx) | 原2→6（+4） | 保留有源蜂鸣器音量回归；新增API失败、三频率正弦与模型幅度参数 |
+| [stage2.spec.ts](../tests/e2e/stage2.spec.ts) | 新9 | 四实验表单搭建、故障/修复/刷新；四实验纯键盘从空板；第25件原子拒绝且24件仍可运行 |
+
+Chromium总场景为44（原35＋新9），实际执行结果以实施证据为准。`tests/fixtures/stage2.ts`／`stage2-reference.json` 是可审阅的受控样例，含真实孔位、导线及canonical SHA256，不是测试通过记录。
+
+固定性能runner与功能测试分开：
+
+- [core.perf.ts](../tests/performance/core.perf.ts)：六个固定B输入，分别10次预热＋100次完整编译／求解，B-MAX P/T/576候选及独立KCL。
+- [ui.perf.ts](../tests/performance/ui.perf.ts)：RGB/NPN/压电/最大DC的指针／键盘响应和停止、压电持续受驱动时变幅、RC第5秒的两个操作与停止；每组分别100样本。真实后台十次检查需`RUN_REAL_FOCUS=1`与专用桌面，默认跳过，不能计通过。
+- [memory.perf.ts](../tests/performance/memory.perf.ts)：M-RC/M-PIEZO各十次真实60s会话及规范GC堆采样／资源清理；不以加速时钟替代。
+- [config.ts](../tests/performance/config.ts)、[vite.config.ts](../tests/performance/vite.config.ts)、[helpers.ts](../tests/performance/helpers.ts)：隔离生产构建、单worker Chromium及观测工具，不增加运行依赖，不进入正常生产入口。
+
+命令：先`npx vite build --config tests/performance/vite.config.ts`，再`npm run test:performance`；长运行与其他测量不并跑。指定M1/8 GB和实际辅助技术／教学验证仍按人工清单执行。

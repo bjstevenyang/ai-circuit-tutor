@@ -1,12 +1,17 @@
 import {describe,it,expect} from 'vitest';
-import {analyzeCircuit,createComponent,getComponentPins} from './index';
+import {analyzeCircuit,createComponent,getComponentPins,HOLES} from './index';
 import {readCircuitDocument} from './validation';
 import {matrixBudget,solveBounded} from './boundedSolver';
+import {compileNetwork} from './stage2';
 import {parseDocument,saveWorkspace,loadWorkspace,STORAGE_KEY} from '../storage';
 import {applyEdit,validateDocument} from '../editor/model';
 import {rgbExperiment,npnExperiment,rcExperiment,piezoExperiment,circuitFixture} from '../../tests/fixtures/stage2';
+import {maxExperiment,overExperiment,overPolarExperiment} from '../../tests/fixtures/stage2';
+import reference from '../../tests/fixtures/stage2-reference.json';
+import {createHash} from 'node:crypto';
 
 describe('EX2 safety, equivalence and configuration contracts',()=>{
+  it.each([['B-RGB',rgbExperiment],['B-NPN',npnExperiment],['B-RC',rcExperiment],['B-PIEZO',piezoExperiment],['B-MAX',maxExperiment]] as const)('fixed physical fixture and canonical SHA256 remain reproducible: %s',(name,make)=>{const fixture=reference.fixtures[name];expect(parseDocument(fixture.document)).toEqual(make());expect(createHash('sha256').update(JSON.stringify(fixture.document)).digest('hex')).toBe(fixture.sha256);});
   it('review regression: grounded NPN base does not mistake independent LEDs for a semiconductor driver',()=>{
     const d=circuitFixture([{id:'t',kind:'npn',nets:['N','C','N']},{id:'rc',kind:'resistor',nets:['P','C'],settings:{resistance:1000}},{id:'led',kind:'led',nets:['A','N']},{id:'rl',kind:'resistor',nets:['P','A'],settings:{resistance:330}}]);
     const a=analyzeCircuit(d);expect(a.status).toBe('supported');expect(a.readings!.t).toMatchObject({region:'cutoff',collectorCurrentMa:0,vceV:4.5});expect(a.readings!.led!.currentMa).toBeCloseTo(7.575757576,6);
@@ -74,5 +79,14 @@ describe('EX2 safety, equivalence and configuration contracts',()=>{
   });
   it('unrelated floating resistor islands do not introduce fictitious RC leakage',()=>{
     const d=circuitFixture([{id:'c',kind:'capacitor',nets:['X','N']},{id:'r',kind:'resistor',nets:['X','Y']},{id:'island',kind:'resistor',nets:['Z','Q']}]);const a=analyzeCircuit(d,{timeState:{timeS:1,voltageV:3},deltaTimeS:1});expect(a.readings!.c).toMatchObject({voltageV:3,currentMa:0,capacitorState:'保持'});
+  });
+  it('fixed document and expanded P/T negatives reject without discarding editable configurations',()=>{
+    const over=overExperiment();expect(over.components).toHaveLength(25);expect(validateDocument({...over,components:over.components.filter(p=>p.id!=='d4b')})).toBeNull();expect(analyzeCircuit(over).status).toBe('unsupported');expect(analyzeCircuit(over).readings).toBeUndefined();
+    for(const [name,d] of [['B-OVER',over],['P-OVER',overPolarExperiment()]] as const){expect(reference.fixtures[name].document).toEqual(d);expect(createHash('sha256').update(JSON.stringify(d)).digest('hex')).toBe(reference.fixtures[name].sha256);}
+    const p=overPolarExperiment();expect(p.components).toHaveLength(23);expect(validateDocument(p)).toBeNull();expect(parseDocument(p)).not.toBeNull();const compiled=compileNetwork(p);expect(compiled.branches.filter(b=>b.polar)).toHaveLength(9);expect(compiled.transistors).toHaveLength(2);expect(analyzeCircuit(p)).toMatchObject({status:'unsupported',diagnostics:[expect.objectContaining({code:'unsupported',reason:expect.stringContaining('预算')})]});
+    const t=circuitFixture([1,2,3].flatMap(i=>[{id:`t${i}`,kind:'npn' as const,nets:[`b${i}`,`c${i}`,'N']},{id:`rb${i}`,kind:'resistor' as const,nets:['P',`b${i}`]},{id:`rc${i}`,kind:'resistor' as const,nets:['P',`c${i}`]}]));expect(validateDocument(t)).toBeNull();expect(analyzeCircuit(t).status).toBe('unsupported');
+  });
+  it('120 physically distinct wire endpoints are accepted; wire 121 is atomically rejected',()=>{
+    const wire=(i:number)=>({id:`boundary-${i}`,from:HOLES[i*2]!.id,to:HOLES[i*2+1]!.id,color:'#123456',bend:'horizontal' as const});const d={...rcExperiment(),components:[],wires:Array.from({length:120},(_,i)=>wire(i))};expect(validateDocument(d)).toBeNull();const result=applyEdit(d,{type:'wire',wire:wire(120)});expect(result.ok).toBe(false);expect(d.wires).toHaveLength(120);expect(new Set(d.wires.flatMap(w=>[w.from,w.to])).size).toBe(240);
   });
 });
