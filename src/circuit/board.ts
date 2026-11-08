@@ -12,7 +12,7 @@ export const HOLE_BY_ID: ReadonlyMap<string,BoardEndpoint> = new Map(HOLES.map(h
 export const ENDPOINTS: readonly BoardEndpoint[] = [...HOLES,{id:'battery:+',x:285,y:565,group:'battery:+'},{id:'battery:-',x:325,y:565,group:'battery:-'}];
 export const ENDPOINT_BY_ID: ReadonlyMap<string,BoardEndpoint> = new Map(ENDPOINTS.map(h=>[h.id,h]));
 const BY_POSITION = new Map(HOLES.filter(h=>/^[a-j]\d+$/.test(h.id)).map(h=>[`${h.x},${h.y}`,h.id]));
-export function createEmptyDocument(): CircuitDocument { return {schemaVersion:3,boardId:'breadboard-30-v1',lessonId:'dc-lab-v2',supplyVoltage:DEFAULT_SUPPLY_VOLTAGE,components:[],wires:[]}; }
+export function createEmptyDocument(): CircuitDocument { return {schemaVersion:4,boardId:'breadboard-30-v1',lessonId:'dc-lab-v2',supplyVoltage:DEFAULT_SUPPLY_VOLTAGE,sourceMode:'battery',signalFrequencyHz:500,components:[],wires:[]}; }
 export function getComponentPins(part: ComponentInstance): [string,string,...string[]] | null {
   const anchor = HOLE_BY_ID.get(part.anchor);
   const definition = COMPONENTS[part.kind];

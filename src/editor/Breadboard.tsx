@@ -182,7 +182,7 @@ export function Breadboard(props: Props) {
     </defs>
     <rect width="880" height="650" fill="url(#workbench-dots)" />
     <text x="96" y="37" className="canvas-eyebrow">BREADBOARD / 30 ROWS</text>
-    <text x="784" y="37" textAnchor="end" className="canvas-eyebrow">{supplyVoltageOf(circuit)} V DC</text>
+    <text x="784" y="37" textAnchor="end" className="canvas-eyebrow">{circuit.sourceMode==='teaching-square'?`实验方波 0/4.5 V · ${circuit.signalFrequencyHz} Hz`:`${supplyVoltageOf(circuit)} V DC`}</text>
     <g filter="url(#board-shadow)">
       <rect x="94" y="65" width="688" height="450" rx="17" fill="#ecece4" stroke="#d1d5c9" />
       <rect x="101" y="72" width="674" height="436" rx="13" fill="#fafaf5" />
@@ -217,8 +217,8 @@ export function Breadboard(props: Props) {
       <rect x="112" y="542" width="152" height="58" rx="9" fill="#233d35" />
       <rect x="120" y="550" width="136" height="42" rx="5" fill="#304f42" />
       <path d="M142 560l-6 12h9l-6 12" fill="none" stroke="#c4e8a5" strokeWidth="2" />
-      <text x="158" y="570" fill="#f3f5ea" fontSize="14" fontWeight="700">{supplyVoltageOf(circuit)} V</text>
-      <text x="158" y="585" fill="#bdd0bc" fontSize="9">IDEAL BATTERY</text>
+      <text x="158" y="570" fill="#f3f5ea" fontSize="14" fontWeight="700">{circuit.sourceMode==='teaching-square'?'实验方波':`${supplyVoltageOf(circuit)} V`}</text>
+      <text x="158" y="585" fill="#bdd0bc" fontSize="9">{circuit.sourceMode==='teaching-square'?'LAB SIGNAL':'IDEAL BATTERY'}</text>
       <path d="M264 559H285V565M264 583H325V565" fill="none" stroke="#8b938a" strokeWidth="2" />
     </g>
     {circuit.wires.map(wire => {
@@ -305,7 +305,7 @@ export function Breadboard(props: Props) {
         const body=componentBody(part);
         return body ? <rect x={body.cx-body.width/2-5} y={body.cy-body.height/2-5} width={body.width+10} height={body.height+10} rx="5" fill="#edbd62" opacity=".35" transform={`rotate(${part.rotation} ${body.cx} ${body.cy})`}/> : null;
       })()}
-      <PartShape part={part} lit={props.readings?.[part.id]?.on ?? false} brightness={relativeLedBrightness(props.readings?.[part.id])} activated={props.pressedButtons?.includes(part.id) ?? false} />
+      <PartShape part={part} {...(props.readings?.[part.id]?{reading:props.readings[part.id]}:{})} lit={props.readings?.[part.id]?.on ?? false} brightness={relativeLedBrightness(props.readings?.[part.id])} activated={props.pressedButtons?.includes(part.id) ?? false} />
     </g>)}
     {selectedWire && (['from','to'] as const).map(endpoint=>{
       const point=ENDPOINT_BY_ID.get(selectedWire[endpoint])!;

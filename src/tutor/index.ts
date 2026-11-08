@@ -1,4 +1,4 @@
-import type { DiagnosticCode } from '../circuit';
+import type { DiagnosticCode, Diagnostic } from '../circuit';
 
 export type DiagnosticCopy = {
   readonly title: string;
@@ -120,8 +120,17 @@ const COPY: Record<DiagnosticCode, DiagnosticCopy> = {
   },
 };
 
-export function getDiagnosticCopy(code: DiagnosticCode): DiagnosticCopy {
-  return COPY[code];
+export function getDiagnosticCopy(code: DiagnosticCode,diagnostic?:Diagnostic): DiagnosticCopy {
+  const original=COPY[code];
+  if(diagnostic?.channel)return {...original,title:`${diagnostic.channel} 通道：${original.title}`,description:diagnostic.reason??original.description,
+    hints:[`RGB包含独立支路；${diagnostic.channel}通道的状态由它自己的连接和电流决定。`,`查看高亮实例的${diagnostic.channel}脚及K脚，从同组空孔沿支路检查。`,original.hints[2]]};
+  if(diagnostic?.reason){
+    const reason=diagnostic.reason;
+    if(reason.includes('压电')||reason.includes('方波'))return {title:reason,description:'无源压电需要有效的变化驱动；此处按有限周期稳态教学模型判断。',hints:['恒定电压和变化信号的作用不同，接通本身并不保证持续音。','检查实验电源模式、开关和压电两端，以及串联电阻是否让驱动幅度不足。','参考实验选择教学方波500 Hz，让电源经开关和压电回负端；幅度不足时减小外部串联电阻。']};
+    if(reason.includes('基极')&&code==='missing-resistor')return {title:reason,description:'NPN基极也需要有限限流路径，不能直接跨接理想电源。',hints:['基极电流控制负载电流，但基极不是无电流的控制端。','检查指出NPN的B脚到正电源之间是否有非零电阻。','在B脚供电路径串入10 kΩ电阻；保留B到负端的100 kΩ下拉，然后重新运行。']};
+    return {...original,title:reason,description:reason,hints:['有限教学模型需要明确且唯一的状态；超出范围不等于真实电路一定接错。','查看高亮器件、实际引脚和显示的支持边界，区分参考缺失、组合限制和资源超限。','按对应元件说明恢复受支持的参考接法，再运行；若需当前不支持的组合，请保留作品并拆开实验验证。']};
+  }
+  return original;
 }
 
 /** Call only in response to an explicit student request. */

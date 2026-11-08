@@ -12,7 +12,9 @@ export type EditCommand =
   | { type: 'update-wire'; id: string; color?: string; bend?: Wire['bend'] }
   | { type: 'reconnect-wire'; id: string; endpoint: WireEnd; to: string }
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
-  | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light'> }
+  | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF'> }
+  | { type: 'set-source'; mode: 'battery'|'teaching-square' }
+  | { type: 'set-frequency'; value: 250|500|1000 }
   | { type: 'set-voltage'; value: number }
   | { type: 'reset' };
 
@@ -34,12 +36,13 @@ function overlaps(a: Bounds, b: Bounds) {
 
 /** Physical constraints are independent of electrical correctness. */
 export function validateDocument(document: CircuitDocument): string | null {
-  if(document.schemaVersion===3&&!isSupplyVoltage(document.supplyVoltage))return '电池电压必须是 1.5–9 V 范围内的有限数值。';
+  if(document.schemaVersion>=3&&!isSupplyVoltage(document.supplyVoltage))return '电池电压必须是 1.5–9 V 范围内的有限数值。';
+  if(document.schemaVersion===4&&(!['battery','teaching-square'].includes(document.sourceMode??'')||![250,500,1000].includes(document.signalFrequencyHz??0)))return '请选择有效的电源模式和 250／500／1000 Hz 频率。';
   const identities = new Set<string>();
   const occupied = new Set<string>();
   if (document.components.length > MAX_COMPONENTS) return `工作台最多放置 ${MAX_COMPONENTS} 个元件。`;
   if (document.wires.length > MAX_WIRES) return `工作台最多连接 ${MAX_WIRES} 根导线。`;
-  if (document.components.filter(p => ['led','diode','buzzer'].includes(p.kind)).length > MAX_POLAR_COMPONENTS) return `LED、二极管和蜂鸣器合计最多 ${MAX_POLAR_COMPONENTS} 个，以保证仿真响应。`;
+  if (!document.components.some(p=>['rgb-led','npn','capacitor','piezo-passive'].includes(p.kind))&&document.components.filter(p => ['led','diode','buzzer'].includes(p.kind)).length > MAX_POLAR_COMPONENTS) return `LED、二极管和蜂鸣器合计最多 ${MAX_POLAR_COMPONENTS} 个，以保证仿真响应。`;
   const bounds: Bounds[] = [];
   const reserveId = (id: string) => {
     if (!id.trim() || identities.has(id)) return false;
@@ -101,7 +104,9 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
       break;
     }
     case 'reset': next = createEmptyDocument(); break;
-    case 'set-voltage': next={...document,schemaVersion:3,lessonId:'dc-lab-v2',supplyVoltage:command.value};break;
+    case 'set-voltage': next={...document,supplyVoltage:command.value};break;
+    case 'set-source': next={...document,sourceMode:command.mode};break;
+    case 'set-frequency': next={...document,signalFrequencyHz:command.value};break;
     case 'configure': {
       if (!document.components.some(p => p.id === command.id)) return { ok: false, error: '找不到要修改的元件。' };
       next = { ...document, components: document.components.map(p => p.id === command.id ? { ...p, ...command.settings } : p) };

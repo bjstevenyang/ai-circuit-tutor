@@ -1,0 +1,1823 @@
+{
+  "purpose": "Controlled regression inputs, not student work or measured output",
+  "hashFormat": "SHA256 of compact UTF-8 JSON.stringify(document)",
+  "fixtures": {
+    "B-RGB": {
+      "sha256": "4435777b499c3d3e71f429fcb1c98b4799bc07b20ec7a1d4039fa3d9999a51f3",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "battery",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "rgb",
+            "kind": "rgb-led",
+            "anchor": "a1",
+            "rotation": 0
+          },
+          {
+            "id": "sR",
+            "kind": "switch",
+            "anchor": "a5",
+            "rotation": 0,
+            "closed": true
+          },
+          {
+            "id": "rR",
+            "kind": "resistor",
+            "anchor": "a8",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "sG",
+            "kind": "switch",
+            "anchor": "a12",
+            "rotation": 0,
+            "closed": true
+          },
+          {
+            "id": "rG",
+            "kind": "resistor",
+            "anchor": "a15",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "sB",
+            "kind": "switch",
+            "anchor": "a19",
+            "rotation": 0,
+            "closed": true
+          },
+          {
+            "id": "rB",
+            "kind": "resistor",
+            "anchor": "a22",
+            "rotation": 0,
+            "resistance": 330
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b5",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "c5",
+            "to": "b12",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "c12",
+            "to": "b19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w3",
+            "from": "battery:-",
+            "to": "b2",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w4",
+            "from": "b1",
+            "to": "b11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w5",
+            "from": "b3",
+            "to": "b18",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w6",
+            "from": "b4",
+            "to": "b25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w7",
+            "from": "b7",
+            "to": "b8",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w8",
+            "from": "b14",
+            "to": "b15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w9",
+            "from": "b21",
+            "to": "b22",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    },
+    "B-NPN": {
+      "sha256": "19285b1af617e0d00330c7c3a1e7eabb7c177c9dd1c60227b1d49ee9037bae6d",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "battery",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "npn",
+            "kind": "npn",
+            "anchor": "a1",
+            "rotation": 0
+          },
+          {
+            "id": "led",
+            "kind": "led",
+            "anchor": "a4",
+            "rotation": 0
+          },
+          {
+            "id": "load",
+            "kind": "resistor",
+            "anchor": "a6",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "rb",
+            "kind": "resistor",
+            "anchor": "a8",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down",
+            "kind": "resistor",
+            "anchor": "a10",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "ref",
+            "kind": "resistor",
+            "anchor": "a12",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "s",
+            "kind": "switch",
+            "anchor": "a16",
+            "rotation": 0,
+            "closed": true
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "c6",
+            "to": "b12",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "c12",
+            "to": "b16",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w3",
+            "from": "battery:-",
+            "to": "b3",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w4",
+            "from": "c3",
+            "to": "b13",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w5",
+            "from": "b1",
+            "to": "b11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w6",
+            "from": "c11",
+            "to": "b10",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w7",
+            "from": "b2",
+            "to": "b5",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w8",
+            "from": "c5",
+            "to": "b15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w9",
+            "from": "b4",
+            "to": "b9",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w10",
+            "from": "b8",
+            "to": "b18",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    },
+    "B-RC": {
+      "sha256": "989dcc1b5d1b0ffff1665f03170a22f67f5d8d5b7ba8de65fec55468bfa39a5a",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "battery",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "cap",
+            "kind": "capacitor",
+            "anchor": "a1",
+            "rotation": 0,
+            "capacitanceF": 0.0001
+          },
+          {
+            "id": "charge",
+            "kind": "resistor",
+            "anchor": "a4",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "discharge",
+            "kind": "resistor",
+            "anchor": "a6",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "sc",
+            "kind": "switch",
+            "anchor": "a10",
+            "rotation": 0,
+            "closed": true
+          },
+          {
+            "id": "sd",
+            "kind": "switch",
+            "anchor": "a13",
+            "rotation": 0,
+            "closed": false
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b10",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "battery:-",
+            "to": "b3",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "c3",
+            "to": "b15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w3",
+            "from": "b1",
+            "to": "b7",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w4",
+            "from": "c7",
+            "to": "b6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w5",
+            "from": "b4",
+            "to": "b12",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w6",
+            "from": "b9",
+            "to": "b13",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    },
+    "B-PIEZO": {
+      "sha256": "8a15873408b374c734491a2c4aafbbc8c6f81d70a91a5804ef1b63f353c41bcd",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "teaching-square",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "piezo",
+            "kind": "piezo-passive",
+            "anchor": "a1",
+            "rotation": 0
+          },
+          {
+            "id": "s",
+            "kind": "switch",
+            "anchor": "a4",
+            "rotation": 0,
+            "closed": true
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b4",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "battery:-",
+            "to": "b3",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "b1",
+            "to": "b6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    },
+    "B-MAX": {
+      "sha256": "c8c9a78fd0750d7010d01e037c086953cb8cb65ea8f6d26189fb847bd58dcefe",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "battery",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "u1",
+            "kind": "rgb-led",
+            "anchor": "a1",
+            "rotation": 0
+          },
+          {
+            "id": "u2",
+            "kind": "rgb-led",
+            "anchor": "a5",
+            "rotation": 0
+          },
+          {
+            "id": "t1",
+            "kind": "npn",
+            "anchor": "a9",
+            "rotation": 0
+          },
+          {
+            "id": "t2",
+            "kind": "npn",
+            "anchor": "a12",
+            "rotation": 0
+          },
+          {
+            "id": "ur1",
+            "kind": "resistor",
+            "anchor": "a15",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ug1",
+            "kind": "resistor",
+            "anchor": "a17",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ub1",
+            "kind": "resistor",
+            "anchor": "a19",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "baseR1",
+            "kind": "resistor",
+            "anchor": "a21",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down1",
+            "kind": "resistor",
+            "anchor": "a23",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "collectorR1",
+            "kind": "resistor",
+            "anchor": "a25",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "ur2",
+            "kind": "resistor",
+            "anchor": "a27",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ug2",
+            "kind": "resistor",
+            "anchor": "f1",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ub2",
+            "kind": "resistor",
+            "anchor": "f3",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "baseR2",
+            "kind": "resistor",
+            "anchor": "f5",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down2",
+            "kind": "resistor",
+            "anchor": "f7",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "collectorR2",
+            "kind": "resistor",
+            "anchor": "f9",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d1a",
+            "kind": "resistor",
+            "anchor": "f11",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d1b",
+            "kind": "resistor",
+            "anchor": "f13",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d2a",
+            "kind": "resistor",
+            "anchor": "f15",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d2b",
+            "kind": "resistor",
+            "anchor": "f17",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d3a",
+            "kind": "resistor",
+            "anchor": "f19",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d3b",
+            "kind": "resistor",
+            "anchor": "f21",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d4a",
+            "kind": "resistor",
+            "anchor": "f23",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d4b",
+            "kind": "resistor",
+            "anchor": "f25",
+            "rotation": 0,
+            "resistance": 1000
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "c15",
+            "to": "b17",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "c17",
+            "to": "b19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w3",
+            "from": "c19",
+            "to": "b21",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w4",
+            "from": "c21",
+            "to": "b25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w5",
+            "from": "c25",
+            "to": "b27",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w6",
+            "from": "c27",
+            "to": "g1",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w7",
+            "from": "h1",
+            "to": "g3",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w8",
+            "from": "h3",
+            "to": "g5",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w9",
+            "from": "h5",
+            "to": "g9",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w10",
+            "from": "h9",
+            "to": "g11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w11",
+            "from": "h11",
+            "to": "g15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w12",
+            "from": "h15",
+            "to": "g19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w13",
+            "from": "h19",
+            "to": "g23",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w14",
+            "from": "battery:-",
+            "to": "b2",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w15",
+            "from": "c2",
+            "to": "b6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w16",
+            "from": "c6",
+            "to": "b11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w17",
+            "from": "c11",
+            "to": "b14",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w18",
+            "from": "c14",
+            "to": "b26",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w19",
+            "from": "c26",
+            "to": "g10",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w20",
+            "from": "h10",
+            "to": "g16",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w21",
+            "from": "h16",
+            "to": "g20",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w22",
+            "from": "h20",
+            "to": "g24",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w23",
+            "from": "h24",
+            "to": "g28",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w24",
+            "from": "b1",
+            "to": "b18",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w25",
+            "from": "b3",
+            "to": "b20",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w26",
+            "from": "b4",
+            "to": "b22",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w27",
+            "from": "b5",
+            "to": "b30",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w28",
+            "from": "b7",
+            "to": "g4",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w29",
+            "from": "b8",
+            "to": "g6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w30",
+            "from": "b9",
+            "to": "b24",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w31",
+            "from": "c24",
+            "to": "b23",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w32",
+            "from": "b10",
+            "to": "b28",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w33",
+            "from": "b12",
+            "to": "g8",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w34",
+            "from": "h8",
+            "to": "g7",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w35",
+            "from": "b13",
+            "to": "g12",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w36",
+            "from": "g14",
+            "to": "g13",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w37",
+            "from": "g18",
+            "to": "g17",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w38",
+            "from": "g22",
+            "to": "g21",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w39",
+            "from": "g26",
+            "to": "g25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    },
+    "B-OVER": {
+      "sha256": "394edb5f6bb7217f78d41cb19fab0e96c7e82fd8b14146462ac5a76ddbfff077",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "battery",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "u1",
+            "kind": "rgb-led",
+            "anchor": "a1",
+            "rotation": 0
+          },
+          {
+            "id": "u2",
+            "kind": "rgb-led",
+            "anchor": "a5",
+            "rotation": 0
+          },
+          {
+            "id": "t1",
+            "kind": "npn",
+            "anchor": "a9",
+            "rotation": 0
+          },
+          {
+            "id": "t2",
+            "kind": "npn",
+            "anchor": "a12",
+            "rotation": 0
+          },
+          {
+            "id": "ur1",
+            "kind": "resistor",
+            "anchor": "a15",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ug1",
+            "kind": "resistor",
+            "anchor": "a17",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ub1",
+            "kind": "resistor",
+            "anchor": "a19",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "baseR1",
+            "kind": "resistor",
+            "anchor": "a21",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down1",
+            "kind": "resistor",
+            "anchor": "a23",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "collectorR1",
+            "kind": "resistor",
+            "anchor": "a25",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "ur2",
+            "kind": "resistor",
+            "anchor": "a27",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ug2",
+            "kind": "resistor",
+            "anchor": "f1",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ub2",
+            "kind": "resistor",
+            "anchor": "f3",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "baseR2",
+            "kind": "resistor",
+            "anchor": "f5",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down2",
+            "kind": "resistor",
+            "anchor": "f7",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "collectorR2",
+            "kind": "resistor",
+            "anchor": "f9",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d1a",
+            "kind": "resistor",
+            "anchor": "f11",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d1b",
+            "kind": "resistor",
+            "anchor": "f13",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d2a",
+            "kind": "resistor",
+            "anchor": "f15",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d2b",
+            "kind": "resistor",
+            "anchor": "f17",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d3a",
+            "kind": "resistor",
+            "anchor": "f19",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d3b",
+            "kind": "resistor",
+            "anchor": "f21",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d4a",
+            "kind": "resistor",
+            "anchor": "f23",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d4b",
+            "kind": "resistor",
+            "anchor": "f25",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "over",
+            "kind": "resistor",
+            "anchor": "j27",
+            "rotation": 0,
+            "resistance": 1000
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "c15",
+            "to": "b17",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "c17",
+            "to": "b19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w3",
+            "from": "c19",
+            "to": "b21",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w4",
+            "from": "c21",
+            "to": "b25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w5",
+            "from": "c25",
+            "to": "b27",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w6",
+            "from": "c27",
+            "to": "g1",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w7",
+            "from": "h1",
+            "to": "g3",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w8",
+            "from": "h3",
+            "to": "g5",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w9",
+            "from": "h5",
+            "to": "g9",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w10",
+            "from": "h9",
+            "to": "g11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w11",
+            "from": "h11",
+            "to": "g15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w12",
+            "from": "h15",
+            "to": "g19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w13",
+            "from": "h19",
+            "to": "g23",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w14",
+            "from": "battery:-",
+            "to": "b2",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w15",
+            "from": "c2",
+            "to": "b6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w16",
+            "from": "c6",
+            "to": "b11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w17",
+            "from": "c11",
+            "to": "b14",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w18",
+            "from": "c14",
+            "to": "b26",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w19",
+            "from": "c26",
+            "to": "g10",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w20",
+            "from": "h10",
+            "to": "g16",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w21",
+            "from": "h16",
+            "to": "g20",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w22",
+            "from": "h20",
+            "to": "g24",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w23",
+            "from": "h24",
+            "to": "g28",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w24",
+            "from": "b1",
+            "to": "b18",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w25",
+            "from": "b3",
+            "to": "b20",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w26",
+            "from": "b4",
+            "to": "b22",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w27",
+            "from": "b5",
+            "to": "b30",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w28",
+            "from": "b7",
+            "to": "g4",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w29",
+            "from": "b8",
+            "to": "g6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w30",
+            "from": "b9",
+            "to": "b24",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w31",
+            "from": "c24",
+            "to": "b23",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w32",
+            "from": "b10",
+            "to": "b28",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w33",
+            "from": "b12",
+            "to": "g8",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w34",
+            "from": "h8",
+            "to": "g7",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w35",
+            "from": "b13",
+            "to": "g12",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w36",
+            "from": "g14",
+            "to": "g13",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w37",
+            "from": "g18",
+            "to": "g17",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w38",
+            "from": "g22",
+            "to": "g21",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w39",
+            "from": "g26",
+            "to": "g25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "overP",
+            "from": "top+:1",
+            "to": "i27",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "overP-link",
+            "from": "top+:2",
+            "to": "d15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "overN",
+            "from": "h30",
+            "to": "d2",
+            "color": "#315f83",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    },
+    "P-OVER": {
+      "sha256": "6b4025166188a908de62bbcaa278183d50cbfc2edc5b4d556a02c8f04954582e",
+      "document": {
+        "schemaVersion": 4,
+        "boardId": "breadboard-30-v1",
+        "lessonId": "dc-lab-v2",
+        "supplyVoltage": 4.5,
+        "sourceMode": "battery",
+        "signalFrequencyHz": 500,
+        "components": [
+          {
+            "id": "u1",
+            "kind": "rgb-led",
+            "anchor": "a1",
+            "rotation": 0
+          },
+          {
+            "id": "u2",
+            "kind": "rgb-led",
+            "anchor": "a5",
+            "rotation": 0
+          },
+          {
+            "id": "t1",
+            "kind": "npn",
+            "anchor": "a9",
+            "rotation": 0
+          },
+          {
+            "id": "t2",
+            "kind": "npn",
+            "anchor": "a12",
+            "rotation": 0
+          },
+          {
+            "id": "ur1",
+            "kind": "resistor",
+            "anchor": "a15",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ug1",
+            "kind": "resistor",
+            "anchor": "a17",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ub1",
+            "kind": "resistor",
+            "anchor": "a19",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "baseR1",
+            "kind": "resistor",
+            "anchor": "a21",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down1",
+            "kind": "resistor",
+            "anchor": "a23",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "collectorR1",
+            "kind": "resistor",
+            "anchor": "a25",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "ur2",
+            "kind": "resistor",
+            "anchor": "a27",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ug2",
+            "kind": "resistor",
+            "anchor": "f1",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "ub2",
+            "kind": "resistor",
+            "anchor": "f3",
+            "rotation": 0,
+            "resistance": 330
+          },
+          {
+            "id": "baseR2",
+            "kind": "resistor",
+            "anchor": "f5",
+            "rotation": 0,
+            "resistance": 10000
+          },
+          {
+            "id": "down2",
+            "kind": "resistor",
+            "anchor": "f7",
+            "rotation": 0,
+            "resistance": 100000
+          },
+          {
+            "id": "collectorR2",
+            "kind": "resistor",
+            "anchor": "f9",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d1a",
+            "kind": "resistor",
+            "anchor": "f11",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d1b",
+            "kind": "resistor",
+            "anchor": "f13",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d2a",
+            "kind": "resistor",
+            "anchor": "f15",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d2b",
+            "kind": "resistor",
+            "anchor": "f17",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d3a",
+            "kind": "resistor",
+            "anchor": "f19",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "d3b",
+            "kind": "resistor",
+            "anchor": "f21",
+            "rotation": 0,
+            "resistance": 1000
+          },
+          {
+            "id": "u3",
+            "kind": "rgb-led",
+            "anchor": "e1",
+            "rotation": 0
+          }
+        ],
+        "wires": [
+          {
+            "id": "w0",
+            "from": "battery:+",
+            "to": "b15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w1",
+            "from": "c15",
+            "to": "b17",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w2",
+            "from": "c17",
+            "to": "b19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w3",
+            "from": "c19",
+            "to": "b21",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w4",
+            "from": "c21",
+            "to": "b25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w5",
+            "from": "c25",
+            "to": "b27",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w6",
+            "from": "c27",
+            "to": "g1",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w7",
+            "from": "h1",
+            "to": "g3",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w8",
+            "from": "h3",
+            "to": "g5",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w9",
+            "from": "h5",
+            "to": "g9",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w10",
+            "from": "h9",
+            "to": "g11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w11",
+            "from": "h11",
+            "to": "g15",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w12",
+            "from": "h15",
+            "to": "g19",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w13",
+            "from": "h19",
+            "to": "g23",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w14",
+            "from": "battery:-",
+            "to": "b2",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w15",
+            "from": "c2",
+            "to": "b6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w16",
+            "from": "c6",
+            "to": "b11",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w17",
+            "from": "c11",
+            "to": "b14",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w18",
+            "from": "c14",
+            "to": "b26",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w19",
+            "from": "c26",
+            "to": "g10",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w20",
+            "from": "h10",
+            "to": "g16",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w21",
+            "from": "h16",
+            "to": "g20",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w22",
+            "from": "h20",
+            "to": "g24",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w23",
+            "from": "h24",
+            "to": "g28",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w24",
+            "from": "b1",
+            "to": "b18",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w25",
+            "from": "b3",
+            "to": "b20",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w26",
+            "from": "b4",
+            "to": "b22",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w27",
+            "from": "b5",
+            "to": "b30",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w28",
+            "from": "b7",
+            "to": "g4",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w29",
+            "from": "b8",
+            "to": "g6",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w30",
+            "from": "b9",
+            "to": "b24",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w31",
+            "from": "c24",
+            "to": "b23",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w32",
+            "from": "b10",
+            "to": "b28",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w33",
+            "from": "b12",
+            "to": "g8",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w34",
+            "from": "h8",
+            "to": "g7",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w35",
+            "from": "b13",
+            "to": "g12",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w36",
+            "from": "g14",
+            "to": "g13",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w37",
+            "from": "g18",
+            "to": "g17",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w38",
+            "from": "g22",
+            "to": "g21",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          },
+          {
+            "id": "w39",
+            "from": "g26",
+            "to": "g25",
+            "color": "#b45b49",
+            "bend": "horizontal"
+          }
+        ]
+      }
+    }
+  }
+}
