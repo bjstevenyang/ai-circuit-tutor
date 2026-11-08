@@ -32,7 +32,7 @@ GitHub PR 是工作流状态来源，PRD 是产品需求来源，CR 是变更记
 
 未来触发器 A 处理需求 PR 的 ready／更新事件并输出只读影响报告；触发器 B 处理实现 PR 的创建／提交更新，执行验证和审查。按 PR 类型及已处理 SHA 去重，机器人反馈不触发同类循环。批准后自动启动实现是额外执行集成，不能由这两类检查推定已实现。
 
-应用heartbeat配置与GitHub事件触发分开：自动路径使用应用内定时协调，实际启用状态在应用Scheduled核对；未配置新的GitHub webhook、认证、费用预算或分支保护，未执行的审查不能标成通过。Work 与 Codex 的报告分别回到对应 PR，跨 PR 通过明确链接和 commit 交接。
+应用heartbeat配置与GitHub事件触发分开：自动路径优先使用已获双向授权的跨聊天主动回报，应用内定时任务只作漏报恢复，具体协议集中在AUTOMATED_HANDOFF；实际兜底启用状态在应用Scheduled核对；未配置新的GitHub webhook、认证、费用预算或分支保护，未执行的审查不能标成通过。Work 与 Codex 的报告分别回到对应 PR，跨 PR 通过明确链接和 commit 交接。
 
 ## 三阶段草案
 

@@ -57,6 +57,8 @@
 
 ## PR 交接流程
 
+派发、主动回报、接收跨聊天结果或自动任务恢复时，先读 [交接与回报协议](docs/changes/AUTOMATED_HANDOFF.md)，按来源核验、任务键去重和中断恢复执行。
+
 具有用户明确“需求自动合并并实施”授权的任务，先读 [自动交接规则](docs/changes/AUTOMATED_HANDOFF.md)。仅在记录的授权范围内，以独立Codex审查通过和实际检查取代逐项用户需求确认，允许自动合并需求／流程PR并继续实施；最终实现PR仍由用户验收合并。未纳入该范围的任务使用下述人工批准默认流程。
 
 新需求、阶段扩展或接手已有 PR 时，先读 [可复用流程](docs/changes/README.md)，使用 [CR 模板](docs/changes/TEMPLATE.md) 和仓库 PR 模板。
