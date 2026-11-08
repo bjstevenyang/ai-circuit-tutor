@@ -244,3 +244,10 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 实际执行：`python3 /tmp/ai-circuit-orchestration/check.py`通过（7份流程文档、本地链接、范围／独立head审查／SHA防护合并／返修去重及交付恢复／最终人工实现合并门槛，产品代码和权威需求未变）；`git diff --check`通过，已审阅差异。应用、浏览器及性能测试未运行，因纯流程文档变化；临时脚本不是运行依赖。
 
 第一次独立复核针对`54c4e2c2b8cf47f4d33682ee479f3c646bbda52f`，Standards PASS、Spec NEEDS_CHANGES：一项P2要求将同head无发现PASS明确列为状态推进事件。已补审查完成事件与派发键＋来源turn／报告只消费一次，允许重新评估合并门槛、不重复派审。新head需再次定向复核；原结论不沿用为PASS。纯文档检查按本轮实际命令记录，未运行产品测试。
+
+
+## 主动回报协议文档验证：2026-11-08
+
+仅AGENTS入口、AUTOMATED_HANDOFF协议、流程README、D55及本记录更新，无产品验收／代码变化。检查唯一双向目标和可访问人类授权、任务完成／阻塞触发、先PR后发送、完整SHA及消息字段、DELIVERED与实际接收区别、去重／RECEIVED中断恢复／CONSUMED、CONFIG_ACK不推进业务、无需回ACK防循环、漏报恢复以及最终实现人工合并边界。本次纯文档不运行应用／浏览器／性能测试，配置发出和真实回传成功必须单列实际工具证据。
+
+实际执行：`python3 /tmp/ai-circuit-orchestration/check_callback_docs.py`通过（5份流程文档、本地引用、AGENTS明确入口、人类双向授权、消息字段、送达／消费恢复、防ACK循环与兜底、产品未变）；`git diff --check`通过，已审阅差异。回传CONFIG_ACK仍需真实发送／接收证据，不以文档校验代替。
