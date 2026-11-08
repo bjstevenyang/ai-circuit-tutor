@@ -179,3 +179,8 @@ Rth=∞ 且一脚仍接参考地时，另一脚孤立：Vc 保持、Ic=0，标�
 源短路／无有限限流／非唯一／数值失败／不支持拓扑／资源超限使整会话失败且清光声、无当前数值；保留作品并可停止。有限超流保留已确定读数及封顶示意，不显示无诊断成功。求解状态、输出工作、教学完成分别呈现：纯 RC 可“已求解／充电”等，RGB／LED／蜂鸣器／压电按各自状态描述；不再将无 ledOn 一律描述成蜂鸣器工作。旧八类 complete 保持兼容；新实验不提供目标图匹配判题，四实验任务完成由操作和观察证据评价，不能单凭亮灯判定。
 
 原理参考：[SparkFun 晶体管入门](https://learn.sparkfun.com/tutorials/transistors/)、[MIT RC 阶跃响应](https://circuits.mit.edu/F25/psets/04/rc_tutorial)、[Murata 外驱压电](https://www.murata.com/en-global/support/faqs/sound/diaphragm/char/sch0001)。资料支持基本原理；上述固定压降、β、容量／频率范围、等效 Cp/Rp、音量映射与支持限制是本应用提案，不冒称来源要求或真实器件规格。
+
+
+## 自激发声电路模型分析入口（Proposed）
+
+[CR-OSCILLATOR](changes/CR-OSCILLATOR.md)所需PNP、耦合晶体管＋0.1μF非线性动态网络及扬声器负载超出现有阶段2模型。当前只记录目标，原有限DC／线性RC／压电规则保持有效。不得仅降低容量下限、镜像NPN图形或隐藏方波就声称支持。下一步技术分析须给出有依据的方程／独立参考、起振与周期、初态和时步收敛、失败分类与预算；这些未冻结前不得合并需求或实施。
