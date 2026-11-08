@@ -246,8 +246,62 @@ v0.1 首次 MVP 为 66 项 Vitest；删除交互修复后为 72 项和 7 个浏�
 第一次独立复核针对`54c4e2c2b8cf47f4d33682ee479f3c646bbda52f`，Standards PASS、Spec NEEDS_CHANGES：一项P2要求将同head无发现PASS明确列为状态推进事件。已补审查完成事件与派发键＋来源turn／报告只消费一次，允许重新评估合并门槛、不重复派审。新head需再次定向复核；原结论不沿用为PASS。纯文档检查按本轮实际命令记录，未运行产品测试。
 
 
+## 自激发声需求初稿检查：2026-11-08
+
+以下保留初稿当时的执行事实；规格已在同日下方OSC冻结章节补齐，初稿“待分析/不能验收”不再描述最新规格状态，仍不表示业务实现。
+
+拟新增OSC-01–06见 [CR](changes/CR-OSCILLATOR.md)，现有AC／EX2／暂缓EX1表行未改。当前只定义目标与待分析门槛；OSC-01目录安装、02容量混接、03起振波形、04扬声器音频、05故障修复、06等价布局／保存／预算均无业务实现、未执行。未来对应模型测试／编辑／storage／app／Chromium，具体数值、容差和文件场景须技术分析收敛后逐项补齐。当前不能宣布验收可执行或通过。
+
+纯文档检查本地引用、源网表、六个唯一OSC ID、旧验收和业务代码未变及git diff --check；不运行应用／浏览器／性能测试。
+
+实际执行：内联Python文档检查通过（6份文档、本地引用、6项唯一OSC ID、旧AC/EX表行及业务代码不变），`git diff --check`通过，已审阅差异。产品／浏览器／性能测试未执行。
+
 ## 主动回报协议文档验证：2026-11-08
 
 仅AGENTS入口、AUTOMATED_HANDOFF协议、流程README、D55及本记录更新，无产品验收／代码变化。检查唯一双向目标和可访问人类授权、任务完成／阻塞触发、先PR后发送、完整SHA及消息字段、DELIVERED与实际接收区别、去重／RECEIVED中断恢复／CONSUMED、CONFIG_ACK不推进业务、无需回ACK防循环、漏报恢复以及最终实现人工合并边界。本次纯文档不运行应用／浏览器／性能测试，配置发出和真实回传成功必须单列实际工具证据。
 
 实际执行：`python3 /tmp/ai-circuit-orchestration/check_callback_docs.py`通过（5份流程文档、本地引用、AGENTS明确入口、人类双向授权、消息字段、送达／消费恢复、防ACK循环与兜底、产品未变）；`git diff --check`通过，已审阅差异。回传CONFIG_ACK仍需真实发送／接收证据，不以文档校验代替。
+
+## OSC规格冻结及实施验收计划（2026-11-08）
+
+新OSC-01–06的完整行为见PRD；方程/独立期望以CIRCUIT_MODEL为准；生命周期/v5以SYSTEM_DESIGN为准。旧AC/EX2定义表保留，适用差异见CR。本需求PR仅文档；下列应用测试位置/命令是后续实施的要求，尚未创建/执行，不将离线研究当应用通过。最终报告逐ID记录真实文件/场景/命令/结果/代码完整SHA和未执行项，不能只给总数。
+
+### 固定输入与独立期望
+
+OSC-REF为CR的七节点网表：V1=9V，R3=47Ω VP–P，Q1NPN(E=GND/B=A/C=B)，Q2PNP(E=P/B=B/C=D)，R1=120kΩ P–A，C=100nF A–D，speaker8Ω D–S，R2=10Ω S–GND。原图跨线桥不连接。冷态0/100μs单次线性上电；默认/严格积分档按模型。测试记录完整显式端点输入与编译后节点表及其SHA-256，不用截图或临时文件作为唯一fixture。
+
+参考及独立变体：OSC-C47、OSC-C220、OSC-R100、OSC-R240、OSC-L26仅分别改C=47nF、220nF、R1=100kΩ、240kΩ、R2=18Ω；独立比较窗15/25/15/30/15ms，周期、次数及容差在模型表。正式产品每次仍算40ms并验证通用周期检测，独立测量1V阈值与UI检测规则分开。错误输入OSC-NOC（精确删C）、OSC-NOR（删R1）、OSC-NOSPK（删speaker）、OSC-BYPASS（并导线D–S）、OSC-PSHORT（P–GND）、OSC-VSHORT（VP–GND）、OSC-WRONGPIN（Q2的B/C外部连接交换）、OSC-WRONGKIND（Q2改NPN）和内部模型负对照BF_N=BF_P=100分别建fixture；不以1e30Ω伪开路替代删除。
+
+独立参考脚本完整归档 [影响报告第12节](changes/CR-OSCILLATOR-IMPACT.md)，脚本SHA-256 f637706ebeb5ee2f20d6141a612422be1a9d529f1749db620c1d09bafbffa191，原始分析含两份独立实现/BE/BDF2与步长对照。其源码作为Markdown证据，不导入生产，也不让项目求解器生成自己的期望。后续数值fixture应逐值转录模型表并保留来源，能对生产错误给出失败；KCL/Jacobian检查与独立数值比较分别报告。归档脚本无LTE，生产必须自行实现已冻结LTE/失败/预算。
+
+| 验收 | 未来文件/具体场景 | 实施命令/实际状态 |
+| --- | --- | --- |
+| OSC-01 | src/circuit/catalog.test.ts和editor/model.test.ts：PNP/speaker四方向稳定脚序/标记/物理拒绝/取消不入历史；Chromium从空板纯键盘/表单搭建OSC-REF，记录实际合法孔位全表，说明查阅只读 | npm test；npm run test:e2e -- --project=chromium --workers=1；均未执行 |
+| OSC-02 | parameters/validation/transient测试：100nF=.1μF、47/220边界、非有限/空白/半输入/重复单位；profile参数不匹配保留；零态/一次上电/严格档/LTE拒步、KCL、Newton/域/步长失败；旧RC默认和范围回归 | npm test；npm run typecheck；npm run build；未执行 |
+| OSC-03 | src/circuit/transient.test.ts独立fixture：OSC-REF两档的五上穿、周期、8相位四节点、D/speaker RMS及源流；五单参数变体周期/次数；固定参数不读音频/拓扑匹配；严格档同门槛 | npm test；固定有限数值runner命令由实现PR列明；未执行 |
+| OSC-04 | src/app/useBuzzerSound.test.tsx或独立speaker音频hook：来自端口的f/RMS/增益，许可/音量0/端点交换/旁路/API不可用/20Hz与20kHz边界；Chromium真实手势/AudioContext调用及停止/后台清理 | npm test；npm run test:e2e -- --project=chromium --workers=1；实际设备试听另记，未执行 |
+| OSC-05 | transient/tutor测试逐反例：DC/窗内无周期/限制分类、有限/理想短路差别、未知不当0；β100/100不变成持续音；Chromium删C→看结果/三层提示→恢复C→periodic，记录模拟时刻/对象 | npm test；npm run test:e2e -- --project=chromium --workers=1；未执行 |
+| OSC-06 | network/storage/editor/session测试：3种布局和顺序等价、v1–v5/profile往返及未知版本保护、50步撤销、Worker过期响应/控制/后台事件表每行、12/13边界/预算注入/旧全部验收回归；固定性能下表 | npm test；npm run typecheck；npm run lint；npm run build；Chromium；未执行 |
+
+三个等价布局必须分别使用不同物理安装位置及同网空孔连线，至少一个旋转PNP/speaker并交换speaker端点；另外改变线色/折点、导线和元件数组顺序。安装先用现有完整物理校验，物理违规不当电气错误。实际孔位表由实现后真实搭建验证，验收仍以七节点关系及安装规则为判据，不能靠目标图坐标识别。
+
+错误/无周期fixture允许范围见模型：精确移除R1/speaker和错脚未给独立数值，不预设其DC唯一；实际按方程/唯一性/域给可解释结果或具体unsupported，不造频率。移除C与β100/100有独立末值/次数，不能只断言“无声”。P短接须保留47Ω及有限源侧电流。speaker旁路验证其自身V=0，不把全电路必不振荡作为期望。
+
+### 新profile固定性能规程（OSC-06，不替代EX2-12）
+
+1. 环境：macOS Apple M1/8GB、仓库锁定Chromium、1440×900、无CPU降速、单Worker/串行；记录实际OS/CPU/内存/浏览器版本/commit和完整配置。其他硬件仅补充，未有M1不宣称该门槛已验证。
+2. 固定运行输入：OSC-REF、五个单参数变体，以及OSC-NOC、OSC-MAX12、OSC-OVER13。MAX12仅把R1替换为8只15kΩ串联，加入X1…X7，总120kΩ；参考5未知节点+7=12、14个板上元件。OVER13把其中一只15kΩ拆成两只7.5kΩ，加入X8，共13未知、15件，预检拒绝。按模型化简前计数，记录节点合并/已知端消去前后，不能用优化绕过边界。MAX12观察量与REF同容差；OVER13不得进入数值积分。
+3. 所有成功输入保持默认LTE/预算、9V/100μs冷态/40ms，不能为了计时替换小窗口、跳过编译或用缓存。每场景预热3次，正式20次，每次独立冷启动；保存20个原始样本，升序第19个为P95。不用跨Worker与主线程的绝对时钟相减。
+4. 核心Worker内从收到该次配置、开始编译到完整窗口及分类完成为同一performance.now间隔；主线程另记点击运行至结果渲染端到端，包含消息/调度。完整编译+分析P95≤2s、每次墙钟5s硬截止。预检拒绝独立报告，不混入成功场景P95；预算触发应为明确失败而非较快的成功。运行点击到“计算中”反馈≤200ms。
+5. 停止两场景分别测20次：计算中按停止；获许可且已发声时按停止。从点击事件开始至UI停止且Worker取消/旧generation失效、音频节点清理均完成取较晚者，P95≤100ms；不能只量dispatch。参数运行中冷重算/后台取消及旧响应不恢复音频用事件测试验证；真实失焦/后台需Chromium实际事件证据，不以合成事件宣称OS验证。
+6. 内存另开进程，不计入耗时采样：加载参考配置并预热3次/停止/终止Worker/清音频，受控GC后采主线程堆M0；串行20次冷运行→结果→停止，每次同样清理/GC并采M1…M20。报告完整序列，M20−M0≤10MB；停止后Worker残留应0，音频振荡器/连接节点应0，AudioContext关闭/释放按实现实际记录。无法采堆时标未验证，不用DOM数替代。每会话最多4096显示样本，不将几十万接受步存React/历史/localStorage；不反复跑旧10分钟RC长测来代替新有限窗。
+
+故意注入Newton上限/hmin/LTE不接受/总步数/拒步/墙钟超限分别验证明确失败及清旧声；低预算注入只供测试，生产预算常量不可随参数放宽。严格数值档只对REF/必要边界验证误差，不无理由重复完整性能套件。若具体失败，修影响范围再复测；无法达到冻结门槛先回需求变更，不改期望掩盖。
+
+### 本需求版本的实际验证与人工边界
+
+已消费技术分析的模型路线不等于最终独立审查。真实研究来源/输入head/命令/结果见影响报告；本轮做文档范围/本地引用/七节点/验收映射/原AC/EX表行/原业务树不变/归档脚本哈希与语法/合并冲突清理/差异检查，不跑应用或浏览器/性能。对应文档检查命令在提交前实际执行后记录；未执行项不得写通过。
+
+后续交付必须分别列目标M1/8GB、真实后台/失焦、设备试听、读屏/200%缩放、教师及至少3名学生任务的已执行/未执行和原因；这些不能从CI或API推断。没有目标环境时先交用户可体验的实现及实际边界，不能声称全部教学/设备验收已通过。仅Chromium，不公开部署，最终实现用户验收合并。
+
+本版本实际执行：`python3 /tmp/ai-circuit-orchestration/check_oscillator_docs.py`通过（7份纯文档、主线协议不变、冲突/围栏/引用、原AC/EX表行、6项OSC映射、七节点/8相位参考、归档独立脚本SHA-256和Python语法、业务/依赖树不变）；`git diff --check`通过，已审阅文档差异。未重新运行原数值研究，也未运行应用/Chromium/性能；新head仍待独立审查和CI，临时检查脚本不是运行依赖或唯一交接来源。
