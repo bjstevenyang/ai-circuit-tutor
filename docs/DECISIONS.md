@@ -163,3 +163,12 @@
 | D52 | 用户明确授权；覆盖指定范围内的需求自动合并与实施 | 用户不希望再确认需求，要求Codex独立review，并对“自动合并需求PR、创建独立实现分支及Draft Implementation PR，自动编码、测试和返修；最终实现PR仍由你验收合并”明确回复“授权需求自动合并并实施”，随后要求立即开始配置。原文转录到本流程PR，作为可访问依据；不是虚构对未来SHA的人类APPROVE。适用本流程配置和下一项NPN＋PNP自激发声电路，不推广至其他阶段。需求作者／独立审查者分离，以固定head及检查作为自动合并门槛；实现最终合并保留用户。 |
 
 原工作区codex/stage-2-implementation、HEAD `40dd29ed6eafae43afc7d84bc02d3188daee1b22`，干净；本流程在隔离工作区codex/automated-requirement-handoff，从已合并PR #3后的主线 `f80a1703cd95d18ad51af1ce8d693527afd92fd3`开始，修改前干净。阶段2代码head为上述40dd29e，验证与未执行人工项见TEST_PLAN／STAGE-2-IMPLEMENTATION；没有将本流程当作产品功能实现或重新验证。本次产品AC／EX验收无变化；无业务代码、新依赖、服务或部署。应用任务的运行状态以Scheduled及实际任务结果为准，不以文档自称已配置。
+
+
+## 主动回报持久化：2026-11-08
+
+| ID | 状态 | 决策及理由 |
+| --- | --- | --- |
+| D55 | 用户明确授权双向回报并要求文档化 | 用户直接要求“你把 codex主动回也报配置好”，继而要求项目文档明确如何工作；[授权记录](https://github.com/bjstevenyang/ai-circuit-tutor/pull/5#issuecomment-6718387899)列出两个唯一目标。以AUTOMATED_HANDOFF作为唯一回报规则，AGENTS负责入口；技术聊天任务完成／真实阻塞先写PR再主动发消息，协调者核验并去重恢复，15分钟任务只兜底。不把临时waitingOnApproval当待用户审批，不扩大到其他聊天／范围，最终实现人工合并不变。 |
+
+本流程分支codex/message-driven-handoff，从master `4ec41dd325566fc273038146645571a6c8f0b785`的干净隔离工作区起步；阶段2功能head仍`40dd29ed6eafae43afc7d84bc02d3188daee1b22`。在途PR #5分析不重派。产品AC/EX/OSC验收、业务代码和依赖均不变，应用实际回传确认单独核实。D53/D54在并行需求PR #5记录，不重用编号。
