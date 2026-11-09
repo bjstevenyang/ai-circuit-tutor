@@ -1,4 +1,6 @@
-# 数值契约失败来源归档
+# 数值契约失败与早期探索来源归档
+
+本文件保留失败/初探时原文，不覆盖已选v2规格；后续16次有限完整核验见[新参考归档](CR-OSCILLATOR-NUMERICS-REFERENCE.md)，当前规范以权威模型/设计/PRD为准。
 
 原作者：唯一技术聊天01a1902f-8a44-7f03-855b-115e272388c4，正式报告[PR #7评论6726404637](https://github.com/bjstevenyang/ai-circuit-tutor/pull/7#issuecomment-6726404637)，固定文档commit9755c7dbb5d1f5edf88a04613d7b21cfebd20600。以下原始失败文档逐字归档；不是最终修订方案或PASS，未修改业务需求。其相对路径提及的原参考脚本已在同目录CR-OSCILLATOR-IMPACT.md永久归档。
 

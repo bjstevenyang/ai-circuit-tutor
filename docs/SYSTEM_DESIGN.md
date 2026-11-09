@@ -167,11 +167,17 @@ v4 仅持久化经过白名单验证的配置；不包含实际 Vc、时间、�
 
 ### 权威状态、接口及异步边界
 
-CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。新建电容按当前profile默认值；应用参数按该profile范围。读取配置允许两容量范围并集，分析支持域另校验。
+CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。新建电容按当前profile默认值；应用参数按该profile范围。读取配置允许两容量范围并集，分析支持域另校验。
+
+可运行profile只有legacy-stage2-v1与oscillator-em-v2；新建作品默认legacy，明确选择“自激发声·虚拟模型v2”才使用新参数。已知oscillator-em-v1为可恢复的旧模型配置：保留全部ID/位置/参数/接线及47–220nF值，显示“旧版虚拟模型，需显式切换v2”，不创建Worker或播放/计算，运行返回unsupported-model-version。已知v1配置编辑仍用47–220nF范围/新建电容100nF默认及同一物理目录，合法编辑可保存，但不触发计算。菜单不把v1呈现为可新建的可用模型；其当前旧版标签仍可读。用户显式选v2是一次可撤销配置编辑，停止/清旧generation，不缩放容量或自动改线；撤销回v1再次只恢复不运行。schema版本仍5，未知profile与已知不运行的v1必须分开：未知值保护原存档，不默退legacy/v2。此转换不会自动产生额外实验或实施授权。
 
 核心纯函数职责分compileTransient(document, profile)→明确预检/编译结果；initialize(compiled, initial)→全部电荷零态；advance(compiled,state,target,budget)→accepted state/readings或带原因的失败。state包含所有独立电荷/必要节点解、模拟时刻及积分所需状态，不由上次UI读数还原。核心不依赖React/SVG/DOM/Worker/AudioContext/localStorage或墙钟。单个组件的导通状态由模型派生，不另存可与解冲突的开关标签。
 
 主线程外的内置Worker负责此profile编译/数值/周期统计，单会话单Worker（可复用一个Worker但不得并行旧generation）。外层以performance.now监督5s墙钟预算，超时/停止可terminate；无新库。每个请求/响应含sessionId、documentRevision、generation和modelProfileId，任一过期即丢弃。取消先使generation失效并静音，再清理计算，不等完成回调。UI不以每个求解步setState，也不按音频采样率求解；最多4096显示样本，周期统计用接受步流式累计，编译数据/旧会话不无限缓存。
+
+通用周期阈值需要5–40ms全窗极值；产品采用最多两遍确定性流式分析，保持有界内存。第一遍从冷态求0–40ms，累计speaker极值、末5ms节点范围/电容导数/KCL及有界显示采样；第二遍使用同一编译网络/控制配置/初态与同一积分参数重放0–40ms，固定第一遍阈值/迟滞，逐接受半步计算上穿、周期均值和RMS，最多保留当前周期累加量、最近5次上穿/4个周期统计及≤4096显示采样。所有遍合计最多4096显示点，第二遍复用或替换同一有界缓冲，不另留第一遍轨迹；不存全轨迹，不能从显示点猜脉冲/频率。speaker缺失/旁路/幅度不足时无需第二遍，但仍按全部节点末窗判DC或window-no-period，不能把无speaker误作全网络静态。
+
+两遍共享总接受/拒绝/墙钟/取消预算及同generation；第二遍开始不得重置计数、延长5s或绕过域检查。编译/两遍/分类均计入完整分析P95≤2s，取消/停止在任一遍≤100ms。内部重放不是周期点火：每遍代表同一个确定性物理0–40ms轨迹，不将时间累计成80ms或显示第二次上电，不把第一遍读数当最终结果/提前发声；UI仅给计算进度，最终结果标40ms。同参数重放不一致即numerical-failure，不能拼接两条轨迹。离线参考保存全轨迹仅供数学审计，不是此生产方案。
 
 结果区分calculating/periodic/settled-DC/window-no-period及模型的明确失败状态；完成结果标观察窗/模拟时刻，不把有限计算冒充持续1×实时。只有periodic有可播放频率/AC强度，其他计算成功结果仍可显示有依据的电流电压。不支持/失败清当前数值及声音，保留诊断/对象/最后接受时刻说明但不当当前读数。提示请求冻结版本/时刻/证据，普通求解进度不自动增加层级或刷屏。
 
@@ -202,10 +208,10 @@ AudioContext仅手势内创建/恢复，复用现有会话许可和15ms平滑增
 
 ### v5保存及迁移
 
-存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind；v5的pnp/speaker由固定目录推导参数。v5容量F严格验证两范围并集，缺字段不猜；保存物理合法但profile不支持的组合，运行说明限制。
+存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。v5容量F严格验证两范围并集，缺字段不猜；保存物理合法但profile不支持的组合，运行说明限制。
 
 不保存模拟时间/节点电压/电荷/积分历史/显示采样/Worker/运行态/周期缓存/诊断/提示/许可/音量/未应用草稿。加载只读，下一次成功保存才写v5；未知modelProfileId/schema、结构/物理损坏保护原文本并暂停自动覆盖，不能退回旧模型默算。写失败保留内存作品和重试。撤销/重做包含profile/参数，50步上限不变，恢复配置不恢复瞬态。
 
 ### 资源及测量
 
-新profile编译/全部40ms分析P95≤2s，交互反馈≤200ms、停止/静音≤100ms、墙钟硬截止5s、内存增长≤10MB；数值步数/12未知量见模型。这些均是未来验收门槛，尚未实测。旧EX2-12的100ms核心/200ms交互/100ms停止及原长运行规程保留；新有限窗不重复套10分钟连续RC实验。固定输入/时钟/样本/内存步骤以TEST_PLAN为准，不能把其他机器结果冒充M1/8GB。
+新profile编译/全部统计遍数的40ms分析P95≤2s，交互反馈≤200ms、停止/静音≤100ms、墙钟硬截止5s、内存增长≤10MB；数值步数/12未知量见模型。这些均是未来验收门槛，尚未实测。旧EX2-12的100ms核心/200ms交互/100ms停止及原长运行规程保留；新有限窗不重复套10分钟连续RC实验。固定输入/时钟/样本/内存步骤以TEST_PLAN为准，不能把其他机器结果冒充M1/8GB。
