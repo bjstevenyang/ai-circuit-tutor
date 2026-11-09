@@ -1,7 +1,8 @@
-import type { ComponentInstance, ComponentKind } from './types';
+import type { ComponentInstance, ComponentKind, ModelProfileId } from './types';
+import { isOscillatorProfile } from './parameters';
 
 type Definition = { name: string; description: string; offsets: readonly (readonly [number, number])[]; pinNames: readonly string[]; body: readonly [number, number, number, number] };
-export const COMPONENT_KINDS: readonly ComponentKind[] = ['resistor', 'led', 'switch', 'button', 'potentiometer', 'buzzer', 'diode', 'ldr', 'rgb-led', 'npn', 'capacitor', 'piezo-passive'];
+export const COMPONENT_KINDS: readonly ComponentKind[] = ['resistor', 'led', 'switch', 'button', 'potentiometer', 'buzzer', 'diode', 'ldr', 'rgb-led', 'npn', 'capacitor', 'piezo-passive', 'pnp', 'speaker'];
 export const COMPONENTS: Record<ComponentKind, Definition> = {
   resistor: { name: '电阻', description: '默认 330 Ω · 可调整', offsets: [[0,0],[60,0]], pinNames: ['1','2'], body: [30,0,38,16] },
   led: { name: '红色 LED', description: 'A 阳极 / K 阴极', offsets: [[0,0],[20,0]], pinNames: ['A','K'], body: [10,0,20,20] },
@@ -15,14 +16,16 @@ export const COMPONENTS: Record<ComponentKind, Definition> = {
   npn: { name:'NPN 晶体管',description:'低侧开关 · B / C / E',offsets:[[0,0],[20,0],[40,0]],pinNames:['B','C','E'],body:[20,-10,34,24]},
   capacitor: { name:'电容',description:'无极性 · 100 μF',offsets:[[0,0],[40,0]],pinNames:['1','2'],body:[20,0,28,22]},
   'piezo-passive': { name:'无源压电',description:'需要变化信号 · 无极性',offsets:[[0,0],[40,0]],pinNames:['1','2'],body:[20,0,28,28]},
+  pnp: { name:'PNP 晶体管',description:'自激发声虚拟模型 · B / C / E',offsets:[[0,0],[20,0],[40,0]],pinNames:['B','C','E'],body:[20,-10,34,24]},
+  speaker: { name:'无源扬声器',description:'虚拟 8 Ω 负载 · 无极性',offsets:[[0,0],[40,0]],pinNames:['1','2'],body:[20,0,28,28]},
 };
-export function createComponent(kind: ComponentKind, anchor: string, rotation: ComponentInstance['rotation'], id: string): ComponentInstance {
+export function createComponent(kind: ComponentKind, anchor: string, rotation: ComponentInstance['rotation'], id: string, profile: ModelProfileId = 'legacy-stage2-v1'): ComponentInstance {
   return { id, kind, anchor, rotation,
     ...(kind === 'resistor' ? { resistance: 330 } : {}),
     ...(kind === 'potentiometer' ? { resistance: 10000, position: 50 } : {}),
     ...(kind === 'switch' ? { closed: false } : {}),
     ...(kind === 'ldr' ? { light: 50 } : {}),
-    ...(kind === 'capacitor' ? { capacitanceF: 100e-6 } : {}),
+    ...(kind === 'capacitor' ? { capacitanceF: isOscillatorProfile(profile) ? 100e-9 : 100e-6 } : {}),
   };
 }
 export function rotateOffset(x: number, y: number, rotation: ComponentInstance['rotation']): [number, number] {

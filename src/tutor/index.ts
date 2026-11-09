@@ -122,6 +122,14 @@ const COPY: Record<DiagnosticCode, DiagnosticCopy> = {
 
 export function getDiagnosticCopy(code: DiagnosticCode,diagnostic?:Diagnostic): DiagnosticCopy {
   const original=COPY[code];
+  if(diagnostic?.context==='oscillator'&&code!=='source-short')return {
+    title:diagnostic.reason??'查看有限观察窗的证据',description:'无连续声音仍可能有直流电流；有限观察窗不证明永不起振，也不能判断真实器件安全。',
+    hints:[
+      `先比较周期、直流和窗口内未见稳定周期的区别。此证据来自模拟${((diagnostic.timeS??0)*1000).toFixed(3)} ms。`,
+      `逐项查看证据对象及实际孔位：${diagnostic.entities.join('、')||'当前作品'}。B/C/E身份和显式端点决定连接，导线交叉不连接。`,
+      '按元件说明对照反馈路径：外部电容连接NPN的B端与PNP的C端；检查偏置电阻、扬声器两端及返回负端的路径。一次修复一处，再从初态运行比较证据。',
+    ],
+  };
   if(diagnostic?.channel)return {...original,title:`${diagnostic.channel} 通道：${original.title}`,description:diagnostic.reason??original.description,
     hints:[`RGB包含独立支路；${diagnostic.channel}通道的状态由它自己的连接和电流决定。`,`查看高亮实例的${diagnostic.channel}脚及K脚，从同组空孔沿支路检查。`,original.hints[2]]};
   if(diagnostic?.reason){

@@ -1,10 +1,10 @@
 import { COMPONENTS, getComponentPins } from '../circuit';
-import type { ComponentInstance, ComponentKind } from '../circuit';
-import { COMPONENT_GUIDES } from './components';
+import type { ComponentInstance, ComponentKind, ModelProfileId } from '../circuit';
+import { componentGuideCopy } from './components';
 
-export function ComponentGuide({ kind, part }: { kind: ComponentKind; part?: ComponentInstance }) {
+export function ComponentGuide({ kind, part, profile='legacy-stage2-v1' }: { kind: ComponentKind; part?: ComponentInstance;profile?:ModelProfileId }) {
   const definition = COMPONENTS[kind];
-  const copy = COMPONENT_GUIDES[kind];
+  const copy = componentGuideCopy(kind,profile);
   const holes = part ? getComponentPins(part) : null;
   return <section className="component-guide" aria-label={`${definition.name}使用说明`}>
     <div className="component-guide-heading"><span>认识元件</span><h2>{definition.name}</h2></div>

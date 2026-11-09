@@ -1,4 +1,5 @@
-import type { ComponentKind } from '../circuit';
+import type { ComponentKind, ModelProfileId } from '../circuit';
+import { isOscillatorProfile } from '../circuit';
 
 export type ComponentGuideCopy = {
   about: string;
@@ -12,6 +13,24 @@ export type ComponentGuideCopy = {
 
 /** General component knowledge, separate from evidence-based repair hints. */
 export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
+  pnp: {
+    about:'PNP晶体管的发射极通常靠近较高电位，基极比发射极低时可以控制负载。它可与NPN形成反馈。',
+    pins:['B 基极，控制端','C 集电极，负载端','E 发射极，通常靠正端'],
+    connection:'显式选择自激发声虚拟模型。E接供电电阻后的节点，B可由NPN集电极驱动，C向负载供电；导线接引脚同组空孔。',
+    example:'正端 → 电阻 → E〔PNP〕C → 负载 → 负端；B由控制电路驱动',
+    tryIt:'先查看B/C/E的实际孔位，再对照原理图接线；改变反馈电容，比较有限观察窗中的结果。',
+    commonMistake:'与NPN外形相近不代表工作方向相同；B/C/E不能按照片或平面朝向猜。无连续音也可能存在直流电流。',
+    modelNote:'仅自激发声虚拟模型采用固定β50及线性结电容，不代表真实2N3906参数、封装脚序或安全性；原实验模型不支持PNP。',
+  },
+  speaker: {
+    about:'无源扬声器把变化的电流变成声音。它与内部自带振荡器的有源蜂鸣器、外驱压电不同。',
+    pins:['1 无固定极性；交换两端改变信号方向','2 无固定极性；不会改变本模型的频率或交流有效值'],
+    connection:'选择自激发声虚拟模型，将扬声器接在电路输出和回路之间；本实验的扬声器还经10Ω电阻回到负端。',
+    example:'变化的输出 → 1〔无源扬声器〕2 → 电阻 → 负端',
+    tryIt:'先查看周期及交流强度，再主动启用声音；把串联电阻10Ω改18Ω，比较负载变化。',
+    commonMistake:'旁路后扬声器端电压为0，但其他节点仍可能变化。未许可、音量0、没有稳定周期或系统静音都可能无声。',
+    modelNote:'固定虚拟8Ω纯电阻，没有线圈电感或机械模型。声音按求解端口的频率及交流有效值作正弦示意，不预测SL27001音色、声压或真实安全。',
+  },
   'rgb-led': {
     about:'RGB LED 内有红、绿、蓝三条发光支路，组合电流可混色。',pins:['R 红色阳极','K 三通道共用阴极','G 绿色阳极','B 蓝色阳极'],
     connection:'K 接负端；R、G、B 各经独立电阻接正端。接同组空孔，不占用引脚孔。',example:'电源＋ → 开关 → 330 Ω → R／G／B；K → 电源−（三条独立支路）',
@@ -105,3 +124,25 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
     modelNote: '模拟光照 0–100% 对应 100 kΩ 到 100 Ω，不是实际照度 lux，也不模拟房间的真实光照。',
   },
 };
+
+export function componentGuideCopy(kind:ComponentKind,profile:ModelProfileId):ComponentGuideCopy {
+  const copy=COMPONENT_GUIDES[kind];
+  if(!isOscillatorProfile(profile))return copy;
+  if(kind==='npn')return {
+    ...copy,pins:['B 基极，控制端','C 集电极，可驱动PNP基极','E 发射极，按电路图连接'],
+    connection:'在自激发声虚拟模型中，B可接受反馈电容及电阻信号，C可接PNP基极；按B/C/E身份连接，不从图形朝向猜。',
+    example:'反馈节点 → B〔NPN〕；C → PNP基极；E → 负端（参考接法）',
+    tryIt:'先对照原理图认清三个端点，再比较改变反馈电阻或电容后的周期。',
+    commonMistake:'饱和和反向工作时不能始终套用Ic=βIb；没有持续声音也不等于完全没电。',
+    modelNote:profile==='oscillator-em-v1'?'这是旧版虚拟模型，仅恢复配置，需显式切换v2后运行。旧模型为10/5pF结电容；不会静默替换参数。':'本profile采用固定β100的EM与2/1nF虚拟线性结电容；不是真实3904参数。虚拟开关模型，不能判断真实器件安全；旧低侧模型的5/50mA课程规则另行保留。',
+  };
+  if(kind==='capacitor')return {
+    ...copy,pins:['1 无极性端','2 无极性端'],
+    connection:'在反馈支路连接两个电路节点，不必把一端接负极。参考实验连接NPN基极与PNP集电极输出。',
+    example:'反馈输入节点 → 1〔电容〕2 → 输出节点；100nF = 0.1μF',
+    tryIt:'比较47、100和220nF；应用参数后从零初态重算0–40ms，不连续保留上次电荷。',
+    commonMistake:'把0.1μF误读成1μF，或把导线交叉当连接；删除反馈电容后仍可能有直流电流。',
+    modelNote:'本profile范围47–220nF、默认100nF；线性无极性电容与内部结电容共同参与EM瞬态。旧RC的10–1000μF、默认100μF及连续性规则保持。',
+  };
+  return copy;
+}

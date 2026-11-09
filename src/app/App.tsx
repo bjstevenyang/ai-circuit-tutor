@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
-import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity, COMPONENTS, COMPONENT_KINDS, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, createComponent, supplyVoltageOf, MIN_SUPPLY_VOLTAGE, MAX_SUPPLY_VOLTAGE } from '../circuit';
+import { analyzeCircuit, createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, inspectConnectivity, COMPONENTS, COMPONENT_KINDS, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, createComponent, profileOf, supplyVoltageOf, MIN_SUPPLY_VOLTAGE, MAX_SUPPLY_VOLTAGE } from '../circuit';
 import type { AnalysisResult, CircuitDocument, ComponentInstance, ComponentKind, Rotation, Wire } from '../circuit';
 import { Breadboard } from '../editor/Breadboard';
 import { PartControls } from '../editor/PartControls';
@@ -13,6 +13,9 @@ import { ComponentGuide } from '../tutor/ComponentGuide';
 import { ChoiceGroup } from '../editor/ChoiceGroup';
 import { StageReadings } from './StageReadings';
 import { NumberEditor } from '../editor/NumberEditor';
+import { OscillatorSession, speakerDrive } from './oscillatorSession';
+import { calculatingResult, presentOscillator, OSCILLATOR_TITLES } from './oscillatorPresentation';
+import type { OscillatorProgress } from '../circuit/oscillator/types';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
 const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
@@ -27,11 +30,13 @@ type AppState = {
   sessionId: number;
   revision: number;
   hintTimeS: number | null;
+  progress: OscillatorProgress | null;
 };
 type Action =
   | { type: 'edit'; history: HistoryState; saveStatus: string }
   | { type: 'run'; result: AnalysisResult; restart?:boolean }
   | { type: 'tick'; result: AnalysisResult; sessionId:number; revision:number }
+  | { type: 'progress'; progress:OscillatorProgress;sessionId:number;revision:number }
   | { type: 'pause'; paused:boolean }
   | { type: 'stop' }
   | { type: 'hint' }
@@ -48,22 +53,23 @@ function initialize(): AppState {
     diagnosticIndex: 0,
     saveStatus: saved.status === 'loaded' ? '已恢复本地作品' : saved.status === 'error' ? saved.message : '本地自动保存已就绪',
     storageBlocked: saved.status === 'error',
-    phase:'stopped',sessionId:0,revision:0,hintTimeS:null,
+    phase:'stopped',sessionId:0,revision:0,hintTimeS:null,progress:null,
   };
 }
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case 'edit': return { ...state, history: action.history, analysis: null, phase:'stopped',revision:state.revision+1,hintTimeS:null,hintLevel: 0, diagnosticIndex: 0, saveStatus: action.saveStatus };
-    case 'run': return { ...state, analysis: action.result, phase:action.result.status==='unsupported'||action.result.status==='fault'&&!action.result.readings?'fault':'running',sessionId:state.sessionId+(action.restart?1:0),hintTimeS:null,hintLevel: 0, diagnosticIndex: 0 };
+    case 'edit': return { ...state, history: action.history, analysis: null, progress:null, phase:'stopped',revision:state.revision+1,hintTimeS:null,hintLevel: 0, diagnosticIndex: 0, saveStatus: action.saveStatus };
+    case 'run': return { ...state, progress:null, analysis: action.result, phase:action.result.status==='unsupported'||action.result.status==='fault'&&!action.result.readings?'fault':'running',sessionId:state.sessionId+(action.restart?1:0),hintTimeS:null,hintLevel: 0, diagnosticIndex: 0 };
     case 'tick': {
       if(action.sessionId!==state.sessionId||action.revision!==state.revision||state.phase!=='running')return state;
       const identity=(a:AnalysisResult|null)=>JSON.stringify(a?.diagnostics.map(d=>[d.code,d.entities,d.channel,d.pin]));
       const same=identity(state.analysis)===identity(action.result);
       return {...state,analysis:action.result,phase:action.result.status==='supported'?'running':'fault',...(same?{}:{hintLevel:0,diagnosticIndex:0,hintTimeS:null})};
     }
-    case 'pause': return state.phase==='running'&&action.paused?{...state,phase:'background-paused'}:state.phase==='background-paused'&&!action.paused?{...state,phase:'running'}:state;
-    case 'stop': return { ...state, analysis: null, phase:'stopped',sessionId:state.sessionId+1,hintTimeS:null,hintLevel: 0, diagnosticIndex: 0 };
+    case 'progress': return action.sessionId===state.sessionId&&action.revision===state.revision&&state.phase==='running'?{...state,progress:action.progress}:state;
+    case 'pause': return state.phase==='running'&&action.paused?{...state,phase:'background-paused',...(state.analysis?.mode==='oscillator'?{analysis:null,progress:null}:{})}:state.phase==='background-paused'&&!action.paused?{...state,phase:'running'}:state;
+    case 'stop': return { ...state, analysis: null, progress:null, phase:'stopped',sessionId:state.sessionId+1,hintTimeS:null,hintLevel: 0, diagnosticIndex: 0 };
     case 'hint': return { ...state, hintTimeS:state.hintTimeS??state.analysis?.timeS??null,hintLevel: Math.min(3, state.hintLevel + 1) };
     case 'diagnostic': return { ...state, diagnosticIndex: action.index, hintLevel: 0 };
     case 'save': return { ...state, saveStatus: action.message };
@@ -98,7 +104,7 @@ function PartIcon({ kind }: { kind: ComponentKind }) {
       <rect x="29" y="14" width="52" height="22" rx="7" fill="#ddc49b" stroke="#b3966e" />
       <path d="M39 14v22M49 14v22M59 14v22M71 14v22" stroke="#be603c" strokeWidth="5" />
       <path d="M49 14v22" stroke="#664735" strokeWidth="5" /><path d="M71 14v22" stroke="#b49b47" strokeWidth="3" />
-    </> : kind !== 'led' ? <><path d="M12 25h86" stroke="#9ba79d" strokeWidth="2"/><rect x="35" y="8" width="40" height="33" rx="7" fill="#577768"/><text x="55" y="30" textAnchor="middle" fill="#eff5df" fontSize="18">{({switch:'↔',button:'●',potentiometer:'↗',buzzer:'♪',diode:'▷|',ldr:'☀','rgb-led':'RGB',npn:'NPN',capacitor:'Ⅱ','piezo-passive':'♫'} as const)[kind]}</text></> : <>
+    </> : kind !== 'led' ? <><path d="M12 25h86" stroke="#9ba79d" strokeWidth="2"/><rect x="35" y="8" width="40" height="33" rx="7" fill="#577768"/><text x="55" y="30" textAnchor="middle" fill="#eff5df" fontSize="18">{({switch:'↔',button:'●',potentiometer:'↗',buzzer:'♪',diode:'▷|',ldr:'☀','rgb-led':'RGB',npn:'NPN',capacitor:'Ⅱ','piezo-passive':'♫',pnp:'PNP',speaker:'◉'} as const)[kind]}</text></> : <>
       <path d="M48 31v15m14-15v12" stroke="#9ba79d" strokeWidth="2" />
       <path d="M41 30V19a14 14 0 0 1 28 0v11Z" fill="#c96b5e" stroke="#a5473e" strokeWidth="1.5" />
       <rect x="38" y="29" width="34" height="5" rx="2" fill="#a54e44" />
@@ -124,7 +130,7 @@ export function App() {
   const [wireColor, setWireColor] = useState<string>(COLORS[0][0]);
   const [bend, setBend] = useState<Wire['bend']>('horizontal');
   const [error, setError] = useState('');
-  const [announcement,setAnnouncement]=useState('');
+  const [announcement,setAnnouncement]=useState<{text:string;analysis:AnalysisResult}|null>(null);
   const [inspectInput, setInspectInput] = useState('a1');
   const [moveAnchor, setMoveAnchor] = useState('');
   const [zoom, setZoom] = useState(100);
@@ -133,23 +139,45 @@ export function App() {
   const [wireTarget,setWireTarget]=useState('');
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
+  const profile=profileOf(document);
+  const oscillatorSession=useRef<OscillatorSession|null>(null);
+  if(oscillatorSession.current===null){oscillatorSession.current=new OscillatorSession();}
+  const backgroundResume=useRef(false);
+  const activeState=useRef({state,document,pressedButtons});
+  useEffect(()=>{activeState.current={state,document,pressedButtons};},[state,document,pressedButtons]);
+  useEffect(()=>()=>oscillatorSession.current?.cancel(),[]);
+  const startOscillator=(next:CircuitDocument,pressed:readonly string[],revision=state.revision)=>{
+    backgroundResume.current=false;
+    const sessionId=state.sessionId+1;
+    dispatch({type:'run',result:calculatingResult(),restart:true});
+    oscillatorSession.current!.start(next,{pressedButtons:pressed},{sessionId,documentRevision:revision},result=>dispatch({type:'tick',result:presentOscillator(result,next),sessionId,revision}),progress=>dispatch({type:'progress',progress,sessionId,revision}));
+  };
+  const resumeOscillator=useRef(startOscillator);
+  useEffect(()=>{resumeOscillator.current=startOscillator;});
   const voltage=supplyVoltageOf(document);
   const running=state.phase!=='stopped';
   useEffect(() => {
     const release = () => {
+      if(profile==='oscillator-em-v2'){
+        if(pressedButtons.length)setPressedButtons([]);
+        if(state.phase==='running'){backgroundResume.current=true;oscillatorSession.current?.cancel();dispatch({type:'pause',paused:true});}
+        return;
+      }
       if(pressedButtons.length)setPressedButtons([]);
       if (state.phase!=='fault'&&state.analysis&&(state.analysis.mode==='rc'||state.analysis.mode==='periodic')){
         if(pressedButtons.length){const cap=document.components.find(p=>p.kind==='capacitor');dispatch({type:'tick',sessionId:state.sessionId,revision:state.revision,result:analyzeCircuit(document,{...(cap&&state.analysis.timeS!==undefined?{timeState:{timeS:state.analysis.timeS,voltageV:state.analysis.readings?.[cap.id]?.voltageV??0}}:{})})});}
         dispatch({type:'pause',paused:true});
       }else if(state.phase==='running'&&state.analysis&&pressedButtons.length)dispatch({type:'run',result:analyzeCircuit(document)});
     };
-    const resume=()=>{if(!window.document.hidden)dispatch({type:'pause',paused:false});};
+    const resume=()=>{if(window.document.hidden)return;if(profile==='oscillator-em-v2'){if(!window.document.hasFocus())return;if(backgroundResume.current){const current=activeState.current;if(current.state.phase==='background-paused')resumeOscillator.current(current.document,[],current.state.revision);}return;}dispatch({type:'pause',paused:false});};
     const visibility = () => { if (window.document.hidden) release();else resume(); };
     window.addEventListener('blur',release);
     window.addEventListener('focus',resume);
     window.document.addEventListener('visibilitychange',visibility);
-    return () => { window.removeEventListener('blur',release);window.removeEventListener('focus',resume); window.document.removeEventListener('visibilitychange',visibility); };
-  },[pressedButtons,document,state.analysis,state.phase,state.sessionId,state.revision]);
+    const pagehide=()=>{backgroundResume.current=false;oscillatorSession.current?.cancel();setPressedButtons([]);dispatch({type:'stop'});};
+    window.addEventListener('pagehide',pagehide);
+    return () => { window.removeEventListener('blur',release);window.removeEventListener('focus',resume); window.document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',pagehide); };
+  },[pressedButtons,document,state.analysis,state.phase,state.sessionId,state.revision,profile]);
   useEffect(()=>{
     if(state.phase!=='running'||state.analysis?.mode!=='rc')return;
     const previous=state.analysis,cap=document.components.find(p=>p.kind==='capacitor');if(!cap)return;
@@ -170,8 +198,11 @@ export function App() {
   const connected = selectedEndpoint ? inspectConnectivity(document, selectedEndpoint, { pressedButtons }) : [];
 
   const piezo=document.components.find(p=>p.kind==='piezo-passive'),piezoReading=piezo?state.analysis?.readings?.[piezo.id]:undefined;
-  const sound = useBuzzerSound(state.phase==='running'&&(!!piezoReading?.on||document.components.some(p => p.kind === 'buzzer' && state.analysis?.readings?.[p.id]?.on)),{frequency:piezoReading?.frequencyHz??2000,waveform:piezoReading?.frequencyHz?'sine':'square',level:piezoReading?.vppV===undefined?1:Math.min(piezoReading.vppV/4.5,1)});
-  const run = (next = document, pressed = pressedButtons) => {
+  const speaker=speakerDrive(state.analysis?.oscillator);
+  const sound = useBuzzerSound(state.phase==='running'&&(profile==='oscillator-em-v2'?speaker.active:(!!piezoReading?.on||document.components.some(p => p.kind === 'buzzer' && state.analysis?.readings?.[p.id]?.on))),profile==='oscillator-em-v2'?speaker:{frequency:piezoReading?.frequencyHz??2000,waveform:piezoReading?.frequencyHz?'sine':'square',level:piezoReading?.vppV===undefined?1:Math.min(piezoReading.vppV/4.5,1)});
+  const run = (next = document, pressed = pressedButtons,revision=state.revision) => {
+    if(profileOf(next)==='oscillator-em-v2'){startOscillator(next,pressed,revision);return;}
+    oscillatorSession.current?.cancel();
     const cap=next.components.find(p=>p.kind==='capacitor'),old=state.analysis;
     const result=analyzeCircuit(next,{pressedButtons:pressed,...(cap&&old?.mode==='rc'&&old.timeS!==undefined?{timeState:{timeS:old.timeS,voltageV:old.readings?.[cap.id]?.voltageV??0}}:{})});
     dispatch({type:'run',result,restart:!running});
@@ -192,8 +223,9 @@ export function App() {
     setError('');
     const history=commitDocument(state.history,result.document);
     if(history===state.history)return true;
+    oscillatorSession.current?.cancel();backgroundResume.current=false;
     dispatch({ type: 'edit', history, saveStatus: save(result.document) });
-    if (live && state.phase==='running'&&!(command.type==='configure'&&command.settings.capacitanceF!==undefined)) run(result.document);
+    if (live && state.phase==='running'&&(profile==='oscillator-em-v2'||!(command.type==='configure'&&command.settings.capacitanceF!==undefined))) run(result.document,pressedButtons,state.revision+1);
     else setPressedButtons([]);
     return true;
   };
@@ -221,6 +253,7 @@ export function App() {
     setWireFrom('');
     setWireTo('');
     setError('');
+    oscillatorSession.current?.cancel();backgroundResume.current=false;
     dispatch({ type: 'edit', history, saveStatus: save(history.document) });
   };
   const addWire = (from: string, to: string) => {
@@ -229,7 +262,7 @@ export function App() {
     }
     return false;
   };
-  const newPart = (kind: ComponentKind, at: string): ComponentInstance => createComponent(kind, normalizeEndpoint(at), rotation, crypto.randomUUID());
+  const newPart = (kind: ComponentKind, at: string): ComponentInstance => createComponent(kind, normalizeEndpoint(at), rotation, crypto.randomUUID(),profile);
   const place = (at: string, kind = placeKind) => {
     const part = newPart(kind, at);
     if (edit({ type: 'place', component: part })) {
@@ -276,7 +309,7 @@ export function App() {
     setTool(kind); setPlaceKind(kind); setSelected(null); setError('');
   };
   const preview: ComponentInstance | null = hover && (isPartTool(tool))
-    ? createComponent(tool, hover, rotation, '__preview__')
+    ? createComponent(tool, hover, rotation, '__preview__',profile)
     : hover && tool === 'move' && selectedPart ? { ...selectedPart, anchor: hover, rotation } : null;
   const previewValid = !!preview && applyEdit(document, tool === 'move'
     ? { type: 'move', id: preview.id, anchor: preview.anchor, rotation: preview.rotation }
@@ -298,7 +331,7 @@ export function App() {
 
     <main onKeyDown={handleDeleteKey}>
       <section className="lesson-heading" aria-labelledby="lesson-title">
-        <div><div className="eyebrow"><span className="lesson-number">01</span> 直流电路探索 <span className="level-tag">入门</span></div><h1 id="lesson-title">搭出你的电路<span className="heading-dot">.</span></h1><p>12 类元件，按支持范围试验连接；看懂变化，解释原因。</p></div>
+        <div><div className="eyebrow"><span className="lesson-number">01</span> 直流电路探索 <span className="level-tag">入门</span></div><h1 id="lesson-title">搭出你的电路<span className="heading-dot">.</span></h1><p>{COMPONENT_KINDS.length} 类元件，按支持范围试验连接；看懂变化，解释原因。</p></div>
         <div className="lesson-goal"><span className="goal-icon"><Icon name="check" /></span><div><small>本次目标</small><p>搭建并检查小型直流串并联电路</p></div></div>
       </section>
 
@@ -315,15 +348,19 @@ export function App() {
 
       <div className="workspace">
         <aside className="parts-panel" aria-label="元件和精确操作">
-          <div className="panel-heading"><h2>元件盒</h2><span className="mono">12 PARTS</span></div>
+          <div className="panel-heading"><h2>元件盒</h2><span className="mono">{COMPONENT_KINDS.length} PARTS</span></div>
+          <ChoiceGroup label="实验模型" value={profile} choices={[{value:'legacy-stage2-v1',label:'原实验模型'},{value:'oscillator-em-v2',label:'自激发声·虚拟模型v2'}] as const} onChange={next=>{if(next!=='oscillator-em-v1')edit({type:'set-profile',profile:next});}}/>
+          {profile==='oscillator-em-v1'&&<p className="panel-intro" role="status">当前为旧版虚拟模型v1，仅恢复配置；需显式切换v2后运行。切换保留元件值和接线，可撤销。</p>}
+          {profile==='oscillator-em-v2'&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。每管2/1 nF为虚拟结电容，不是真实3904参数。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
           <p className="panel-intro">选择元件，再点击孔位放置。</p>
           <div className="part-list">
             {COMPONENT_KINDS.map(kind => {
               const count = document.components.filter(part => part.kind === kind).length;
               const polarCount = document.components.filter(part => ['led','diode','buzzer'].includes(part.kind)).length;
-              const atLimit = document.components.length >= MAX_COMPONENTS || (['led','diode','buzzer'].includes(kind) && polarCount >= MAX_POLAR_COMPONENTS);
+              const expanded=profile!=='legacy-stage2-v1'||document.components.some(p=>['rgb-led','npn','capacitor','piezo-passive','pnp','speaker'].includes(p.kind));
+              const atLimit = document.components.length >= MAX_COMPONENTS || (!expanded&&['led','diode','buzzer'].includes(kind) && polarCount >= MAX_POLAR_COMPONENTS);
               return <button key={kind} className={`part-card ${tool === kind ? 'active' : ''}`} disabled={atLimit} onClick={() => partTool(kind)} aria-label={`添加${COMPONENTS[kind].name}`} aria-pressed={tool === kind}>
-                <span className="part-illustration"><PartIcon kind={kind} /></span><span className="part-card-copy"><strong>{COMPONENTS[kind].name}</strong><small>{COMPONENTS[kind].description}</small></span><span className="add-mark">{count ? `${count} · +` : '+'}</span>
+                <span className="part-illustration"><PartIcon kind={kind} /></span><span className="part-card-copy"><strong>{COMPONENTS[kind].name}</strong><small>{profile!=='legacy-stage2-v1'&&kind==='npn'?'反馈虚拟模型 · B / C / E':profile!=='legacy-stage2-v1'&&kind==='capacitor'?'无极性 · 默认 100 nF':COMPONENTS[kind].description}</small></span><span className="add-mark">{count ? `${count} · +` : '+'}</span>
               </button>;
             })}
           </div>
@@ -366,11 +403,11 @@ export function App() {
             <button className="delete-button" title="删除选中对象（Delete / Backspace）" disabled={!selectedPart && !selectedWire} onClick={deleteSelected}><Icon name="trash" size={16} />删除</button>
             <button className={`run-button${running?' stop-button':''}`} aria-describedby="simulation-status" onClick={() => {
               setError('');
-              if(running){setPressedButtons([]);dispatch({type:'stop'});}
+              if(running){backgroundResume.current=false;oscillatorSession.current?.cancel();setPressedButtons([]);dispatch({type:'stop'});}
               else {setTool('inspect');run();}
             }}><Icon name={running?'stop':'play'} size={16} />{running?'停止运行':'运行电路'}</button>
           </div>
-          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?'后台已暂停 · 返回前台继续，不补算离开时间。':state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?'运行中 · 开关点击切换；黄色按钮按住接通。':'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
+          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?(profile==='oscillator-em-v2'?'后台已暂停 · 返回前台从零初态重算。':'后台已暂停 · 返回前台继续，不补算离开时间。'):state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?(state.analysis?.mode==='oscillator'&&!state.analysis.oscillator?`计算中 · 分析进度 ${(((state.progress?.pass??1)-1)*50+(state.progress?.timeS??0)/.04*50).toFixed(0)}% · 从初态重算`:'运行中 · 开关点击切换；黄色按钮按住接通。'):'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}
@@ -399,7 +436,7 @@ export function App() {
             {selectedPart ? <>
               <div className="selection-heading"><strong>{COMPONENTS[selectedPart.kind].name}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
               <div className="selection-controls">
-                <PartControls key={selectedPart.id} part={selectedPart} autoAnnounce={state.analysis?.mode!=='rc'} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
+                <PartControls key={selectedPart.id} part={selectedPart} profile={profile} autoAnnounce={state.analysis?.mode!=='rc'} {...(state.analysis?.readings?.[selectedPart.id] ? {reading: state.analysis.readings[selectedPart.id]} : {})} pressed={pressedButtons.includes(selectedPart.id)} onConfigure={settings => edit({type:'configure',id:selectedPart.id,settings},true)} onPress={pressed => pressButton(selectedPart.id,pressed)} />
                 <label>新锚点 <input aria-label="所选元件新锚点" value={moveAnchor} onChange={event => setMoveAnchor(event.target.value)} /></label>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: normalizeEndpoint(moveAnchor), rotation: selectedPart.rotation })}>移动元件</button>
                 <button className="small-button" onClick={() => edit({ type: 'move', id: selectedPart.id, anchor: selectedPart.anchor, rotation: ((selectedPart.rotation + 90) % 360) as Rotation })}><Icon name="rotate" size={14} />旋转 90°</button>
@@ -425,10 +462,12 @@ export function App() {
         </section>
 
         <aside className="tutor-panel" aria-label="学习指导">
-          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
+          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} profile={profile} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
           <div className="tutor-heading"><span className="tutor-symbol"><Icon name="bulb" size={21} /></span><div><h2>一起想一想</h2><span>先观察，再找到答案</span></div><span className="reviewed-badge">课程提示</span></div>
           <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live={state.analysis?.mode==='rc'?'off':'polite'}>
-            {state.analysis?.complete ? <>
+            {state.analysis?.mode==='oscillator'?<>
+              <span className="eyebrow">0–40 MS OBSERVATION</span><h3>{state.analysis.oscillator?OSCILLATOR_TITLES[state.analysis.oscillator.outcome]:'计算中'}</h3><p>{state.analysis.oscillator?.reason??'从零初态求解；完成全部分析后才显示读数和播放声音。'}</p>
+            </>:state.analysis?.complete ? <>
               <span className="result-icon success-icon"><Icon name="check" size={24} /></span><span className="eyebrow">CIRCUIT COMPLETE</span><h3>{state.analysis.mode==='periodic'?'压电受到驱动！':state.analysis.ledOn ? '亮起来了！' : '蜂鸣器工作了！'}</h3><p>至少一个 LED 或蜂鸣器正常工作，当前没有检测到模型内的电气问题。此结果不代表已匹配某张目标电路图。</p>
             </> : state.analysis ? <>
               <span className="eyebrow">{state.analysis.status === 'unsupported' ? 'MODEL LIMIT' : 'LET’S INVESTIGATE'}</span><h3>{diagnostic?.reason??diagnosticCopy?.title ?? (state.analysis.mode==='rc'?'RC 电路已求解':'直流电路已求解')}</h3><p>{diagnostic?.reason??diagnosticCopy?.description ?? '可选中各元件查看电流；开关、按钮、旋钮和光照在运行后会即时更新结果。'}</p>
@@ -436,14 +475,14 @@ export function App() {
               <div className="empty-circuit-illustration"><span>＋</span><i /><span className="mini-led" /><i /><span>−</span></div><span className="eyebrow">A LITTLE EXPERIMENT</span><h3>电流会走哪条路？</h3><p>放好电阻和 LED，接通电池，再运行电路。遇到问题时，我们一步一步寻找线索。</p>
             </>}
             {state.analysis?.notes?.map(note=><p key={note} className="model-note">{note}</p>)}
-            {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>估算电池总电流</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
-            {state.analysis && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '电路检测通过' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? (state.analysis.currentMa === undefined ? '未计算 LED 状态' : '查看各元件的工作状态') : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
+            {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>{state.analysis.mode==='oscillator'?'观察窗末电池总电流':'估算电池总电流'}</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
+            {state.analysis&&state.analysis.mode!=='oscillator' && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '电路检测通过' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? (state.analysis.currentMa === undefined ? '未计算 LED 状态' : '查看各元件的工作状态') : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
           </div>
-          {state.analysis?.mode&&<><StageReadings result={state.analysis} document={document}/><button className="small-button" onClick={()=>setAnnouncement(window.document.querySelector('.stage-readings')?.textContent??'暂无读数')}>播报当前实验状态</button><p role="status">{announcement}</p></>}
+          {state.analysis?.mode&&<><StageReadings result={state.analysis} document={document}/><button className="small-button" onClick={()=>setAnnouncement({text:window.document.querySelector('.stage-readings')?.textContent??'暂无读数',analysis:state.analysis!})}>播报当前实验状态</button><p role="status">{announcement?.analysis===state.analysis?announcement.text:''}</p></>}
           {!!state.analysis?.diagnostics.length && <div className="diagnostic-list" aria-label="诊断项目">
             {state.analysis.diagnostics.map((item, index) => <button key={`${item.code}-${index}`} className={index === state.diagnosticIndex ? 'active' : ''} onClick={() => dispatch({ type: 'diagnostic', index })}><span>{String(index + 1).padStart(2, '0')}</span>{getDiagnosticCopy(item.code,item).title}<Icon name="arrow" size={13} /></button>)}
           </div>}
-          <div className="sound-control"><button className="small-button" aria-pressed={sound.enabled} onClick={() => { void sound.toggle(); }}>{sound.enabled ? '关闭声音' : '启用蜂鸣器声音'}</button><label className="volume-control">蜂鸣器音量 <input aria-label="蜂鸣器音量" type="range" min="0" max="100" step="1" value={sound.volume} onChange={event=>sound.changeVolume(Number(event.target.value))}/><output>{sound.volume}%</output></label><p>0% 静音；声音还受系统和扬声器音量影响。</p>{sound.error && <p role="status">{sound.error}</p>}</div>
+          <div className="sound-control"><button className="small-button" aria-pressed={sound.enabled} onClick={() => { void sound.toggle(); }}>{sound.enabled ? '关闭声音' : (profile==='oscillator-em-v2'?'启用扬声器声音':'启用蜂鸣器声音')}</button><label className="volume-control">{profile==='oscillator-em-v2'?'扬声器音量':'蜂鸣器音量'} <input aria-label={profile==='oscillator-em-v2'?'扬声器音量':'蜂鸣器音量'} type="range" min="0" max="100" step="1" value={sound.volume} onChange={event=>sound.changeVolume(Number(event.target.value))}/><output>{sound.volume}%</output></label><p>0% 静音；声音还受系统和扬声器音量影响。</p>{sound.error && <p role="status">{sound.error}</p>}</div>
           <div className="hint-section"><div className="hint-section-heading"><h3>给我一点提示</h3><span>{state.hintLevel} / 3</span></div>
             <div className="hint-progress" aria-hidden="true">{[1, 2, 3].map(level => <i key={level} className={state.hintLevel >= level ? 'revealed' : ''} />)}</div>
             {diagnosticCopy && state.hintLevel > 0 ? <ol className="hint-list">{diagnosticCopy.hints.slice(0, state.hintLevel).map((hint, index) => <li key={hint}><span>{['想一想', '看这里', '试着修复'][index]}</span><p>{hint}</p></li>)}</ol> : <p className="hint-placeholder">{state.analysis?.complete ? '试着选中孔位，解释电流经过的路径。' : '先运行电路。每次只揭开一个线索，把发现留给你。'}</p>}

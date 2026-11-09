@@ -446,3 +446,7 @@ Chromium总场景为44（原35＋新9），实际执行结果以实施证据为�
 - [config.ts](../tests/performance/config.ts)、[vite.config.ts](../tests/performance/vite.config.ts)、[helpers.ts](../tests/performance/helpers.ts)：隔离生产构建、单worker Chromium及观测工具，不增加运行依赖，不进入正常生产入口。
 
 命令：先`npx vite build --config tests/performance/vite.config.ts`，再`npm run test:performance`；长运行与其他测量不并跑。指定M1/8 GB和实际辅助技术／教学验证仍按人工清单执行。
+
+## 18. OSC v2新增测试（2026-11-08）
+
+配置/存档测试见catalog、CapacitanceEditor、storage/oscillator和OscillatorConfiguration；纯数值测试见src/circuit/oscillator下fixtures/numeric/contracts/analysis/verification，覆盖独立参考、变体、精确反例、等价、预算及失败。异步生命周期见oscillatorSession和OscillatorLifecycle；声音边界追加在useBuzzerSound；Chromium在tests/e2e/oscillator.spec.ts；有限生产性能在tests/oscillator-performance。实际通过数量及交付边界统一见TEST_PLAN和OSCILLATOR-IMPLEMENTATION最新记录，旧历史清单不改写成新通过。

@@ -1,7 +1,7 @@
 import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from '../circuit';
 import { validComponent } from '../circuit/validation';
-import { isSupplyVoltage } from '../circuit/parameters';
-import type { CircuitDocument, ComponentInstance, Rotation, Wire } from '../circuit';
+import { capacitanceRange, isKnownModelProfile, isSupplyVoltage, profileOf } from '../circuit/parameters';
+import type { CircuitDocument, ComponentInstance, Rotation, RunnableModelProfileId, Wire } from '../circuit';
 
 export type WireEnd = 'from' | 'to';
 export type EditCommand =
@@ -14,6 +14,7 @@ export type EditCommand =
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
   | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF'> }
   | { type: 'set-source'; mode: 'battery'|'teaching-square' }
+  | { type: 'set-profile'; profile: RunnableModelProfileId }
   | { type: 'set-frequency'; value: 250|500|1000 }
   | { type: 'set-voltage'; value: number }
   | { type: 'reset' };
@@ -37,12 +38,14 @@ function overlaps(a: Bounds, b: Bounds) {
 /** Physical constraints are independent of electrical correctness. */
 export function validateDocument(document: CircuitDocument): string | null {
   if(document.schemaVersion>=3&&!isSupplyVoltage(document.supplyVoltage))return '电池电压必须是 1.5–9 V 范围内的有限数值。';
-  if(document.schemaVersion===4&&(!['battery','teaching-square'].includes(document.sourceMode??'')||![250,500,1000].includes(document.signalFrequencyHz??0)))return '请选择有效的电源模式和 250／500／1000 Hz 频率。';
+  if(document.schemaVersion>=4&&(!['battery','teaching-square'].includes(document.sourceMode??'')||![250,500,1000].includes(document.signalFrequencyHz??0)))return '请选择有效的电源模式和 250／500／1000 Hz 频率。';
+  if(document.schemaVersion===5&&!isKnownModelProfile(document.modelProfileId))return '请选择有效的实验模型。';
+  if(document.schemaVersion<5&&document.components.some(p=>['pnp','speaker'].includes(p.kind)||p.kind==='capacitor'&&(p.capacitanceF??0)<10e-6))return '旧格式不能包含新模型元件或容量，请先迁移作品。';
   const identities = new Set<string>();
   const occupied = new Set<string>();
   if (document.components.length > MAX_COMPONENTS) return `工作台最多放置 ${MAX_COMPONENTS} 个元件。`;
   if (document.wires.length > MAX_WIRES) return `工作台最多连接 ${MAX_WIRES} 根导线。`;
-  if (!document.components.some(p=>['rgb-led','npn','capacitor','piezo-passive'].includes(p.kind))&&document.components.filter(p => ['led','diode','buzzer'].includes(p.kind)).length > MAX_POLAR_COMPONENTS) return `LED、二极管和蜂鸣器合计最多 ${MAX_POLAR_COMPONENTS} 个，以保证仿真响应。`;
+  if (profileOf(document)==='legacy-stage2-v1'&&!document.components.some(p=>['rgb-led','npn','capacitor','piezo-passive','pnp','speaker'].includes(p.kind))&&document.components.filter(p => ['led','diode','buzzer'].includes(p.kind)).length > MAX_POLAR_COMPONENTS) return `LED、二极管和蜂鸣器合计最多 ${MAX_POLAR_COMPONENTS} 个，以保证仿真响应。`;
   const bounds: Bounds[] = [];
   const reserveId = (id: string) => {
     if (!id.trim() || identities.has(id)) return false;
@@ -106,12 +109,23 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
     case 'reset': next = createEmptyDocument(); break;
     case 'set-voltage': next={...document,supplyVoltage:command.value};break;
     case 'set-source': next={...document,sourceMode:command.mode};break;
+    case 'set-profile': {
+      if(command.profile!=='legacy-stage2-v1'&&command.profile!=='oscillator-em-v2')return {ok:false,error:'新实验请选择原实验模型或自激发声·虚拟模型v2。'};
+      next={...document,schemaVersion:5,modelProfileId:command.profile};break;
+    }
     case 'set-frequency': next={...document,signalFrequencyHz:command.value};break;
     case 'configure': {
       if (!document.components.some(p => p.id === command.id)) return { ok: false, error: '找不到要修改的元件。' };
       next = { ...document, components: document.components.map(p => p.id === command.id ? { ...p, ...command.settings } : p) };
       break;
     }
+  }
+  const changedCap = command.type === 'place' && command.component.kind === 'capacitor' ? command.component :
+    command.type === 'configure' && command.settings.capacitanceF !== undefined ? next.components.find(p => p.id === command.id) : undefined;
+  if (changedCap) {
+    const [min, max] = capacitanceRange(document);
+    if (changedCap.capacitanceF === undefined || changedCap.capacitanceF < min || changedCap.capacitanceF > max)
+      return { ok:false, error:'电容值不在当前实验模型的支持范围内，请检查单位。' };
   }
   const error = validateDocument(next);
   return error ? { ok: false, error } : { ok: true, document: next };

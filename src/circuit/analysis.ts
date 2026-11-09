@@ -4,7 +4,7 @@ import { buildNets } from './network';
 import { solveDC } from './solver';
 import type { Branch } from './solver';
 import { readCircuitDocument } from './validation';
-import { supplyVoltageOf, LED_CURRENT_LIMIT_MA } from './parameters';
+import { capacitanceRange, profileOf, supplyVoltageOf, LED_CURRENT_LIMIT_MA } from './parameters';
 import type { AnalysisResult, CircuitDocument, ComponentReading, Diagnostic, DiagnosticCode, SimulationControls } from './types';
 import { analyzeExtendedDC, isExtended } from './stage2';
 import { analyzeRC } from './transient';
@@ -31,6 +31,14 @@ export function analyzeCircuit(input: CircuitDocument, controls: SimulationContr
   const unsupported=(): AnalysisResult=>({status:'unsupported',complete:false,diagnostics:[{code:'unsupported',entities:[]}]});
   const document=readCircuitDocument(input);
   if(!document)return unsupported();
+  if(profileOf(document)==='oscillator-em-v1') {
+    const reason='旧版虚拟模型，需显式切换v2；作品配置已保留。';
+    return {status:'unsupported',complete:false,mode:'oscillator',oscillator:{outcome:'unsupported-model-version',timeS:0,reason,entities:[]},diagnostics:[{code:'unsupported',entities:[],reason}]};
+  }
+  if(profileOf(document)==='oscillator-em-v2')return {status:'unsupported',complete:false,diagnostics:[{code:'unsupported',entities:[],reason:'此模型需要自激发声瞬态会话，直流分析入口不提供结果。'}]};
+  if(document.components.some(p=>['pnp','speaker'].includes(p.kind)))return {status:'unsupported',complete:false,diagnostics:[{code:'unsupported',entities:document.components.filter(p=>['pnp','speaker'].includes(p.kind)).map(p=>p.id),reason:'PNP和无源扬声器需要显式选择自激发声虚拟模型。'}]};
+  const [minimumC,maximumC]=capacitanceRange(document);
+  if(document.components.some(p=>p.kind==='capacitor'&&(p.capacitanceF!<minimumC||p.capacitanceF!>maximumC)))return {status:'unsupported',complete:false,diagnostics:[{code:'unsupported',entities:document.components.filter(p=>p.kind==='capacitor').map(p=>p.id),reason:'原实验模型的电容范围为10–1000 μF；作品参数已保留。'}]};
   if(document.components.some(p=>p.kind==='capacitor'))return analyzeRC(document,controls);
   if(document.sourceMode==='teaching-square')return analyzePiezo(document,controls);
   if(isExtended(document))return analyzeExtendedDC(document,controls);

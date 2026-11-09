@@ -309,6 +309,9 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 
 本版本实际执行：`python3 /tmp/ai-circuit-orchestration/check_oscillator_docs.py`通过（7份纯文档、主线协议不变、冲突/围栏/引用、原AC/EX表行、6项OSC映射、七节点/8相位参考、归档独立脚本SHA-256和Python语法、业务/依赖树不变）；`git diff --check`通过，已审阅文档差异。未重新运行原数值研究，也未运行应用/Chromium/性能；新head仍待独立审查和CI，临时检查脚本不是运行依赖或唯一交接来源。
 
+### OSC实施实际记录入口（2026-11-08）
+
+需求已合并后的实际基线、逐OSC部分证据和未执行项见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)，数值契约的明确失败及独立复现见[失败记录](changes/OSCILLATOR-INTEGRATION-BLOCKER.md)。配置/迁移切片和旧模块回归有通过证据，但不能覆盖冻结BE-LTE在10ps下限的数值失败；目前完整OSC-01–06均未完成，不将配置CI绿色当整体可验收。本节只登记实际实施进度，不改变上文批准需求/门槛；人工/目标设备/完整动态性能仍分别保留未验证边界。
 ## OSC数值修订输入与独立失败核验：2026-11-08
 
 实现实际失败及其有限影响见 [数值修订CR](changes/CR-OSCILLATOR-NUMERICS.md)、[完整可复现来源](changes/CR-OSCILLATOR-NUMERICS-IMPACT.md)。本轮协调者已在干净主线需求工作区执行该归档标准库Python复现（临时提取脚本命令`python3 /tmp/ai-circuit-orchestration/reproduce_lte_blocker.py`），得到BLOCKED：t=0.0007880928149619716s、接受3381/拒25、下一步8e-12s；与技术报告一致。失败是结果，不能记为数值验收通过。
@@ -330,3 +333,13 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 
 
 本轮v2实际文档验证：`python3 /tmp/ai-circuit-orchestration/check_num_v2_docs.py`通过（9份纯文档、原DC/RC/压电章节与AC/EX表行/流程/旧参考归档保留、本地引用/围栏/空白、6项OSC/八相位、3脚本语法和SHA-256、两遍预算算术、业务/依赖树不变）；最终`git diff --check`通过，差异已审阅。没有重跑原研究或应用/浏览器/性能；新head独立审查与CI另记，临时验证脚本不是运行依赖。
+
+## OSC v2实施实际验证入口（2026-11-08）
+
+本轮采用主线已合并需求974c737a0545f908e3612736bd02edc77618dc9f。逐OSC文件/场景/命令/实际结果及未验证边界见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)最新v2节。首轮完整Vitest32文件448/448，typecheck/lint/build/diff检查通过；OSC Chromium4通过/1原生后台场景跳过。新数值已对照既有独立参考，不重新研究。固定性能、旧Chromium与独立代码审查继续回填，不由模块绿色推断目标设备或教学有效性；产品验收定义未修改。
+
+## OSC v2当前实际结果（2026-11-09）
+
+产品代码f108d7b8534bc7eb44fbbd21a26ad45db03df19f：本机32文件453模块通过，CI Verify42697686184/42697675137均成功（453模块、Chromium48通过/1原生事件环境跳过，typecheck/lint/build通过）。原CI资源失败已修，5s及精度不变；独立Standards/Spec代码覆盖PASS。完整逐ID证据、之前失败/返修和未验证边界见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)最新节；旧构建实际原始性能样本见[性能记录](changes/OSCILLATOR-PERFORMANCE.md)。
+
+按用户最新“只跑失败测试”，停止了进行中的本机全套，未再运行优化版整套性能/真实UI基准。目标M1/8GB、优化版正式P95/内存、发声停止20次、真实后台失焦、试听、读屏/200%及师生仍未验证。本次仅证据文档提交不改变需求/验收定义，以[skip ci]避免再触发全套；不将其写成该文档head测试通过。

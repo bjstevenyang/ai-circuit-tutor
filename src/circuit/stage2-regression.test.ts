@@ -68,7 +68,7 @@ describe('EX2 safety, equivalence and configuration contracts',()=>{
     const original=rcExperiment(),data={...original,timeS:20,voltageV:4,history:[],analysis:{status:'supported'},components:original.components.map(p=>({...p,actualVoltage:4}))};
     expect(parseDocument(data)).toEqual(original);const raw=JSON.stringify(data),contents=new Map([[STORAGE_KEY,raw]]),storage={getItem:(k:string)=>contents.get(k)??null,setItem:(k:string,v:string)=>{contents.set(k,v);}};expect(loadWorkspace(storage).status).toBe('loaded');expect(contents.get(STORAGE_KEY)).toBe(raw);expect(saveWorkspace(original,storage).ok).toBe(true);expect(JSON.parse(contents.get(STORAGE_KEY)!)).toEqual(original);
   });
-  it('EX2-10 v1/v2/v3 migrate source defaults and preserve appropriate voltage',()=>{for(const version of [1,2,3]){const old={...rgbExperiment(),components:[],wires:[],schemaVersion:version,lessonId:version===1?'led-series-v1':'dc-lab-v2',supplyVoltage:9};const d=readCircuitDocument(old);expect(d).toMatchObject({schemaVersion:4,supplyVoltage:version===3?9:4.5,sourceMode:'battery',signalFrequencyHz:500});}});
+  it('EX2-10 v1/v2/v3 migrate source defaults and preserve appropriate voltage',()=>{for(const version of [1,2,3]){const old={...rgbExperiment(),components:[],wires:[],schemaVersion:version,lessonId:version===1?'led-series-v1':'dc-lab-v2',supplyVoltage:9};const d=readCircuitDocument(old);expect(d).toMatchObject({schemaVersion:5,modelProfileId:'legacy-stage2-v1',supplyVoltage:version===3?9:4.5,sourceMode:'battery',signalFrequencyHz:500});}});
   it.each([0,9e-6,1001e-6,NaN,Infinity])('rejects malformed capacitor configuration %s',capacitanceF=>{const d=rcExperiment();d.components.find(p=>p.id==='cap')!.capacitanceF=capacitanceF;expect(readCircuitDocument(d)).toBeNull();});
   it.each([0,2000,NaN,Infinity])('rejects unsupported persisted frequency %s',frequency=>{expect(readCircuitDocument({...piezoExperiment(),signalFrequencyHz:frequency})).toBeNull();});
   it('budget excess is retained as configuration but refused before analysis',()=>{const d=circuitFixture([1,2,3].map(i=>({id:`rgb${i}`,kind:'rgb-led',nets:[`R${i}`,'N',`G${i}`,`B${i}`]})));expect(parseDocument(d)).not.toBeNull();expect(analyzeCircuit(d).status).toBe('unsupported');expect(matrixBudget(128)).toBe(true);expect(matrixBudget(129)).toBe(false);expect(applyEdit(piezoExperiment(),{type:'set-frequency',value:2000 as 500}).ok).toBe(false);});
@@ -82,7 +82,12 @@ describe('EX2 safety, equivalence and configuration contracts',()=>{
   });
   it('fixed document and expanded P/T negatives reject without discarding editable configurations',()=>{
     const over=overExperiment();expect(over.components).toHaveLength(25);expect(validateDocument({...over,components:over.components.filter(p=>p.id!=='d4b')})).toBeNull();expect(analyzeCircuit(over).status).toBe('unsupported');expect(analyzeCircuit(over).readings).toBeUndefined();
-    for(const [name,d] of [['B-OVER',over],['P-OVER',overPolarExperiment()]] as const){expect(reference.fixtures[name].document).toEqual(d);expect(createHash('sha256').update(JSON.stringify(d)).digest('hex')).toBe(reference.fixtures[name].sha256);}
+    for(const [name,d] of [['B-OVER',over],['P-OVER',overPolarExperiment()]] as const){
+      // Preserve the original version-4 benchmark bytes while new documents write v5.
+      const legacyDocument=JSON.parse(JSON.stringify({...d,schemaVersion:4,modelProfileId:undefined}));
+      expect(reference.fixtures[name].document).toEqual(legacyDocument);
+      expect(createHash('sha256').update(JSON.stringify(legacyDocument)).digest('hex')).toBe(reference.fixtures[name].sha256);
+    }
     const p=overPolarExperiment();expect(p.components).toHaveLength(23);expect(validateDocument(p)).toBeNull();expect(parseDocument(p)).not.toBeNull();const compiled=compileNetwork(p);expect(compiled.branches.filter(b=>b.polar)).toHaveLength(9);expect(compiled.transistors).toHaveLength(2);expect(analyzeCircuit(p)).toMatchObject({status:'unsupported',diagnostics:[expect.objectContaining({code:'unsupported',reason:expect.stringContaining('预算')})]});
     const t=circuitFixture([1,2,3].flatMap(i=>[{id:`t${i}`,kind:'npn' as const,nets:[`b${i}`,`c${i}`,'N']},{id:`rb${i}`,kind:'resistor' as const,nets:['P',`b${i}`]},{id:`rc${i}`,kind:'resistor' as const,nets:['P',`c${i}`]}]));expect(validateDocument(t)).toBeNull();expect(analyzeCircuit(t).status).toBe('unsupported');
   });
