@@ -114,3 +114,20 @@ M1/8GB目标性能、真实后台/失焦、读屏、200%缩放、设备试听、
 无新增/删除验收ID。OSC-02改v2每管2/1nF，默认/严格LTE和10ps下限不变；OSC-03改v2五上穿/周期/八相位/RMS/源流与五变体参考；OSC-05采用精确删除C/R1/speaker、旁路及BF负例；OSC-06改已知v1只恢复/显式v2可撤销、两遍共享1m接受/10k拒绝/5s和4096采样；OSC-01/04及原AC/EX2保留并回归，EX1仍暂缓。影响circuit核心、profile/存档、Worker会话、读数/提示/音频及对应测试/证据。风险为刚性求解耗时、取消隔离与共享预算；不能放宽批准容差或拿部分窗作成功。
 
 当前会话已向用户输出上述简短确认后继续。两个聊天自动协调/定时任务/跨聊天回报保持暂停；本工作仅在PR7交付，不自行合并或公开部署。人工/目标设备边界仍单列。
+
+## v2代码与首轮自动化证据（2026-11-08）
+
+已完成通用显式网络编译、EM v2/BE-LTE/半步域和KCL检查、两遍共享计数及流式周期/DC、有界显示采样、Worker取消隔离、结果/三级提示/端口音频与v1恢复/显式v2转换。生产不调用归档Python或预录波形。原失败与配置历史保留。下列是实际自动化范围，尚不是全部人工/目标设备验收。
+
+| 验收 | 实际测试文件/场景 | 命令与结果 |
+| --- | --- | --- |
+| OSC-01 | catalog/editor既有四方向安装/拒绝；oscillator/fixtures.test.ts三个物理合法孔表；tests/e2e/oscillator.spec.ts空板纯键盘七节点搭建及说明只读 | npm test：448/448；OSC Chromium4通过/1原生后台场景跳过 |
+| OSC-02 | numeric/contracts/verification：零态、一次100μs上电、2/1nF、整步/两半步误差、域/KCL/hmin/Newton/拒步；配置双单位/边界/非法输入/旧RC | 同全模块；默认/严格REF及C边界与独立参考通过 |
+| OSC-03 | oscillator/verification.test.ts：固定完整fixture/编译节点SHA、REF默认/严格五上穿/周期/8相位四节点/RMS/源均峰流；五变体窗口次数/周期/40ms，C47/220严格 | 同全模块；不用求解器自产期望；既有归档参考未重跑 |
+| OSC-04 | useBuzzerSound.test.tsx端口f/RMS/20–20000Hz/1mV/交换/旁路/许可/0–100/API/清理；Chromium真实AudioContext正弦/增益/停止 | 同全模块；OSC Chromium4通过/1跳过；设备实际试听未执行 |
+| OSC-05 | analysis/contracts：精确删C/R1/speaker/旁路/BF100负对照/有限P短接/理想源短路/错型具体限制；Chromium删C→DC→三级对象/时刻提示→撤销修复 | 同全模块；OSC Chromium错误修复通过；不把无声当没电 |
+| OSC-06 | 三布局实际数值、MAX12/OVER13、第二遍接受/拒绝共享预算、v1–v5/未知profile/50历史既有回归；oscillatorSession/OscillatorLifecycle测试取消、过期四重身份、后台/冷重算/停止/pagehide/5s | 同全模块；目标性能/完整旧Chromium/独立审查继续记录，不提前标通过 |
+
+实际命令：`npm test` 32文件448/448通过；`npm run typecheck`、`npm run lint`、`npm run build`及`git diff --check`通过。`CIRCUIT_E2E_PORT=5187 npm run test:e2e -- tests/e2e/oscillator.spec.ts --project=chromium --workers=1`：4通过/1跳过（22.3s）；headless切tab未产生trusted原生blur/hidden，不能冒称OS后台验证。合成生命周期事件仅证明应用事件处理。代码完整SHA由本切片提交后的PR记录给出，避免自引用未来SHA。
+
+固定生产Chromium性能runner在tests/oscillator-performance/，原始采样输出/tmp，不提交运行数据。性能正式结果、完整旧Chromium及全新独立Standards/Spec审查尚待回填；M1/8GB、真实后台失焦、设备试听、读屏/200%缩放、教师/至少3名学生均仍未验证。

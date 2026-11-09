@@ -1,7 +1,7 @@
 import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from '../circuit';
 import { validComponent } from '../circuit/validation';
-import { capacitanceRange, isSupplyVoltage, profileOf } from '../circuit/parameters';
-import type { CircuitDocument, ComponentInstance, ModelProfileId, Rotation, Wire } from '../circuit';
+import { capacitanceRange, isKnownModelProfile, isSupplyVoltage, profileOf } from '../circuit/parameters';
+import type { CircuitDocument, ComponentInstance, Rotation, RunnableModelProfileId, Wire } from '../circuit';
 
 export type WireEnd = 'from' | 'to';
 export type EditCommand =
@@ -14,7 +14,7 @@ export type EditCommand =
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
   | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF'> }
   | { type: 'set-source'; mode: 'battery'|'teaching-square' }
-  | { type: 'set-profile'; profile: ModelProfileId }
+  | { type: 'set-profile'; profile: RunnableModelProfileId }
   | { type: 'set-frequency'; value: 250|500|1000 }
   | { type: 'set-voltage'; value: number }
   | { type: 'reset' };
@@ -39,7 +39,7 @@ function overlaps(a: Bounds, b: Bounds) {
 export function validateDocument(document: CircuitDocument): string | null {
   if(document.schemaVersion>=3&&!isSupplyVoltage(document.supplyVoltage))return '电池电压必须是 1.5–9 V 范围内的有限数值。';
   if(document.schemaVersion>=4&&(!['battery','teaching-square'].includes(document.sourceMode??'')||![250,500,1000].includes(document.signalFrequencyHz??0)))return '请选择有效的电源模式和 250／500／1000 Hz 频率。';
-  if(document.schemaVersion===5&&!['legacy-stage2-v1','oscillator-em-v1'].includes(document.modelProfileId??''))return '请选择有效的实验模型。';
+  if(document.schemaVersion===5&&!isKnownModelProfile(document.modelProfileId))return '请选择有效的实验模型。';
   if(document.schemaVersion<5&&document.components.some(p=>['pnp','speaker'].includes(p.kind)||p.kind==='capacitor'&&(p.capacitanceF??0)<10e-6))return '旧格式不能包含新模型元件或容量，请先迁移作品。';
   const identities = new Set<string>();
   const occupied = new Set<string>();
@@ -109,7 +109,10 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
     case 'reset': next = createEmptyDocument(); break;
     case 'set-voltage': next={...document,supplyVoltage:command.value};break;
     case 'set-source': next={...document,sourceMode:command.mode};break;
-    case 'set-profile': next={...document,schemaVersion:5,modelProfileId:command.profile};break;
+    case 'set-profile': {
+      if(command.profile!=='legacy-stage2-v1'&&command.profile!=='oscillator-em-v2')return {ok:false,error:'新实验请选择原实验模型或自激发声·虚拟模型v2。'};
+      next={...document,schemaVersion:5,modelProfileId:command.profile};break;
+    }
     case 'set-frequency': next={...document,signalFrequencyHz:command.value};break;
     case 'configure': {
       if (!document.components.some(p => p.id === command.id)) return { ok: false, error: '找不到要修改的元件。' };

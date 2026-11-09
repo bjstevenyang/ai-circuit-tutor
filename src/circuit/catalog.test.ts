@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createComponent, createEmptyDocument, getComponentPins } from './index';
 import type { Rotation } from './types';
-import { applyEdit, commitDocument, createHistory, undo } from '../editor/model';
+import { applyEdit, commitDocument, createHistory, redo, undo } from '../editor/model';
 import { analyzeCircuit } from './analysis';
 import { readCircuitDocument } from './validation';
 
@@ -30,9 +30,31 @@ describe('OSC-01 new footprints remain independent of electrical correctness',()
 });
 
 describe('OSC-02 explicit profile and capacitance edits',()=>{
+  it('restores known v1 for configuration only and converts to v2 without reinterpreting values or connections',()=>{
+    const document={...createEmptyDocument(),modelProfileId:'oscillator-em-v1' as const,supplyVoltage:6,
+      components:[createComponent('capacitor','c13',0,'cap','oscillator-em-v1'),createComponent('pnp','c20',180,'q2')],
+      wires:[{id:'wire-id',from:'battery:+',to:'b13',color:'#123456',bend:'vertical' as const}]};
+    expect(readCircuitDocument(document)).toEqual(document);
+    expect(analyzeCircuit(document)).toMatchObject({status:'unsupported',complete:false});
+    expect(analyzeCircuit(document).oscillator?.outcome).toBe('unsupported-model-version');
+    expect(analyzeCircuit(document).readings).toBeUndefined();
+    const edited=applyEdit(document,{type:'configure',id:'cap',settings:{capacitanceF:220e-9}});
+    expect(edited.ok).toBe(true);
+    expect(createComponent('capacitor','c3',0,'new','oscillator-em-v1').capacitanceF).toBe(100e-9);
+    const converted=applyEdit(document,{type:'set-profile',profile:'oscillator-em-v2'});
+    expect(converted.ok).toBe(true);
+    if(!converted.ok)throw new Error(converted.error);
+    expect(converted.document).toEqual({...document,modelProfileId:'oscillator-em-v2'});
+    const history=commitDocument(createHistory(document),converted.document);
+    expect(history.past).toHaveLength(1);
+    const restored=undo(history);
+    expect(restored.document).toEqual(document);
+    expect(analyzeCircuit(restored.document).oscillator?.outcome).toBe('unsupported-model-version');
+    expect(redo(restored).document).toEqual(converted.document);
+  });
   it('changes profile as one undoable configuration without changing existing capacitance',()=>{
     const document={...createEmptyDocument(),components:[createComponent('capacitor','c13',0,'cap')]};
-    const changed=applyEdit(document,{type:'set-profile',profile:'oscillator-em-v1'});
+    const changed=applyEdit(document,{type:'set-profile',profile:'oscillator-em-v2'});
     expect(changed.ok).toBe(true);
     if(!changed.ok)throw new Error(changed.error);
     expect(changed.document.components[0]?.capacitanceF).toBe(100e-6);
@@ -40,12 +62,12 @@ describe('OSC-02 explicit profile and capacitance edits',()=>{
     const history=commitDocument(createHistory(document),changed.document);
     expect(history.past).toHaveLength(1);
     expect(undo(history).document).toEqual(document);
-    expect(createComponent('capacitor','c13',0,'new','oscillator-em-v1').capacitanceF).toBe(100e-9);
+    expect(createComponent('capacitor','c13',0,'new','oscillator-em-v2').capacitanceF).toBe(100e-9);
     expect(createComponent('capacitor','c13',0,'old').capacitanceF).toBe(100e-6);
   });
   it.each([47e-9,100e-9,220e-9])('accepts the current profile boundary %s but preserves old RC rules',capacitanceF=>{
-    const part={...createComponent('capacitor','c13',0,'cap','oscillator-em-v1'),capacitanceF};
-    const oscillator={...createEmptyDocument(),modelProfileId:'oscillator-em-v1' as const};
+    const part={...createComponent('capacitor','c13',0,'cap','oscillator-em-v2'),capacitanceF};
+    const oscillator={...createEmptyDocument(),modelProfileId:'oscillator-em-v2' as const};
     expect(applyEdit(oscillator,{type:'place',component:part}).ok).toBe(true);
     expect(applyEdit(createEmptyDocument(),{type:'place',component:part}).ok).toBe(false);
     const stored={...createEmptyDocument(),components:[part]};
@@ -53,7 +75,7 @@ describe('OSC-02 explicit profile and capacitance edits',()=>{
     expect(analyzeCircuit(stored).diagnostics[0]?.reason).toContain('10–1000');
   });
   it.each([0,46e-9,221e-9,1e-6,9e-6,1001e-6,NaN,Infinity])('rejects out-of-range or gap configuration %s atomically',capacitanceF=>{
-    const d={...createEmptyDocument(),modelProfileId:'oscillator-em-v1' as const,components:[createComponent('capacitor','c13',0,'cap','oscillator-em-v1')]};
+    const d={...createEmptyDocument(),modelProfileId:'oscillator-em-v2' as const,components:[createComponent('capacitor','c13',0,'cap','oscillator-em-v2')]};
     expect(applyEdit(d,{type:'configure',id:'cap',settings:{capacitanceF}}).ok).toBe(false);
     expect(d.components[0]?.capacitanceF).toBe(100e-9);
     expect(readCircuitDocument({...d,components:[{...d.components[0]!,capacitanceF}]})).toBeNull();

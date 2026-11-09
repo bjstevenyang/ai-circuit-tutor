@@ -1,4 +1,5 @@
 import type { ComponentInstance, ComponentKind, ModelProfileId } from './types';
+import { isOscillatorProfile } from './parameters';
 
 type Definition = { name: string; description: string; offsets: readonly (readonly [number, number])[]; pinNames: readonly string[]; body: readonly [number, number, number, number] };
 export const COMPONENT_KINDS: readonly ComponentKind[] = ['resistor', 'led', 'switch', 'button', 'potentiometer', 'buzzer', 'diode', 'ldr', 'rgb-led', 'npn', 'capacitor', 'piezo-passive', 'pnp', 'speaker'];
@@ -24,7 +25,7 @@ export function createComponent(kind: ComponentKind, anchor: string, rotation: C
     ...(kind === 'potentiometer' ? { resistance: 10000, position: 50 } : {}),
     ...(kind === 'switch' ? { closed: false } : {}),
     ...(kind === 'ldr' ? { light: 50 } : {}),
-    ...(kind === 'capacitor' ? { capacitanceF: profile === 'oscillator-em-v1' ? 100e-9 : 100e-6 } : {}),
+    ...(kind === 'capacitor' ? { capacitanceF: isOscillatorProfile(profile) ? 100e-9 : 100e-6 } : {}),
   };
 }
 export function rotateOffset(x: number, y: number, rotation: ComponentInstance['rotation']): [number, number] {

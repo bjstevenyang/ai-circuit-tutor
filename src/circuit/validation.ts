@@ -1,7 +1,7 @@
 import { COMPONENTS } from './catalog';
 import { getComponentPins, ENDPOINT_BY_ID } from './board';
 import { MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from './types';
-import { DEFAULT_SUPPLY_VOLTAGE, isCapacitance, isResistance, isSupplyVoltage } from './parameters';
+import { DEFAULT_SUPPLY_VOLTAGE, isCapacitance, isKnownModelProfile, isResistance, isSupplyVoltage } from './parameters';
 import type { CircuitDocument, ComponentInstance, ModelProfileId, Wire } from './types';
 const record = (value: unknown): value is Record<string, unknown> => typeof value==='object'&&value!==null&&!Array.isArray(value);
 const percentage = (value: unknown) => typeof value==='number'&&Number.isInteger(value)&&value>=0&&value<=100;
@@ -23,7 +23,7 @@ export function readCircuitDocument(value: unknown): CircuitDocument | null {
   const v5=value.schemaVersion===5&&value.lessonId==='dc-lab-v2';
   const current=v4||v5;
   if(!legacy&&!previous&&!v3&&!current)return null;
-  if(v5&&!['legacy-stage2-v1','oscillator-em-v1'].includes(value.modelProfileId as string))return null;
+  if(v5&&!isKnownModelProfile(value.modelProfileId))return null;
   if((current||v3)&&!isSupplyVoltage(value.supplyVoltage))return null;
   if(current&&(!['battery','teaching-square'].includes(value.sourceMode as string)||![250,500,1000].includes(value.signalFrequencyHz as number)))return null;
   const supplyVoltage=current||v3?value.supplyVoltage as number:DEFAULT_SUPPLY_VOLTAGE;

@@ -9,9 +9,16 @@ import type { Rotation } from '../circuit';
 
 afterEach(cleanup);
 describe('OSC-01/02 units and upright pin identification',()=>{
+  it('keeps the known retired v1 capacitance editor in nF without silently converting the configuration',()=>{
+    const apply=vi.fn();
+    render(<CapacitanceEditor part={createComponent('capacitor','c13',0,'c','oscillator-em-v1')} profile="oscillator-em-v1" onApply={apply}/>);
+    expect(screen.getByRole('textbox',{name:'电容容量'})).toHaveValue('100');
+    expect(screen.getByRole('combobox',{name:'电容显示单位'})).toHaveValue('nF');
+    expect(apply).not.toHaveBeenCalled();
+  });
   it('changes nF/μF presentation without editing and converts a valid applied value once',async()=>{
-    const user=userEvent.setup(),apply=vi.fn(),part=createComponent('capacitor','c13',0,'c','oscillator-em-v1');
-    render(<CapacitanceEditor part={part} profile="oscillator-em-v1" onApply={apply}/>);
+    const user=userEvent.setup(),apply=vi.fn(),part=createComponent('capacitor','c13',0,'c','oscillator-em-v2');
+    render(<CapacitanceEditor part={part} profile="oscillator-em-v2" onApply={apply}/>);
     expect(screen.getByRole('textbox',{name:'电容容量'})).toHaveValue('100');
     await user.selectOptions(screen.getByRole('combobox',{name:'电容显示单位'}),'μF');
     expect(screen.getByRole('textbox',{name:'电容容量'})).toHaveValue('0.1');expect(apply).not.toHaveBeenCalled();
@@ -20,7 +27,7 @@ describe('OSC-01/02 units and upright pin identification',()=>{
   });
   it.each(['','1e','100 nF','0.1 μF','46','221','Infinity','NaN'])('rejects invalid or duplicate-unit draft %j without applying',async draft=>{
     const user=userEvent.setup(),apply=vi.fn();
-    render(<CapacitanceEditor part={createComponent('capacitor','c13',0,'c','oscillator-em-v1')} profile="oscillator-em-v1" onApply={apply}/>);
+    render(<CapacitanceEditor part={createComponent('capacitor','c13',0,'c','oscillator-em-v2')} profile="oscillator-em-v2" onApply={apply}/>);
     const input=screen.getByRole('textbox',{name:'电容容量'});await user.clear(input);if(draft)await user.type(input,draft);
     await user.click(screen.getByRole('button',{name:'应用电容容量'}));expect(screen.getByRole('alert')).toBeVisible();expect(apply).not.toHaveBeenCalled();
   });

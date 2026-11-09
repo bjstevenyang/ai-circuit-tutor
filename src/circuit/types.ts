@@ -1,7 +1,8 @@
 export type Rotation = 0 | 90 | 180 | 270;
 export type Resistance = number;
 export type ComponentKind = 'resistor' | 'led' | 'switch' | 'button' | 'potentiometer' | 'buzzer' | 'diode' | 'ldr' | 'rgb-led' | 'npn' | 'capacitor' | 'piezo-passive' | 'pnp' | 'speaker';
-export type ModelProfileId = 'legacy-stage2-v1' | 'oscillator-em-v1';
+export type ModelProfileId = 'legacy-stage2-v1' | 'oscillator-em-v1' | 'oscillator-em-v2';
+export type RunnableModelProfileId = Exclude<ModelProfileId, 'oscillator-em-v1'>;
 export type ComponentInstance = {
   id: string;
   kind: ComponentKind;
@@ -27,7 +28,7 @@ export type CircuitDocument = {
 };
 export type SimulationControls = { pressedButtons?: readonly string[]; timeState?: {timeS:number; voltageV:number}; deltaTimeS?:number };
 export type DiagnosticCode = 'source-short' | 'missing-resistor' | 'resistor-bypassed' | 'led-bypassed' | 'open-circuit' | 'reversed-led' | 'overcurrent' | 'unsupported' | 'missing-led' | 'control-open' | 'insufficient-voltage' | 'reversed-diode' | 'buzzer-reversed' | 'buzzer-undervoltage' | 'buzzer-overvoltage';
-export type Diagnostic = { code: DiagnosticCode; entities: string[]; channel?: 'R' | 'G' | 'B'; pin?: string; reason?: string; timeS?: number };
+export type Diagnostic = { code: DiagnosticCode; entities: string[]; channel?: 'R' | 'G' | 'B'; pin?: string; reason?: string; timeS?: number; context?:'oscillator' };
 export type ChannelReading = { currentMa: number; on: boolean; level: number };
 export type ComponentReading = { currentMa?: number; voltageV?: number; on?: boolean; resistanceOhms?: number;
   channels?: Record<'R'|'G'|'B', ChannelReading>; rgb?: readonly [number,number,number];
@@ -41,7 +42,8 @@ export type AnalysisResult = {
   complete: boolean;
   diagnostics: Diagnostic[];
   readings?: Record<string, ComponentReading>;
-  mode?: 'dc'|'rc'|'periodic';
+  mode?: 'dc'|'rc'|'periodic'|'oscillator';
+  oscillator?: import('./oscillator/types').OscillatorResult;
   timeS?: number;
   notes?: string[];
 };

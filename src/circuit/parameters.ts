@@ -1,8 +1,10 @@
-import type { CircuitDocument } from './types';
+import type { CircuitDocument, ModelProfileId } from './types';
 
 export const profileOf = (document: CircuitDocument) => document.schemaVersion===5 ? document.modelProfileId ?? 'legacy-stage2-v1' : 'legacy-stage2-v1';
+export const isOscillatorProfile = (profile: ModelProfileId) => profile === 'oscillator-em-v1' || profile === 'oscillator-em-v2';
+export const isKnownModelProfile = (profile: unknown): profile is ModelProfileId => profile === 'legacy-stage2-v1' || profile === 'oscillator-em-v1' || profile === 'oscillator-em-v2';
 export function capacitanceRange(document: CircuitDocument): readonly [number, number] {
-  return profileOf(document) === 'oscillator-em-v1' ? [47e-9, 220e-9] : [10e-6, 1000e-6];
+  return isOscillatorProfile(profileOf(document)) ? [47e-9, 220e-9] : [10e-6, 1000e-6];
 }
 export function isCapacitance(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) &&

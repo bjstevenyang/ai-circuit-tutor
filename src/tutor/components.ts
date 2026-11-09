@@ -1,4 +1,5 @@
 import type { ComponentKind, ModelProfileId } from '../circuit';
+import { isOscillatorProfile } from '../circuit';
 
 export type ComponentGuideCopy = {
   about: string;
@@ -126,14 +127,14 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
 
 export function componentGuideCopy(kind:ComponentKind,profile:ModelProfileId):ComponentGuideCopy {
   const copy=COMPONENT_GUIDES[kind];
-  if(profile!=='oscillator-em-v1')return copy;
+  if(!isOscillatorProfile(profile))return copy;
   if(kind==='npn')return {
     ...copy,pins:['B 基极，控制端','C 集电极，可驱动PNP基极','E 发射极，按电路图连接'],
     connection:'在自激发声虚拟模型中，B可接受反馈电容及电阻信号，C可接PNP基极；按B/C/E身份连接，不从图形朝向猜。',
     example:'反馈节点 → B〔NPN〕；C → PNP基极；E → 负端（参考接法）',
     tryIt:'先对照原理图认清三个端点，再比较改变反馈电阻或电容后的周期。',
     commonMistake:'饱和和反向工作时不能始终套用Ic=βIb；没有持续声音也不等于完全没电。',
-    modelNote:'本profile采用固定β100的EM与10/5pF线性结电容。虚拟开关模型，不能判断真实器件安全；旧低侧模型的5/50mA课程规则另行保留。',
+    modelNote:profile==='oscillator-em-v1'?'这是旧版虚拟模型，仅恢复配置，需显式切换v2后运行。旧模型为10/5pF结电容；不会静默替换参数。':'本profile采用固定β100的EM与2/1nF虚拟线性结电容；不是真实3904参数。虚拟开关模型，不能判断真实器件安全；旧低侧模型的5/50mA课程规则另行保留。',
   };
   if(kind==='capacitor')return {
     ...copy,pins:['1 无极性端','2 无极性端'],

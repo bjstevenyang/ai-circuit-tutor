@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ComponentInstance, ModelProfileId } from '../circuit';
+import { isOscillatorProfile } from '../circuit';
 import { NumberEditor } from './NumberEditor';
 
 function decimalShift(value:number,places:number):number {
@@ -9,7 +10,7 @@ function decimalShift(value:number,places:number):number {
 
 /** Unit selection is a display preference; only a complete, valid application edits the document. */
 export function CapacitanceEditor({part,profile,onApply}:{part:ComponentInstance;profile:ModelProfileId;onApply:(capacitanceF:number)=>void}) {
-  const oscillator=profile==='oscillator-em-v1';
+  const oscillator=isOscillatorProfile(profile);
   const [unit,setUnit]=useState<'nF'|'μF'>(oscillator?'nF':'μF');
   const places=unit==='nF'?9:6;
   const displayed=(value:number)=>decimalShift(value,places);

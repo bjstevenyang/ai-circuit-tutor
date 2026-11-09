@@ -333,3 +333,7 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 
 
 本轮v2实际文档验证：`python3 /tmp/ai-circuit-orchestration/check_num_v2_docs.py`通过（9份纯文档、原DC/RC/压电章节与AC/EX表行/流程/旧参考归档保留、本地引用/围栏/空白、6项OSC/八相位、3脚本语法和SHA-256、两遍预算算术、业务/依赖树不变）；最终`git diff --check`通过，差异已审阅。没有重跑原研究或应用/浏览器/性能；新head独立审查与CI另记，临时验证脚本不是运行依赖。
+
+## OSC v2实施实际验证入口（2026-11-08）
+
+本轮采用主线已合并需求974c737a0545f908e3612736bd02edc77618dc9f。逐OSC文件/场景/命令/实际结果及未验证边界见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)最新v2节。首轮完整Vitest32文件448/448，typecheck/lint/build/diff检查通过；OSC Chromium4通过/1原生后台场景跳过。新数值已对照既有独立参考，不重新研究。固定性能、旧Chromium与独立代码审查继续回填，不由模块绿色推断目标设备或教学有效性；产品验收定义未修改。
