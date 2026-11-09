@@ -41,8 +41,8 @@ describe('OSC-02/05/06 generic finite analysis',()=>{
   });
   it('shares acceptance budget between both passes without emitting a partial result',()=>{
     const compile=compileOscillator(oscillatorVariant('REF'));if(!compile.ok)throw new Error(compile.result.reason);
-    const state=createOscillatorAnalysis(compile.compiled,{limits:{maxAccepted:200_000}});let result;
-    do{result=advanceOscillatorAnalysis(compile.compiled,state);}while(!result.done);
+    let state=createOscillatorAnalysis(compile.compiled,{limits:{maxAccepted:200_000}});let result;
+    do{result=advanceOscillatorAnalysis(compile.compiled,state);state=result.state;}while(!result.done);
     expect(state.pass).toBe(2);expect(result.result.outcome).toBe('resource-limit');expect(result.result.readings).toBeUndefined();
   },20000);
 });

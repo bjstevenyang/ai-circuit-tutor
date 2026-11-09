@@ -156,7 +156,7 @@ describe('OSC-02/03 independent v2 numerical acceptance', () => {
     expect(result.stats!.rejected).toBeLessThanOrEqual(10_000);
   }, 60000);
 
-  it.each([['C47', .001614032895], ['C220', .007627086287]] as const)('%s: strict boundary completes full 40ms in the original numerical budget', (name, expectedPeriodS) => {
+  it.each([['REF', .003466217221363], ['C47', .001614032895], ['C220', .007627086287]] as const)('%s: strict boundary completes full 40ms in the original numerical budget', (name, expectedPeriodS) => {
     const { compiled } = compile(name);
     const result = runOscillatorAnalysis(compiled, { precision: STRICT_PRECISION });
     expect(result.outcome, JSON.stringify(result)).toBe('periodic');

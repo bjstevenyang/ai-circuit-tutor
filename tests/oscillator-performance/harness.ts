@@ -5,7 +5,7 @@ import type { OscillatorFixtureName } from '../../src/circuit/oscillator/fixture
 
 export type RunSample = {
   scenario: OscillatorFixtureName; workerMs: number; renderedMs: number; feedbackMs: number;
-  outcome: OscillatorResult['outcome']; timeS: number; stats: OscillatorResult['stats'] | null;
+  outcome: OscillatorResult['outcome']; reason: string; timeS: number; stats: OscillatorResult['stats'] | null;
   activeWorkers: number; displaySamples: number;
 };
 export type StopSample = { pass: 1 | 2; stopMs: number; activeWorkers: number; staleResult: boolean };
@@ -37,7 +37,7 @@ runButton.onclick = () => {
     running = false; lastResult = result; status.textContent = result.outcome;
     void paint().then(() => {
       runResolve?.({ scenario: configuredName, workerMs, renderedMs: performance.now() - started, feedbackMs,
-        outcome: result.outcome, timeS: result.timeS, stats: result.stats ?? null, activeWorkers: workers.size, displaySamples: result.samples?.length ?? 0 });
+        outcome: result.outcome, reason: result.reason, timeS: result.timeS, stats: result.stats ?? null, activeWorkers: workers.size, displaySamples: result.samples?.length ?? 0 });
       runResolve = undefined;
     });
   }, progress => { currentProgress = progress; status.textContent = `计算中 ${progress.pass}/2`; });

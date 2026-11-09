@@ -29,6 +29,9 @@ describe('oscillator cold-run event contract',()=>{
     fireEvent.click(screen.getByRole('button',{name:'停止运行'}));expect(old.terminate).toHaveBeenCalledOnce();old.result();expect(status()).toHaveTextContent('已停止');
     start();expect(latest()).not.toBe(old);latest().result();expect(screen.getByRole('heading',{name:'检测到稳定周期'})).toBeInTheDocument();
     expect(screen.getByLabelText('实验读数')).toHaveTextContent('288.5 Hz');expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    fireEvent.click(screen.getByRole('button',{name:'播报当前实验状态'}));
+    fireEvent.click(screen.getByRole('button',{name:'停止运行'}));start();
+    expect(screen.queryByText(/稳定频率 288.5/)).not.toBeInTheDocument();
   });
   it('recomputes R/C/source values from cold state, but topology and undo stop and invalidate generations',()=>{
     render(<App/>);start();const first=latest();

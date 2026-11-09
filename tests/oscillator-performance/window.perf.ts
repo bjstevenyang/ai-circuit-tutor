@@ -11,7 +11,7 @@ const scenarios: OscillatorFixtureName[] = ['REF', 'C47', 'C220', 'R100', 'R240'
 const p95 = (values: number[]) => [...values].sort((a, b) => a - b)[18]!;
 const hardware = () => ({ osRelease: release(), arch: arch(), cpu: cpus()[0]?.model, logicalCpus: cpus().length,
   memoryBytes: totalmem(), commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-  targetHardware: 'Apple M1 / 8GB', actualTargetHardware: false });
+  targetHardware: 'Apple M1 / 8GB', actualTargetHardware: cpus()[0]?.model === 'Apple M1' && totalmem() === 8 * 1024 ** 3 });
 const workerBuildHash = async () => {
   const assets = '/tmp/ai-circuit-oscillator-benchmark-dist/assets';
   const name = (await readdir(assets)).find(name => name.startsWith('oscillatorWorker-'))!;
@@ -22,12 +22,16 @@ test('OSC-06: fresh production Worker, all nine fixed inputs, 3 warmups and 20 m
   await page.goto('/tests/oscillator-performance/index.html');
   const evidence = { environment: { ...hardware(), workerBundleSha256: await workerBuildHash(), chromium: browser.version(), viewport: { width: 1440, height: 900 }, cpuThrottling: 'none',
     timingBoundary: 'workerMs: production Worker receipt through compile/all passes/classification; renderedMs: independent harness click handler through next result paint; product React UI timing measured separately',
-    worktreeUncommitted: true }, scenarios: [] as { name: OscillatorFixtureName; sha256: string; warmups: RunSample[]; samples: RunSample[]; coreP95: number; renderedP95: number; coreThresholdPass: boolean }[] };
+    worktreeUncommitted: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim().length > 0 }, scenarios: [] as { name: OscillatorFixtureName; sha256: string; warmups: RunSample[]; samples: RunSample[]; coreP95: number | null; renderedP95: number | null; coreThresholdPass: boolean | null }[] };
   for (const name of scenarios) {
     const warmups: RunSample[] = [], samples: RunSample[] = [];
+    const record = { name, sha256: createHash('sha256').update(JSON.stringify(oscillatorVariant(name))).digest('hex'), warmups, samples,
+      coreP95: null as number | null, renderedP95: null as number | null, coreThresholdPass: null as boolean | null };
+    evidence.scenarios.push(record);
     for (let i = 0; i < 23; i++) {
       const sample = await page.evaluate(name => window.oscPerformance.run(name), name);
       (i < 3 ? warmups : samples).push(sample);
+      await writeFile('/tmp/ai-circuit-oscillator-performance.json', JSON.stringify(evidence, null, 2));
       expect(sample.activeWorkers).toBe(0);
       expect(sample.displaySamples).toBeLessThanOrEqual(4096);
       expect(sample.outcome, `${name} run ${i}`).toBe(name === 'OVER13' ? 'unsupported-topology' : name === 'NOC' ? 'settled-DC' : 'periodic');
@@ -38,8 +42,8 @@ test('OSC-06: fresh production Worker, all nine fixed inputs, 3 warmups and 20 m
       } else expect(sample.stats).toBeNull();
     }
     const coreP95 = p95(samples.map(sample => sample.workerMs));
-    evidence.scenarios.push({ name, sha256: createHash('sha256').update(JSON.stringify(oscillatorVariant(name))).digest('hex'), warmups, samples,
-      coreP95, renderedP95: p95(samples.map(sample => sample.renderedMs)), coreThresholdPass: name === 'OVER13' || coreP95 <= 2000 });
+    record.coreP95 = coreP95; record.renderedP95 = p95(samples.map(sample => sample.renderedMs));
+    record.coreThresholdPass = name === 'OVER13' ? null : coreP95 <= 2000;
     await writeFile('/tmp/ai-circuit-oscillator-performance.json', JSON.stringify(evidence, null, 2));
     console.log(`${name}: core P95=${coreP95.toFixed(2)}ms; harness render P95=${p95(samples.map(sample => sample.renderedMs)).toFixed(2)}ms`);
   }

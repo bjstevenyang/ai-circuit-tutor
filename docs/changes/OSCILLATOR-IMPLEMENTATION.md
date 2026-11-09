@@ -131,3 +131,9 @@ M1/8GB目标性能、真实后台/失焦、读屏、200%缩放、设备试听、
 实际命令：`npm test` 32文件448/448通过；`npm run typecheck`、`npm run lint`、`npm run build`及`git diff --check`通过。`CIRCUIT_E2E_PORT=5187 npm run test:e2e -- tests/e2e/oscillator.spec.ts --project=chromium --workers=1`：4通过/1跳过（22.3s）；headless切tab未产生trusted原生blur/hidden，不能冒称OS后台验证。合成生命周期事件仅证明应用事件处理。代码完整SHA由本切片提交后的PR记录给出，避免自引用未来SHA。
 
 固定生产Chromium性能runner在tests/oscillator-performance/，原始采样输出/tmp，不提交运行数据。性能正式结果、完整旧Chromium及全新独立Standards/Spec审查尚待回填；M1/8GB、真实后台失焦、设备试听、读屏/200%缩放、教师/至少3名学生均仍未验证。
+
+### 首轮独立Standards发现与返修
+
+全新只读Standards审查者/root/standards_review固定99485ccde2f201bce9059b791545d65bf9e78767发现一项P2：advanceOscillatorAnalysis原地修改调用者状态，违反circuit纯函数规则。已改为复制会变化的有界统计容器并显式返回next.state，Worker及同步包装器接收新状态；补“输入不变/相同输入同输出”回归。另将播报内容绑定对应analysis快照，避免下次计算中复现旧读数，并补REF严格档完整40ms分类测试。模型/精度/预算未变。
+
+返修后`npm test`32文件450/450通过；typecheck/lint/build及diff检查通过。性能runner补真实工作区/硬件元数据及失败时原始样本，正式计时采用返修后Worker构建。原head的NEEDS_CHANGES不冒称最终PASS，后续固定新head复核。

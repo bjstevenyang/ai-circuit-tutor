@@ -121,11 +121,13 @@ function successfulResult(compiled:CompiledOscillator,state:OscillatorAnalysisSt
       sourcePeakA:state.sourcePeakA,...(periodic?{sourceMeanA:state.cycles.reduce((a,c)=>a+c.sourceArea,0)/lengths.reduce((a,b)=>a+b,0)}:{}),maxConductionA:state.maxConductionA,maxDisplacementA:state.maxDisplacementA}};
 }
 /** One bounded pure batch; the caller supervises wall clock and cancellation. */
-export function advanceOscillatorAnalysis(compiled:CompiledOscillator,state:OscillatorAnalysisState):OscillatorAdvanceResult {
-  if(state.result)return {done:true,result:state.result};
+export function advanceOscillatorAnalysis(compiled:CompiledOscillator,input:OscillatorAnalysisState):OscillatorAdvanceResult {
+  if(input.result)return {done:true,state:input,result:input.result};
+  // Copy only writable, bounded accumulators. Accepted voltage/sample objects are immutable.
+  const state:OscillatorAnalysisState={...input,samples:input.samples.slice(),tailMin:input.tailMin.slice(),tailMax:input.tailMax.slice(),cycles:input.cycles.map(c=>({...c})),...(input.currentCycle?{currentCycle:{...input.currentCycle}}:{})};
   const result=advanceNumeric(compiled.model,state.numeric,WINDOW_S,compiled.pairs,state.precision,state.limits);
   state.numeric=result.state;
-  if(!result.ok){state.result={outcome:result.failure.outcome,timeS:result.failure.timeS,reason:result.failure.reason,entities:compiled.document.components.map(p=>p.id)};return {done:true,result:state.result};}
+  if(!result.ok){state.result={outcome:result.failure.outcome,timeS:result.failure.timeS,reason:result.failure.reason,entities:compiled.document.components.map(p=>p.id)};return {done:true,state,result:state.result};}
   for(const point of result.points)consumePoint(compiled,state,point);
   if(state.numeric.timeS>=WINDOW_S) {
     if(state.pass===1&&compiled.speaker&&compiled.speaker.a!==compiled.speaker.b&&state.speakerMax-state.speakerMin>=.002) {
@@ -137,14 +139,14 @@ export function advanceOscillatorAnalysis(compiled:CompiledOscillator,state:Osci
     } else {
       if(state.firstPassFinal&&!state.numeric.voltage.every((value,i)=>value===state.firstPassFinal![i]))state.result={outcome:'numerical-failure',timeS:WINDOW_S,reason:'确定性重放与第一遍结果不一致',entities:[]};
       else state.result=successfulResult(compiled,state);
-      return {done:true,result:state.result};
+      return {done:true,state,result:state.result};
     }
   }
-  return {done:false,progress:{pass:state.pass,timeS:state.numeric.timeS,accepted:state.numeric.accepted,rejected:state.numeric.rejected}};
+  return {done:false,state,progress:{pass:state.pass,timeS:state.numeric.timeS,accepted:state.numeric.accepted,rejected:state.numeric.rejected}};
 }
 export function runOscillatorAnalysis(compiled:CompiledOscillator,options:AnalysisOptions={}):OscillatorResult {
-  const state=createOscillatorAnalysis(compiled,options);
-  for(;;){const next=advanceOscillatorAnalysis(compiled,state);if(next.done)return next.result;}
+  let state=createOscillatorAnalysis(compiled,options);
+  for(;;){const next=advanceOscillatorAnalysis(compiled,state);if(next.done)return next.result;state=next.state;}
 }
 /** Exposed for numerical verification of source and charge/port accounting. */
 export const oscillatorPointEvidence=portValues;

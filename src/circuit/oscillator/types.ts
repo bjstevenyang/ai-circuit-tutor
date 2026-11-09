@@ -31,7 +31,7 @@ export type CompiledOscillator = {
 export type CompileOscillatorResult = {ok:true;compiled:CompiledOscillator}|{ok:false;result:OscillatorResult};
 export type AnalysisOptions = {precision?:Precision;limits?:Partial<NumericLimits>};
 export type OscillatorProgress = {pass:1|2;timeS:number;accepted:number;rejected:number};
-export type OscillatorAdvanceResult = {done:false;progress:OscillatorProgress}|{done:true;result:OscillatorResult};
+export type OscillatorAdvanceResult = {state:OscillatorAnalysisState}&({done:false;progress:OscillatorProgress}|{done:true;result:OscillatorResult});
 export type PeriodIntegral = {startS:number;endS:number;area:number;square:number;sourceArea:number};
 export type OscillatorAnalysisState = {
   numeric:IntegrationState; precision:Precision; limits:Partial<NumericLimits>; pass:1|2;

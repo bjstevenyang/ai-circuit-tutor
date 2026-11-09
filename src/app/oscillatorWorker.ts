@@ -11,11 +11,12 @@ scope.onmessage=({data})=>{
   try {
     const compiled=compileOscillator(data.document,data.controls);
     if(!compiled.ok){finish(compiled.result);return;}
-    const state=createOscillatorAnalysis(compiled.compiled);
+    let state=createOscillatorAnalysis(compiled.compiled);
     for(;;){
       if(performance.now()-started>=OSCILLATOR_DEADLINE_MS){finish(oscillatorFailure('完整计算超过5秒墙钟预算；未产生本次读数。',lastTimeS));return;}
       const next=advanceOscillatorAnalysis(compiled.compiled,state);
       if(next.done){finish(next.result);return;}
+      state=next.state;
       lastTimeS=next.progress.timeS;
       if(performance.now()-lastProgress>=100||next.progress.pass===2&&lastProgress<0){scope.postMessage({...identity,type:'progress',progress:next.progress});lastProgress=performance.now();}
     }

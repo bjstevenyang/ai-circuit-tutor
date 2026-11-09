@@ -130,7 +130,7 @@ export function App() {
   const [wireColor, setWireColor] = useState<string>(COLORS[0][0]);
   const [bend, setBend] = useState<Wire['bend']>('horizontal');
   const [error, setError] = useState('');
-  const [announcement,setAnnouncement]=useState('');
+  const [announcement,setAnnouncement]=useState<{text:string;analysis:AnalysisResult}|null>(null);
   const [inspectInput, setInspectInput] = useState('a1');
   const [moveAnchor, setMoveAnchor] = useState('');
   const [zoom, setZoom] = useState(100);
@@ -478,7 +478,7 @@ export function App() {
             {state.analysis?.currentMa !== undefined && <div className="current-reading"><span>{state.analysis.mode==='oscillator'?'观察窗末电池总电流':'估算电池总电流'}</span><strong>{state.analysis.currentMa.toFixed(2)}<small>mA</small></strong></div>}
             {state.analysis&&state.analysis.mode!=='oscillator' && <div className="run-status"><span className={`status-dot ${state.analysis.complete ? '' : 'amber'}`} />{state.analysis.complete ? '电路检测通过' : state.analysis.status === 'unsupported' ? '此接法超出当前仿真范围' : state.analysis.ledOn === undefined ? (state.analysis.currentMa === undefined ? '未计算 LED 状态' : '查看各元件的工作状态') : state.analysis.ledOn ? 'LED 导通 · 请处理提示的问题' : 'LED 未点亮'}</div>}
           </div>
-          {state.analysis?.mode&&<><StageReadings result={state.analysis} document={document}/><button className="small-button" onClick={()=>setAnnouncement(window.document.querySelector('.stage-readings')?.textContent??'暂无读数')}>播报当前实验状态</button><p role="status">{announcement}</p></>}
+          {state.analysis?.mode&&<><StageReadings result={state.analysis} document={document}/><button className="small-button" onClick={()=>setAnnouncement({text:window.document.querySelector('.stage-readings')?.textContent??'暂无读数',analysis:state.analysis!})}>播报当前实验状态</button><p role="status">{announcement?.analysis===state.analysis?announcement.text:''}</p></>}
           {!!state.analysis?.diagnostics.length && <div className="diagnostic-list" aria-label="诊断项目">
             {state.analysis.diagnostics.map((item, index) => <button key={`${item.code}-${index}`} className={index === state.diagnosticIndex ? 'active' : ''} onClick={() => dispatch({ type: 'diagnostic', index })}><span>{String(index + 1).padStart(2, '0')}</span>{getDiagnosticCopy(item.code,item).title}<Icon name="arrow" size={13} /></button>)}
           </div>}

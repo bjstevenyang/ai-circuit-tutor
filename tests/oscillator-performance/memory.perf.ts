@@ -11,8 +11,8 @@ test('OSC-06: 20 finite cold sessions after controlled-GC baseline', async ({ pa
   await cdp.send('HeapProfiler.enable');
   const collect = async () => { await cdp.send('HeapProfiler.collectGarbage'); await cdp.send('HeapProfiler.collectGarbage'); return (await cdp.send('Runtime.getHeapUsage')).usedSize; };
   const heapBytes = [await collect()];
-  const evidence = { environment: { osRelease: release(), cpu: cpus()[0]?.model, memoryBytes: totalmem(), chromium: browser.version(), actualTargetHardware: false,
-    commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), worktreeUncommitted: true,
+  const evidence = { environment: { osRelease: release(), cpu: cpus()[0]?.model, memoryBytes: totalmem(), chromium: browser.version(), actualTargetHardware: cpus()[0]?.model === 'Apple M1' && totalmem() === 8 * 1024 ** 3,
+    commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), worktreeUncommitted: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim().length > 0,
     scope: 'separate Chromium process; main-thread heap, production Workers terminated after each result; audio never enabled and no AudioContext created' }, heapBytes, finalGrowthBytes: 0, thresholdPass: false };
   for (let i = 0; i < 20; i++) {
     const result = await page.evaluate(() => window.oscPerformance.run('REF'));

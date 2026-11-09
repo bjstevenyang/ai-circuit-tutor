@@ -5,6 +5,16 @@ import { compileOscillator,createOscillatorAnalysis,advanceOscillatorAnalysis,ru
 import { oscillatorFixture,oscillatorVariant,oscillatorFixtureDetails } from './fixtures';
 const rc=():NumericModel=>({size:1,g:Float64Array.of(.001),capacitance:Float64Array.of(1e-7),gSource:Float64Array.of(-.001),cSource:new Float64Array(1),transistors:[],supplyV:9});
 describe('OSC-02/06 frozen integration and failure contracts',()=>{
+  it('does not mutate its input state and gives the same batch for repeated identical input',()=>{
+    const compiled=compileOscillator(oscillatorFixture());if(!compiled.ok)throw new Error(compiled.result.reason);
+    const initial=createOscillatorAnalysis(compiled.compiled),before=structuredClone(initial);
+    const first=advanceOscillatorAnalysis(compiled.compiled,initial),second=advanceOscillatorAnalysis(compiled.compiled,initial);
+    expect(initial).toEqual(before);expect(first).toEqual(second);expect(first.state).not.toBe(initial);
+    expect(first.state.numeric.timeS).toBeGreaterThan(0);
+    // The next batch must also leave already populated sample and tail arrays untouched.
+    const populated=first.state,previous=structuredClone(populated);
+    advanceOscillatorAnalysis(compiled.compiled,populated);expect(populated).toEqual(previous);
+  });
   it('uses cold zero state, one aligned ramp, and checks voltage differences independently of node error',()=>{
     const model=rc(),state=initializeNumeric(model);expect([...state.voltage]).toEqual([0]);expect(sourceAt(model,0)).toBe(0);expect(sourceAt(model,.00005)).toBe(4.5);expect(sourceAt(model,.0001)).toBe(9);expect(sourceAt(model,.04)).toBe(9);
     expect(EM.cbeF).toBe(2e-9);expect(EM.cbcF).toBe(1e-9);
@@ -54,8 +64,8 @@ describe('OSC-02/06 frozen integration and failure contracts',()=>{
   });
   it('cannot revive a cached partial waveform when the second-pass rejection budget is exhausted',()=>{
     const result=compileOscillator(oscillatorFixture());if(!result.ok)throw new Error(result.result.reason);
-    const state=createOscillatorAnalysis(result.compiled);let next;
-    do{next=advanceOscillatorAnalysis(result.compiled,state);}while(!next.done&&state.pass===1);
+    let state=createOscillatorAnalysis(result.compiled);let next;
+    do{next=advanceOscillatorAnalysis(result.compiled,state);state=next.state;}while(!next.done&&state.pass===1);
     expect(next.done).toBe(false);expect(state.result).toBeUndefined();expect(state.samples.length).toBeLessThanOrEqual(4096);
     state.limits={maxRejected:state.numeric.rejected};next=advanceOscillatorAnalysis(result.compiled,state);
     expect(next.done).toBe(true);if(next.done){expect(next.result.outcome).toBe('resource-limit');expect(next.result.speaker).toBeUndefined();expect(next.result.readings).toBeUndefined();}
