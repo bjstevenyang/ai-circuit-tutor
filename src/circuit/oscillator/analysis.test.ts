@@ -39,6 +39,14 @@ describe('OSC-02/05/06 generic finite analysis',()=>{
     const over=compileOscillator(oscillatorVariant('OVER13'));expect(over.ok).toBe(false);if(!over.ok)expect(over.result.reason).toContain('13');
     const short=compileOscillator(oscillatorVariant('VSHORT'));expect(short.ok).toBe(false);if(!short.ok)expect(short.result.reason).toContain('短接');
   });
+  it('evaluates physically legal swapped PNP B/C wiring through the model without inventing a frequency',()=>{
+    const compiled=compileOscillator(oscillatorVariant('WRONGPIN'));expect(compiled.ok).toBe(true);if(!compiled.ok)return;
+    const result=runOscillatorAnalysis(compiled.compiled);
+    expect(result.outcome).toBe('settled-DC');expect(result.timeS).toBe(.04);
+    expect(result.speaker?.frequencyHz).toBeUndefined();expect(result.readings?.Q2).toBeDefined();
+    expect(Number.isFinite(result.currentMa)).toBe(true);expect(result.stats!.maxConductionA).toBeLessThanOrEqual(.25);
+    expect(result.stats!.maxResidualA).toBeLessThanOrEqual(1e-9);
+  });
   it('shares acceptance budget between both passes without emitting a partial result',()=>{
     const compile=compileOscillator(oscillatorVariant('REF'));if(!compile.ok)throw new Error(compile.result.reason);
     let state=createOscillatorAnalysis(compile.compiled,{limits:{maxAccepted:200_000}});let result;

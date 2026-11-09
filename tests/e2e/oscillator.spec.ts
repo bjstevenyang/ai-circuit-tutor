@@ -42,7 +42,7 @@ const refPart=(page:Page,document:CircuitDocument,id:string)=>{
   const part=document.components.find(part=>part.id===id)!;
   return page.getByRole('button',{name:new RegExp(`${COMPONENTS[part.kind].name}.*，锚点 ${part.anchor}$`)});
 };
-const completedPeriodic=(page:Page)=>expect(page.getByRole('heading',{name:'检测到稳定周期',exact:true})).toBeVisible({timeout:10000});
+const completedPeriodic=(page:Page)=>expect(page.locator('.result-card h3')).toHaveText('检测到稳定周期',{timeout:10000});
 test('OSC configuration: keyboard places new parts, reads actual pins, saves and undoes model choice',async({page})=>{
   await page.goto('/');await page.getByRole('radio',{name:'自激发声·虚拟模型v2',exact:true}).press('Enter');
   await keyboardPlace(page,'PNP 晶体管','c13');await keyboardPlace(page,'无源扬声器','c20');

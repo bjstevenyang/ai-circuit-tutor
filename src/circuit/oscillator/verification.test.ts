@@ -141,6 +141,11 @@ describe('OSC-02/03 independent v2 numerical acceptance', () => {
     ['R240', .030, 5, .006210732274],
     ['L26', .015, 4, .004542393184],
   ] as const;
+  it('precisely removing the external capacitor gives only one D=1V rise in 15ms',()=>{
+    const {compiled,indices}=compile('NOC');
+    const trace=measure(compiled,indices,.015,DEFAULT_PRECISION);
+    expect(trace.rises).toHaveLength(1);
+  },60000);
   it.each(variants)('%s: independent window crossing count and period; full 40ms is periodic', (name, windowS, count, expectedPeriodS) => {
     const { compiled, indices } = compile(name);
     const trace = measure(compiled, indices, windowS, DEFAULT_PRECISION);

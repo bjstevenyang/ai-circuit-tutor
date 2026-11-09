@@ -137,3 +137,9 @@ M1/8GB目标性能、真实后台/失焦、读屏、200%缩放、设备试听、
 全新只读Standards审查者/root/standards_review固定99485ccde2f201bce9059b791545d65bf9e78767发现一项P2：advanceOscillatorAnalysis原地修改调用者状态，违反circuit纯函数规则。已改为复制会变化的有界统计容器并显式返回next.state，Worker及同步包装器接收新状态；补“输入不变/相同输入同输出”回归。另将播报内容绑定对应analysis快照，避免下次计算中复现旧读数，并补REF严格档完整40ms分类测试。模型/精度/预算未变。
 
 返修后`npm test`32文件450/450通过；typecheck/lint/build及diff检查通过。性能runner补真实工作区/硬件元数据及失败时原始样本，正式计时采用返修后Worker构建。原head的NEEDS_CHANGES不冒称最终PASS，后续固定新head复核。
+
+## 独立Spec返修及CI失败诊断（2026-11-09）
+
+全新Spec审查者/root/spec_review固定7a3ff7079baf14fd529ca77d472dfc1caa6cee4a指出OSC-05两项证据缺口：WRONGPIN仅验证物理fixture而未动态运行、NOC未核15ms的唯一1V上穿。现补真实compile/run WRONGPIN：按方程为settled-DC、域内有限读数且无频率，不强行猜成域外；补精确删C的15ms接受半步上穿计数=1。定向命令`npm test -- src/circuit/oscillator/analysis.test.ts src/circuit/oscillator/verification.test.ts -t 'swapped PNP|precisely removing'`：2通过/21无关项跳过；三受影响测试文件ESLint与diff检查通过。没有改变需求期望或产品模型。最终Spec需新head复核。
+
+用户报告[CI job129001285699](https://github.com/bjstevenyang/ai-circuit-tutor/actions/runs/42568841803/job/129001285699?pr=7)失败。实际head7a3ff70，typecheck/lint/450模块/build通过，Chromium46通过/3个需要REF周期的场景等待标题10s超时。日志明确1 worker，不能归因为浏览器测试并发。尚未取到最终产品状态，因此不先认定5s预算、后台取消或Worker错误哪项是原因；将正向断言改为同一标题文本精确匹配，保留原10s，下一次失败可显示实际结果标题，不放宽任何门槛。本机4×CDP降速REF仍periodic（6.7s整测试），CDP未证明WorkerCPU等效降速，不用它排除CI资源限制。临时诊断测试已删除，生产5s不变。
