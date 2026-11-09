@@ -337,3 +337,9 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 ## OSC v2实施实际验证入口（2026-11-08）
 
 本轮采用主线已合并需求974c737a0545f908e3612736bd02edc77618dc9f。逐OSC文件/场景/命令/实际结果及未验证边界见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)最新v2节。首轮完整Vitest32文件448/448，typecheck/lint/build/diff检查通过；OSC Chromium4通过/1原生后台场景跳过。新数值已对照既有独立参考，不重新研究。固定性能、旧Chromium与独立代码审查继续回填，不由模块绿色推断目标设备或教学有效性；产品验收定义未修改。
+
+## OSC v2当前实际结果（2026-11-09）
+
+产品代码f108d7b8534bc7eb44fbbd21a26ad45db03df19f：本机32文件453模块通过，CI Verify42697686184/42697675137均成功（453模块、Chromium48通过/1原生事件环境跳过，typecheck/lint/build通过）。原CI资源失败已修，5s及精度不变；独立Standards/Spec代码覆盖PASS。完整逐ID证据、之前失败/返修和未验证边界见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)最新节；旧构建实际原始性能样本见[性能记录](changes/OSCILLATOR-PERFORMANCE.md)。
+
+按用户最新“只跑失败测试”，停止了进行中的本机全套，未再运行优化版整套性能/真实UI基准。目标M1/8GB、优化版正式P95/内存、发声停止20次、真实后台失焦、试听、读屏/200%及师生仍未验证。本次仅证据文档提交不改变需求/验收定义，以[skip ci]避免再触发全套；不将其写成该文档head测试通过。
