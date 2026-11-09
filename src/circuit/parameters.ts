@@ -1,5 +1,14 @@
 import type { CircuitDocument } from './types';
 
+export const profileOf = (document: CircuitDocument) => document.schemaVersion===5 ? document.modelProfileId ?? 'legacy-stage2-v1' : 'legacy-stage2-v1';
+export function capacitanceRange(document: CircuitDocument): readonly [number, number] {
+  return profileOf(document) === 'oscillator-em-v1' ? [47e-9, 220e-9] : [10e-6, 1000e-6];
+}
+export function isCapacitance(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) &&
+    (value >= 47e-9 && value <= 220e-9 || value >= 10e-6 && value <= 1000e-6);
+}
+
 export const DEFAULT_SUPPLY_VOLTAGE = 4.5;
 export const MIN_SUPPLY_VOLTAGE = 1.5;
 export const MAX_SUPPLY_VOLTAGE = 9;

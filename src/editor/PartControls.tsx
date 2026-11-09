@@ -1,10 +1,11 @@
 import { COMPONENTS, getComponentPins, MIN_RESISTANCE, MAX_RESISTANCE } from '../circuit';
-import type { ComponentInstance, ComponentReading } from '../circuit';
+import type { ComponentInstance, ComponentReading, ModelProfileId } from '../circuit';
 import { NumberEditor } from './NumberEditor';
 import { relativeLedBrightness } from './ledAppearance';
+import { CapacitanceEditor } from './CapacitanceEditor';
 
 type Settings=Pick<ComponentInstance,'resistance'|'closed'|'position'|'light'|'capacitanceF'>;
-export function PartControls({part,reading,pressed,onConfigure,onPress,autoAnnounce=true}:{part:ComponentInstance;reading?:ComponentReading;pressed:boolean;autoAnnounce?:boolean;onConfigure:(settings:Settings)=>void;onPress:(pressed:boolean)=>void}) {
+export function PartControls({part,reading,pressed,onConfigure,onPress,autoAnnounce=true,profile='legacy-stage2-v1'}:{part:ComponentInstance;reading?:ComponentReading;pressed:boolean;autoAnnounce?:boolean;profile?:ModelProfileId;onConfigure:(settings:Settings)=>void;onPress:(pressed:boolean)=>void}) {
   const pins=getComponentPins(part),brightness=relativeLedBrightness(reading);
   const presets=[100,330,1000,4700,10000,100000];
   const potTotal=part.resistance??10000,potPosition=part.position??50;
@@ -28,7 +29,7 @@ export function PartControls({part,reading,pressed,onConfigure,onPress,autoAnnou
       onKeyUp={e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();onPress(false);}}}>{pressed?'正在按下':'按住接通，松开断开'}</button>}
     {part.kind==='potentiometer'&&<><label>总阻值 <select aria-label="电位器总阻值" value={part.resistance??10000} onChange={e=>onConfigure({resistance:Number(e.target.value)})}>{[1000,10000,100000].map(value=><option key={value} value={value}>{value/1000} kΩ</option>)}</select></label><label className="range-control">旋钮位置 <input aria-label="旋钮位置" type="range" min="0" max="100" step="1" value={part.position??50} onChange={e=>onConfigure({position:Number(e.target.value)})}/><output>{part.position??50}%</output></label></>}
     {part.kind==='ldr'&&<label className="range-control">模拟光照 <input aria-label="模拟光照" type="range" min="0" max="100" step="1" value={part.light??50} onChange={e=>onConfigure({light:Number(e.target.value)})}/><output>{part.light??50}%</output></label>}
-    {part.kind==='capacitor'&&<><label>容量预设 <select aria-label="电容容量预设" value={part.capacitanceF??100e-6} onChange={e=>onConfigure({capacitanceF:Number(e.target.value)})}>{![10e-6,100e-6,1000e-6].includes(part.capacitanceF??100e-6)&&<option value={part.capacitanceF}>自定义</option>}{[10,100,1000].map(v=><option key={v} value={v/1e6}>{v} μF</option>)}</select></label><NumberEditor key={`${part.id}:${part.capacitanceF}`} label="电容容量" value={(part.capacitanceF??100e-6)*1e6} unit="μF" min={10} max={1000} onApply={v=>onConfigure({capacitanceF:v/1e6})}/></>}
+    {part.kind==='capacitor'&&<CapacitanceEditor key={`${part.id}:${profile}`} part={part} profile={profile} onApply={capacitanceF=>onConfigure({capacitanceF})}/>}
     {reading&&<span className="part-reading" aria-live={autoAnnounce?'polite':'off'}>{COMPONENTS[part.kind].name}：{reading.currentMa===undefined?'电流未提供':`${reading.currentMa.toFixed(4)} mA`}{reading.resistanceOhms!==undefined?` · ${Math.round(reading.resistanceOhms).toLocaleString()} Ω`:''}{reading.on!==undefined?` · ${reading.on?'工作中':'未导通/未鸣响'}`:''}</span>}
   </>;
 }

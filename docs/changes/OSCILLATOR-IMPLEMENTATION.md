@@ -75,4 +75,30 @@ M1/8GB目标性能、真实后台/失焦、读屏、200%缩放、设备试听、
 
 [冻结hmin/LTE失败及独立复现](OSCILLATOR-INTEGRATION-BLOCKER.md)：首次反馈跳变约0.788093ms时，冻结10ps下限的LTE仍>1，数值切片明确失败，尚未产生所需5次上穿。未放宽任何需求。归档的独立参考加相同控制器从零态复现，已排查本地最小步建议bug并重跑。依赖数值的OSC-02/03/04/05和OSC-06动态/性能部分暂停，独立安装/profile/单位/迁移继续；不能将部分配置通过冒充完整OSC通过。
 
-相关命令`npm test -- src/circuit/oscillator/numeric.test.ts`实际失败；本地业务改动仍未提交，没有推送失败业务测试或声称CI通过。本轮新增文档记录事实，不修改冻结需求；完整独立失败命令在上述文档，后续数值恢复需要核对修订的已合并需求SHA。
+相关命令`npm test -- src/circuit/oscillator/numeric.test.ts`实际失败；该失败报告时本地业务改动未提交，没有推送失败业务测试或声称CI通过。后续独立配置切片见下节；失败数值尝试未纳入配置交付。失败文档记录事实，不修改冻结需求；完整独立失败命令在上述文档，后续数值恢复需要核对修订的已合并需求SHA。
+
+## 配置切片证据（2026-11-08，部分实施）
+
+已实现PNP/speaker安装/图形/中文说明，显式profile切换和停止/撤销，按profile新建容量、nF/μF输入/单位验证，以及v1–v4→v5的旧模型迁移/未知模型保护和配置白名单。切profile不改变已存在容量/电压；结构物理合法但不支持的组合仍可保存。旧DC入口明确拒绝新profile/新kind/错误容量，不能让旧RC或分段NPN冒算新模型。
+
+这不是完整自激发声功能：Worker、40ms周期/DC分类和speaker声音未接入；仍受上述数值契约阻塞。未将未通过数值原型或其失败测试纳入配置切片提交；它们在隔离工作区保留，数值未通过的事实及独立复现已经提交。后续完整OSC验收不能靠本切片的绿色CI推断。
+
+| ID/部分 | 实际文件/场景 | 命令及实际结果 |
+| --- | --- | --- |
+| OSC-01 安装/标识/说明部分 | src/circuit/catalog.test.ts四方向PNP/speaker占孔/越界/重叠/原子拒绝；src/editor/CapacitanceEditor.test.tsx正向文字；src/app/OscillatorConfiguration.test.tsx中文说明及真实孔位/只读 | 下述模块命令通过；完整七节点参考纯键盘搭建及修复流程仍未执行 |
+| OSC-02 配置部分 | catalog.test.ts显式profile/默认/范围；CapacitanceEditor.test.tsx单位切换不编辑、一次转换、非法/重复单位草稿；App配置/撤销/停止 | 单位/配置通过；零态/EM/LTE/数值部分失败，不能算完整通过 |
+| OSC-06 保存/历史部分 | src/storage/oscillator.test.ts旧v1–v4/新kind/profile/配置白名单/未知模型保护/合法不支持组合；旧storage及stage2固定样例保持 | 迁移/配置通过；Worker/三布局数值/12–13未知量/动态性能待完成 |
+| OSC-01/02/06 Chromium配置部分 | tests/e2e/oscillator.spec.ts两个场景：键盘放置新器件/引脚/刷新/撤销；nF/μF及非法输入保留存档 | 仅Chromium；2/2通过，不冒称完整七节点实验或教学验收 |
+| 旧AC/EX模块及界面回归 | 原335项，规范化存档期望升v5、12类期望升14，原固定v4性能fixture字节/哈希不改 | 25文件374/374通过（当时新增39项）；随后新加1项合法不支持组合，受影响6文件64项复验通过。数值原型测试明确排除并仍失败 |
+
+实际命令：
+
+- `npm test -- --exclude src/circuit/oscillator/numeric.test.ts`：374/374通过；这是配置/旧回归套件，不是数值验收。该排除针对尚未提交且已披露失败的原型，不能写全OSC通过。
+- `npm test -- src/circuit/catalog.test.ts src/storage/oscillator.test.ts src/editor/components.test.ts src/app/components.test.tsx src/app/OscillatorConfiguration.test.tsx src/editor/CapacitanceEditor.test.tsx`：后续受影响64/64通过；新加的第40项为不支持组合可保存/旧限额不放宽。
+- `npm run typecheck`、`npm run lint`、`npm run build`：均通过；后续有效变更又完成lint及含类型检查的build。构建产物不提交。
+- `CIRCUIT_E2E_PORT=5187 npm run test:e2e -- tests/e2e/oscillator.spec.ts --project=chromium --workers=1`：两配置场景通过；测试使用独立worktree/5187服务，不复用原stage2的5173服务。首次本地监听被环境EPERM拒绝后按既有授权重试成功；不是产品测试失败。
+- `git diff --check`与配置差异审阅：通过。代码完整SHA在本切片PR发布评论记录，避免在文件中伪造本提交自身未来SHA。
+
+无新安装或依赖版本变化；隔离工作区复用已锁定的现有node_modules。忽略规则同时覆盖该目录及本地依赖软链接，软链接/构建/运行数据不提交。Playwright配置仅Chromium，独立端口可指定，默认不复用未知版本已运行服务。
+
+远端CI、最终独立实现审查/需求覆盖及所有未完成OSC项目后续另记录。当前交付仅配置切片可审阅，完整实现尚未可验收，不合并、不部署，不重复旧十分钟长测。

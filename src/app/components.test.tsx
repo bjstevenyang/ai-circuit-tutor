@@ -18,9 +18,9 @@ function place(kind:ComponentKind,anchor:string){
 }
 
 describe('expanded experiment controls',()=>{
-  it('offers twelve kinds and allows repeated placement of a kind',()=>{
+  it('offers fourteen kinds and allows repeated placement of a kind',()=>{
     render(<App/>);
-    expect(screen.getByLabelText('元件',{exact:true}).querySelectorAll('option')).toHaveLength(12);
+    expect(screen.getByLabelText('元件',{exact:true}).querySelectorAll('option')).toHaveLength(14);
     place('resistor','a1');place('resistor','a10');
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).components).toHaveLength(2);
     place('button','e20');
