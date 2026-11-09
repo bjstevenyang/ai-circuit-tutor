@@ -143,3 +143,11 @@ M1/8GB目标性能、真实后台/失焦、读屏、200%缩放、设备试听、
 全新Spec审查者/root/spec_review固定7a3ff7079baf14fd529ca77d472dfc1caa6cee4a指出OSC-05两项证据缺口：WRONGPIN仅验证物理fixture而未动态运行、NOC未核15ms的唯一1V上穿。现补真实compile/run WRONGPIN：按方程为settled-DC、域内有限读数且无频率，不强行猜成域外；补精确删C的15ms接受半步上穿计数=1。定向命令`npm test -- src/circuit/oscillator/analysis.test.ts src/circuit/oscillator/verification.test.ts -t 'swapped PNP|precisely removing'`：2通过/21无关项跳过；三受影响测试文件ESLint与diff检查通过。没有改变需求期望或产品模型。最终Spec需新head复核。
 
 用户报告[CI job129001285699](https://github.com/bjstevenyang/ai-circuit-tutor/actions/runs/42568841803/job/129001285699?pr=7)失败。实际head7a3ff70，typecheck/lint/450模块/build通过，Chromium46通过/3个需要REF周期的场景等待标题10s超时。日志明确1 worker，不能归因为浏览器测试并发。尚未取到最终产品状态，因此不先认定5s预算、后台取消或Worker错误哪项是原因；将正向断言改为同一标题文本精确匹配，保留原10s，下一次失败可显示实际结果标题，不放宽任何门槛。本机4×CDP降速REF仍periodic（6.7s整测试），CDP未证明WorkerCPU等效降速，不用它排除CI资源限制。临时诊断测试已删除，生产5s不变。
+
+### CI根因证据与数值缓冲优化（2026-11-09）
+
+[诊断后的CI42695365899](https://github.com/bjstevenyang/ai-circuit-tutor/actions/runs/42695365899)仍在同三个周期场景失败，实际标题明确为“计算达到资源限制”；该head的模块/类型/lint/build通过且浏览器1 worker。参考推进336720/拒662远低于共享上限，结合相同输入模块通过，证据指向该runner的5s墙钟截止，而非隐藏重试或没有输出。未延长5s、未把资源失败当周期成功。
+
+短CPU profile仅作热点诊断：implicitStep约25.6%、residual16.2%、GC14.0%、solveDense8.5%，不是正式性能验收。采用每个有界batch的私有Newton缓冲，公开implicitStep/solveDense仍不修改输入，内部stepper输出拥有独立电压数组；补后续求解不改已接受半步/输入状态/模型的别名回归。同一临时runner无profile对照，REF约13–16%、MAX12约9–15%改善，数值统计逐字相同；不把该暖态对照冒称新Chromium P95。
+
+优化后三数值文件定向ESLint、typecheck、`git diff --check`通过；完整数值目录56/56、完整模块32文件453/453通过。完整本机Chromium实际48通过/1失败：新增native-tab场景在初始运行即收到失焦并清结果，正在定向核验起始焦点与产品恢复；不把它当已通过或继续沿用旧skip。原46旧/config浏览器场景通过，两周期/音频/删C修复正向通过。最终CI及原生场景待修后实际复验。

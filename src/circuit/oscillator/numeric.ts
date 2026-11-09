@@ -46,8 +46,8 @@ export function domainViolation(model: NumericModel, v: Float64Array, timeS: num
 }
 
 /** Pivoted dense elimination, at most 12 unknowns, without reference conductance. */
-export function solveDense(matrix: Float64Array, rhs: Float64Array, inPlace=false): Float64Array | null {
-  const n = rhs.length, a = inPlace?matrix:matrix.slice(), b = inPlace?rhs:rhs.slice();
+function solveDenseMutable(a:Float64Array,b:Float64Array,output?:Float64Array):Float64Array|null {
+  const n=b.length;
   for (let k=0;k<n;k++) {
     let p=k;
     for (let i=k+1;i<n;i++) if (Math.abs(a[i*n+k]!) > Math.abs(a[p*n+k]!)) p=i;
@@ -62,13 +62,18 @@ export function solveDense(matrix: Float64Array, rhs: Float64Array, inPlace=fals
       b[i]=b[i]!-factor*b[k]!;
     }
   }
-  const x=new Float64Array(n);
+  const x=output??new Float64Array(n);
   for (let i=n-1;i>=0;i--) {
     let sum=b[i]!;
     for (let j=i+1;j<n;j++) sum-=a[i*n+j]!*x[j]!;
     x[i]=sum/a[i*n+i]!;
   }
   return x.every(Number.isFinite) ? x : null;
+}
+
+/** Public linear solve owns its working copies and never modifies caller inputs. */
+export function solveDense(matrix:Float64Array,rhs:Float64Array):Float64Array|null {
+  return solveDenseMutable(matrix.slice(),rhs.slice());
 }
 
 function residual(model: NumericModel, v: Float64Array, previous: Float64Array, h: number, timeS: number, f:Float64Array, jacobian:Float64Array) {
@@ -99,14 +104,18 @@ function residual(model: NumericModel, v: Float64Array, previous: Float64Array, 
   return { f,jacobian,norm,junctions };
 }
 export type ImplicitStep = { ok:true; voltage:Float64Array; residualA:number; iterations:number; junctions:ReturnType<typeof emCurrents>[] } | { ok:false; reason:string };
-export function implicitStep(model: NumericModel, previous: Float64Array, h: number, timeS: number, maxNewton=80): ImplicitStep {
-  let v=previous.slice(),candidate=new Float64Array(model.size);
-  let current=residual(model,v,previous,h,timeS,new Float64Array(model.size),new Float64Array(model.size*model.size));
-  let spareF:Float64Array=new Float64Array(model.size),spareJ:Float64Array=new Float64Array(model.size*model.size);
+/** Scratch is private to one bounded advance batch; no input state or emitted point owns these buffers. */
+type ImplicitWorkspace={v:Float64Array;candidate:Float64Array;f:Float64Array;j:Float64Array;spareF:Float64Array;spareJ:Float64Array;delta:Float64Array};
+function createImplicitWorkspace(n:number):ImplicitWorkspace{return {v:new Float64Array(n),candidate:new Float64Array(n),f:new Float64Array(n),j:new Float64Array(n*n),spareF:new Float64Array(n),spareJ:new Float64Array(n*n),delta:new Float64Array(n)};}
+function solveImplicitStep(model:NumericModel,previous:Float64Array,h:number,timeS:number,maxNewton:number,workspace:ImplicitWorkspace):ImplicitStep {
+  let v=workspace.v,candidate=workspace.candidate;v.set(previous);
+  let current=residual(model,v,previous,h,timeS,workspace.f,workspace.j);
+  let spareF:Float64Array=workspace.spareF,spareJ:Float64Array=workspace.spareJ;
   for (let iteration=0;iteration<maxNewton;iteration++) {
-    if (current.norm <= 1e-10) return {ok:true,voltage:v,residualA:current.norm,iterations:iteration,junctions:current.junctions};
+    // Output must own its voltage: the next implicit solve reuses every scratch buffer.
+    if (current.norm <= 1e-10) return {ok:true,voltage:v.slice(),residualA:current.norm,iterations:iteration,junctions:current.junctions};
     for(let i=0;i<current.f.length;i++)current.f[i]=-current.f[i]!;
-    const delta=solveDense(current.jacobian,current.f,true);
+    const delta=solveDenseMutable(current.jacobian,current.f,workspace.delta);
     if (!delta) return {ok:false,reason:'奇异矩阵'};
     let largest=0;
     for (const x of delta) largest=Math.max(largest,Math.abs(x));
@@ -123,6 +132,16 @@ export function implicitStep(model: NumericModel, previous: Float64Array, h: num
     if (!accepted) return {ok:false,reason:'Newton 阻尼未收敛'};
   }
   return {ok:false,reason:'Newton 迭代超限'};
+}
+
+/** A deterministic batch-local stepper. Scratch cannot escape; every result owns its data. */
+export function createImplicitStepper(model:NumericModel,maxNewton=80):(previous:Float64Array,h:number,timeS:number)=>ImplicitStep {
+  const workspace=createImplicitWorkspace(model.size);
+  return (previous,h,timeS)=>solveImplicitStep(model,previous,h,timeS,maxNewton,workspace);
+}
+/** Single-call pure interface; repeated integration uses an encapsulated local stepper. */
+export function implicitStep(model:NumericModel,previous:Float64Array,h:number,timeS:number,maxNewton=80):ImplicitStep {
+  return createImplicitStepper(model,maxNewton)(previous,h,timeS);
 }
 
 export const DEFAULT_PRECISION = { rtol:1e-4,atolV:1e-5,hMaxS:.25e-6,hMinS:1e-11 } as const;

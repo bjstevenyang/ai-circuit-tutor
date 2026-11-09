@@ -1,4 +1,4 @@
-import { DEFAULT_PRECISION, domainViolation, estimateError, implicitStep, RAMP_S, sourceAt } from './numeric';
+import { DEFAULT_PRECISION, createImplicitStepper, domainViolation, estimateError, RAMP_S, sourceAt } from './numeric';
 import type { emCurrents, ErrorVoltagePair, NumericModel, Precision } from './numeric';
 
 export const NUMERIC_LIMITS = { maxNewton:80,maxAccepted:1_000_000,maxRejected:10_000,batchAttempts:256 } as const;
@@ -21,7 +21,7 @@ export function advanceNumeric(model:NumericModel,input:IntegrationState,targetS
     const requested=reducedLimits[key];
     if(requested!==undefined)limits[key]=Math.max(key==='batchAttempts'?1:0,Math.min(limits[key],Math.floor(requested)));
   }
-  const state={...input},points:AcceptedPoint[]=[];
+  const state={...input},points:AcceptedPoint[]=[],step=createImplicitStepper(model,limits.maxNewton);
   const fail=(outcome:IntegrationFailure['outcome'],reason:string):AdvanceResult=>({ok:false,state,failure:{outcome,reason,timeS:state.timeS}});
   if(!Number.isFinite(targetS)||targetS<state.timeS||targetS>.04)return fail('numerical-failure','无效模拟时间');
   for(let attempt=0;attempt<limits.batchAttempts&&state.timeS<targetS;attempt++) {
@@ -34,9 +34,9 @@ export function advanceNumeric(model:NumericModel,input:IntegrationState,targetS
     if(remaining>h&&remaining-h<precision.hMinS)h=remaining/2;
     if(h<precision.hMinS)return fail('numerical-failure','边界剩余区间小于最小批准步长');
     const endS=state.timeS+h;
-    const full=implicitStep(model,state.voltage,h,endS,limits.maxNewton);
-    const first=implicitStep(model,state.voltage,h/2,state.timeS+h/2,limits.maxNewton);
-    const second=first.ok?implicitStep(model,first.voltage,h/2,endS,limits.maxNewton):first;
+    const full=step(state.voltage,h,endS);
+    const first=step(state.voltage,h/2,state.timeS+h/2);
+    const second=first.ok?step(first.voltage,h/2,endS):first;
     const error=full.ok&&first.ok&&second.ok?estimateError(full.voltage,second.voltage,sourceAt(model,endS),pairs,precision,model.errorProjections):Infinity;
     if(!Number.isFinite(error)||error>1) {
       state.rejected++;
