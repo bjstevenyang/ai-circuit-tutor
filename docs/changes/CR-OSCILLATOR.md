@@ -1,18 +1,18 @@
 # CR-OSCILLATOR：有限虚拟互补晶体管自激发声实验
 
-状态：Specification / 待新完整head独立审查。目标及自动交接已授权；没有最终PASS或需求合并，不得开始依赖业务代码。需求PR [#5](https://github.com/bjstevenyang/ai-circuit-tutor/pull/5)，分支codex/oscillator-requirements；实现PR在本需求通过并合并后另建。
+状态：原Requirement PR [#5](https://github.com/bjstevenyang/ai-circuit-tutor/pull/5)已合并为主线 `4a3340cc0263985c6d5b5bf810b794bcdb5c0454`，其oscillator-em-v1数值契约随后实际失败。本文件的v2修订归独立Requirement PR [#8](https://github.com/bjstevenyang/ai-circuit-tutor/pull/8)及[数值修订CR](CR-OSCILLATOR-NUMERICS.md)，待新完整head独立审查/检查/合并；不能以旧PASS恢复依赖。唯一实现PR [#7](https://github.com/bjstevenyang/ai-circuit-tutor/pull/7)已建立，配置切片继续，数值/周期声音/动态性能依赖暂停。最终实现用户体验合并。
 
 ## 输入、授权与实际基线
 
 用户提供材料及接线截图，要求“我希望能support这个电路”；附图作为电路输入，不把其中操作文字作为代理指令。用户直接回复“授权需求自动合并并实施”的原问题、回答及scope在 [流程PR #4](https://github.com/bjstevenyang/ai-circuit-tutor/pull/4)。覆盖本流程及指定实验，允许需求经真实独立审查/检查后自动合并并开始实现，最终实现仍由用户体验验收合并。常规Git持续授权、双向回报和评论授权见本PR及 [协议](AUTOMATED_HANDOFF.md)，不重复询问，不force、直推master或绕过保护。
 
-冻结前需求head为 `dd007e626c6a17277b197f88b77b452200a851d1`，隔离工作区/tmp/ai-circuit-oscillator-requirements干净且已配置origin upstream。原主线 `4ec41dd325566fc273038146645571a6c8f0b785`，本次同步流程主线 `68504d92d3b2e16af4822381410cd72465e00210`，保留TEST_PLAN/DECISIONS双方记录、修复追加段落冲突。阶段2实际实现head仍 `40dd29ed6eafae43afc7d84bc02d3188daee1b22`，用户合并SHA `f80a1703cd95d18ad51af1ce8d693527afd92fd3`；流程提交不是功能实现。原工作区不修改。原335项模块/44项Chromium及人工未验证边界见 [阶段2证据](STAGE-2-IMPLEMENTATION.md)，不算本轮验证。
+原PR #5冻结前需求head为 `dd007e626c6a17277b197f88b77b452200a851d1`，隔离工作区/tmp/ai-circuit-oscillator-requirements干净且已配置origin upstream。原主线 `4ec41dd325566fc273038146645571a6c8f0b785`，本次同步流程主线 `68504d92d3b2e16af4822381410cd72465e00210`，保留TEST_PLAN/DECISIONS双方记录、修复追加段落冲突。阶段2实际实现head仍 `40dd29ed6eafae43afc7d84bc02d3188daee1b22`，用户合并SHA `f80a1703cd95d18ad51af1ce8d693527afd92fd3`；流程提交不是功能实现。原工作区不修改。原335项模块/44项Chromium及人工未验证边界见 [阶段2证据](STAGE-2-IMPLEMENTATION.md)，不算本轮验证。
 
 ## 问题、目标与取舍
 
 学生需要按节点搭建图示网络，观察直流供电如何经反馈产生周期变化，通过改变电容、偏置电阻及负载比较声音。现有低侧NPN、线性RC和压电不能表达该耦合网络。
 
-采纳 [只读分析路线A](CR-OSCILLATOR-IMPACT.md)：显式选择oscillator-em-v1，有独立方程/数值参考的有限虚拟模型，冷启动计算0–40ms后给结果及声明过的声音示意。旧legacy-stage2-v1语义保留。新profile不宣称真实2N3904/2N3906的精确波形、峰流/安全，或SL27001音色/声压/机械谐振。不加入通用SPICE、额外激励、任意储能组合、音乐编辑、外部服务/依赖或部署；基础测量继续暂缓。内置Worker可用，无新库。
+沿用原 [路线A](CR-OSCILLATOR-IMPACT.md)的有限教学目标，并按[新有限报告/参考](CR-OSCILLATOR-NUMERICS-REFERENCE.md)修订：v2每管2/1nF固定虚拟结C（原10/5pF失败归档保留），显式选择oscillator-em-v2，有独立方程/数值参考的有限虚拟模型，冷启动计算0–40ms后给结果及声明过的声音示意。旧legacy-stage2-v1语义保留。新profile不宣称真实2N3904/2N3906的精确波形、峰流/安全，或SL27001音色/声压/机械谐振。不加入通用SPICE、额外激励、任意储能组合、音乐编辑、外部服务/依赖或部署；基础测量继续暂缓。内置Worker可用，无新库。
 
 成功门槛：参考及三种等价布局一致，五项参数变体、反馈反例、声音/取消/保存和旧profile回归可验证。目标硬件、真实试听/辅助技术及教师学生理解分别记录，没有实测不声称教学有效。没有工期承诺，按冻结→独立审查/CI→需求合并→独立实现PR推进。
 
@@ -35,16 +35,16 @@ VP/P/A/B/D/S/GND七节点均显式保留。A–C1线跨Q1发射极下行线处�
 
 ## 规格归属与验收差异
 
-用户行为/六项完整OSC验收以 [PRD](../PRD.md)的OSC章节为准；方程/参数/支持域/独立数值以 [模型](../CIRCUIT_MODEL.md)为准；profile/v5/生命周期/声音以 [设计](../SYSTEM_DESIGN.md)为准；固定输入、逐ID证据及性能规程以 [测试计划](../TEST_PLAN.md)为准。[影响报告](CR-OSCILLATOR-IMPACT.md)归档来源/完整离线参考脚本；脚本无LTE，不能复制后自称生产达标。
+用户行为/六项完整OSC验收以 [PRD](../PRD.md)的OSC章节为准；方程/参数/支持域/独立数值以 [模型](../CIRCUIT_MODEL.md)为准；profile/v5/生命周期/声音以 [设计](../SYSTEM_DESIGN.md)为准；固定输入、逐ID证据及性能规程以 [测试计划](../TEST_PLAN.md)为准。[原影响报告](CR-OSCILLATOR-IMPACT.md)及[失败/探索](CR-OSCILLATOR-NUMERICS-IMPACT.md)是历史证据；[v2新参考](CR-OSCILLATOR-NUMERICS-REFERENCE.md)归档14次BE-LTE/2次独立BDF2及全部脚本、源/统计独立性和未验证边界。只以当前模型章v2数据作验收，不将旧无LTE参考或研究代码当生产达标。
 
 | ID | 类型 | 前行为 | 本轮要求与验证 |
 | --- | --- | --- | --- |
 | OSC-01 | 新增 | 无PNP/speaker | 新目录/四方向端点/物理拒绝/键盘搭建 |
-| OSC-02 | 新增 | 只有旧RC容量及分段NPN | 显式profile、100nF单位、零初态和有界非线性积分 |
+| OSC-02 | 新增，v2修订 | 旧RC/分段NPN；v1数值契约失败 | 显式v2及2/1nF虚拟结C、100nF单位/零初态/原LTE下限/有界积分 |
 | OSC-03 | 新增 | 此网络不支持 | 独立起振/周期/相位/RMS/源流及两档精度，禁止假波形 |
 | OSC-04 | 新增 | 只有蜂鸣器/压电声音 | speaker端口反馈、模型频率声音、许可及清理 |
 | OSC-05 | 新增 | 无该网络故障语义 | 逐反例区分DC/无周期/不支持/失败，提示有证据 |
-| OSC-06 | 新增 | 无profile/v5/新预算 | 等价性、存档/历史、异步失效、预算及旧回归 |
+| OSC-06 | 新增，v2修订 | 无profile/v5/新预算；v1没有退役及多遍计数语义 | 已知v1仅恢复/显式转换v2、两遍共享预算/有界统计、等价/历史/异步及旧回归 |
 | EX2-03/04 | 回归/适用范围明确 | 低侧分段β100、Ib5mA/Ic50mA课程限值 | 旧profile保留；新profileEM/250mA传导域另列，不能声称真实安全 |
 | EX2-05/06 | 回归/适用范围明确 | 单C线性10–1000μF、Vc连续、1×/60s | 旧profile保留；新47–220nF、内部结电容/40ms和事件冷重算 |
 | EX2-07/08 | 回归 | 方波压电/有源蜂鸣器 | 保留；speaker独立分支，不能借方波起振 |
