@@ -1,6 +1,6 @@
 /** The fixed virtual EM card. None of these values is a real-device safety rating. */
 export const EM = { saturationA: 1e-14, thermalV: 0.02585, betaN: 100, betaP: 50, cbeF: 2e-9, cbcF: 1e-9 } as const;
-export type Junction = { id: string; b: number; c: number; e: number; sign: 1 | -1; beta: number };
+export type Junction = { id: string; b: number; c: number; e: number; sign: 1 | -1; beta: number; saturationA?:number; cbeF?:number; cbcF?:number };
 export type NumericModel = {
   size: number;
   g: Float64Array;
@@ -18,19 +18,20 @@ export const POSITIVE = -1, GROUND = -2;
 export const nodeVoltage = (v: Float64Array, index: number, source: number) => index === POSITIVE ? source : index === GROUND ? 0 : v[index]!;
 
 /** Linear extension is a Newton trial safeguard; accepted biases are checked below 0.9V. */
-function exponential(bias: number): readonly [number, number] {
+function exponential(bias: number, saturationA: number): readonly [number, number] {
   const z = bias / EM.thermalV;
   if (z > 40) {
     const e = Math.exp(40);
-    return [EM.saturationA * (e * (1 + z - 40) - 1), EM.saturationA * e / EM.thermalV];
+    return [saturationA * (e * (1 + z - 40) - 1), saturationA * e / EM.thermalV];
   }
   const e=Math.exp(z);
-  return [EM.saturationA * (Math.abs(z)<1e-5?Math.expm1(z):e-1), EM.saturationA * e / EM.thermalV];
+  return [saturationA * (Math.abs(z)<1e-5?Math.expm1(z):e-1), saturationA * e / EM.thermalV];
 }
 export function emCurrents(t: Junction, v: Float64Array, source: number) {
   const vb = nodeVoltage(v,t.b,source), vc = nodeVoltage(v,t.c,source), ve = nodeVoltage(v,t.e,source);
   const vbe = t.sign * (vb-ve), vbc = t.sign * (vb-vc);
-  const [forward,df] = exponential(vbe), [reverse,dr] = exponential(vbc);
+  const saturationA=t.saturationA??EM.saturationA;
+  const [forward,df] = exponential(vbe,saturationA), [reverse,dr] = exponential(vbc,saturationA);
   const ib = t.sign * (forward/t.beta + reverse), ic = t.sign * (forward-2*reverse);
   return { ib, ic, ie:-ib-ic, df, dr, vbe, vbc };
 }

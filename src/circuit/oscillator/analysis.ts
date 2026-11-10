@@ -47,7 +47,7 @@ function portValues(compiled:CompiledOscillator,point:AcceptedPoint,includePorts
   for(let index=0;index<compiled.model.transistors.length;index++) {
     const t=compiled.model.transistors[index]!,q=point.junctions?.[index]??emCurrents(t,point.voltage,source);
     const dd=(index:number)=>nodeVoltage(point.derivative,index,sourceSlope);
-    const be=EM.cbeF*(dd(t.b)-dd(t.e)),bc=EM.cbcF*(dd(t.b)-dd(t.c));
+    const be=(t.cbeF??EM.cbeF)*(dd(t.b)-dd(t.e)),bc=(t.cbcF??EM.cbcF)*(dd(t.b)-dd(t.c));
     const ib=q.ib+be+bc,ic=q.ic-bc,ie=q.ie-be;
     if(includePorts)ports[t.id]={conductionA:{b:q.ib,c:q.ic,e:q.ie},displacementA:{b:be+bc,c:-bc,e:-be},totalA:{b:ib,c:ic,e:ie}};
     if(t.b===POSITIVE)sourceCurrentA+=ib;if(t.c===POSITIVE)sourceCurrentA+=ic;if(t.e===POSITIVE)sourceCurrentA+=ie;

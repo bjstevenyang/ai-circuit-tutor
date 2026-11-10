@@ -1,10 +1,11 @@
 import { getComponentPins } from '../board';
 import { resistanceOf } from '../catalog';
+import { transistorParameters } from '../transistorModels';
 import { buildNets } from '../network';
 import { profileOf, supplyVoltageOf } from '../parameters';
 import type { CircuitDocument, SimulationControls } from '../types';
 import { readCircuitDocument } from '../validation';
-import { EM, GROUND, POSITIVE, solveDense } from './numeric';
+import { GROUND, POSITIVE, solveDense } from './numeric';
 import type { Junction } from './numeric';
 import type { CompileOscillatorResult, PassiveBranch, Reconstruction } from './types';
 
@@ -54,8 +55,9 @@ export function compileOscillator(input:CircuitDocument,controls:SimulationContr
       branches.push({id:part.id,a,b,value:part.capacitanceF!,kind:'capacitor'});stamp(capacitance,cSource,a,b,part.capacitanceF!);dynamic.add(a);dynamic.add(b);
     } else if(part.kind==='npn'||part.kind==='pnp') {
       const c=node(pins[1]),e=node(pins[2]!);
-      transistors.push({id:part.id,b:a,c,e,sign:part.kind==='npn'?1:-1,beta:part.kind==='npn'?EM.betaN:EM.betaP});
-      stamp(capacitance,cSource,a,e,EM.cbeF);stamp(capacitance,cSource,a,c,EM.cbcF);
+      const parameters=transistorParameters(part.kind,part.transistorModel);
+      transistors.push({id:part.id,b:a,c,e,sign:part.kind==='npn'?1:-1,...parameters});
+      stamp(capacitance,cSource,a,e,parameters.cbeF);stamp(capacitance,cSource,a,c,parameters.cbcF);
       dynamic.add(a);dynamic.add(c);dynamic.add(e);
     }
   }

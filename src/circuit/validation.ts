@@ -1,4 +1,5 @@
 import { COMPONENTS } from './catalog';
+import { isTransistorModelForKind } from './transistorModels';
 import { getComponentPins, ENDPOINT_BY_ID } from './board';
 import { MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from './types';
 import { DEFAULT_SUPPLY_VOLTAGE, isCapacitance, isKnownModelProfile, isResistance, isSupplyVoltage } from './parameters';
@@ -12,6 +13,7 @@ export function validComponent(value: unknown): value is ComponentInstance {
   if(value.position!==undefined&&(value.kind!=='potentiometer'||!percentage(value.position)))return false;
   if(value.light!==undefined&&(value.kind!=='ldr'||!percentage(value.light)))return false;
   if(value.kind==='capacitor' ? !isCapacitance(value.capacitanceF) : value.capacitanceF!==undefined)return false;
+  if(!isTransistorModelForKind(value.kind, value.transistorModel))return false;
   return getComponentPins(value as ComponentInstance)!==null;
 }
 export function readCircuitDocument(value: unknown): CircuitDocument | null {
@@ -37,7 +39,7 @@ export function readCircuitDocument(value: unknown): CircuitDocument | null {
     if(!v5&&(['pnp','speaker'].includes(part.kind)||part.kind==='capacitor'&&(part.capacitanceF??0)<10e-6))return null;
     components.push({id:part.id,kind:part.kind,anchor:part.anchor,rotation:part.rotation,
       ...(part.resistance===undefined?{}:{resistance:part.resistance}),...(part.closed===undefined?{}:{closed:part.closed}),
-      ...(part.position===undefined?{}:{position:part.position}),...(part.light===undefined?{}:{light:part.light}),...(part.capacitanceF===undefined?{}:{capacitanceF:part.capacitanceF})});
+      ...(part.position===undefined?{}:{position:part.position}),...(part.light===undefined?{}:{light:part.light}),...(part.capacitanceF===undefined?{}:{capacitanceF:part.capacitanceF}),...(part.transistorModel===undefined?{}:{transistorModel:part.transistorModel})});
   }
   if((!v5||value.modelProfileId==='legacy-stage2-v1')&&!components.some(p=>['rgb-led','npn','capacitor','piezo-passive','pnp','speaker'].includes(p.kind))&&components.filter(p=>['led','diode','buzzer'].includes(p.kind)).length>MAX_POLAR_COMPONENTS)return null;
   const wires: Wire[]=[];

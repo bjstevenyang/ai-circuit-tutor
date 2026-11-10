@@ -12,7 +12,7 @@ export type EditCommand =
   | { type: 'update-wire'; id: string; color?: string; bend?: Wire['bend'] }
   | { type: 'reconnect-wire'; id: string; endpoint: WireEnd; to: string }
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
-  | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF'> }
+  | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF' | 'transistorModel'> }
   | { type: 'set-source'; mode: 'battery'|'teaching-square' }
   | { type: 'set-profile'; profile: RunnableModelProfileId }
   | { type: 'set-frequency'; value: 250|500|1000 }
