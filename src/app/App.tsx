@@ -140,6 +140,11 @@ export function App() {
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
   const profile=profileOf(document);
+  const runningControlHints = [
+    document.components.some(part => part.kind === 'switch') && '开关点击切换',
+    document.components.some(part => part.kind === 'button') && '黄色按钮按住接通',
+  ].filter(Boolean).join('；');
+  const runningStatus = runningControlHints ? `运行中 · ${runningControlHints}。` : '运行中 · 点击“停止运行”结束。';
   const oscillatorSession=useRef<OscillatorSession|null>(null);
   if(oscillatorSession.current===null){oscillatorSession.current=new OscillatorSession();}
   const backgroundResume=useRef(false);
@@ -407,7 +412,7 @@ export function App() {
               else {setTool('inspect');run();}
             }}><Icon name={running?'stop':'play'} size={16} />{running?'停止运行':'运行电路'}</button>
           </div>
-          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?(profile==='oscillator-em-v2'?'后台已暂停 · 返回前台从零初态重算。':'后台已暂停 · 返回前台继续，不补算离开时间。'):state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?(state.analysis?.mode==='oscillator'&&!state.analysis.oscillator?`计算中 · 分析进度 ${(((state.progress?.pass??1)-1)*50+(state.progress?.timeS??0)/.04*50).toFixed(0)}% · 从初态重算`:'运行中 · 开关点击切换；黄色按钮按住接通。'):'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
+          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?(profile==='oscillator-em-v2'?'后台已暂停 · 返回前台从零初态重算。':'后台已暂停 · 返回前台继续，不补算离开时间。'):state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?(state.analysis?.mode==='oscillator'&&!state.analysis.oscillator?`计算中 · 分析进度 ${(((state.progress?.pass??1)-1)*50+(state.progress?.timeS??0)/.04*50).toFixed(0)}% · 从初态重算`:runningStatus):'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}

@@ -15,6 +15,24 @@ const stop=()=>fireEvent.click(screen.getByRole('button',{name:'停止运行'}))
 const status=()=>screen.getByRole('status',{name:'仿真状态'});
 
 describe('explicit simulation lifecycle',()=>{
+  it.each([
+    [false,false,'运行中 · 点击“停止运行”结束。'],
+    [true,false,'运行中 · 开关点击切换。'],
+    [false,true,'运行中 · 黄色按钮按住接通。'],
+    [true,true,'运行中 · 开关点击切换；黄色按钮按住接通。'],
+  ] as const)('running instructions match actual controls (switch=%s, button=%s)',(hasSwitch,hasButton,message)=>{
+    const document=hasSwitch?switchedCircuit():hasButton?switchedCircuit(true):validCircuit();
+    if(hasSwitch&&hasButton){
+      document.components.push(createComponent('button','e20',0,'momentary'));
+      document.wires=document.wires.map(wire=>wire.to==='battery:-'?{...wire,to:'d20'}:wire);
+      document.wires.push(makeWire('j20','battery:-'));
+    }
+    open(document);
+    expect(status()).toHaveTextContent('已停止');
+    start();expect(status()).toHaveTextContent(message);
+    stop();expect(status()).toHaveTextContent('已停止');
+  });
+
   it('starts stopped, clears live output on stop, and resumes without editing or saving the circuit',()=>{
     open(validCircuit());
     const saved=localStorage.getItem(STORAGE_KEY);

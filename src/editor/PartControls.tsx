@@ -1,5 +1,5 @@
 import { COMPONENTS, getComponentPins, MIN_RESISTANCE, MAX_RESISTANCE } from '../circuit';
-import type { ComponentInstance, ComponentReading, ModelProfileId } from '../circuit';
+import type { ComponentInstance, ComponentReading, ModelProfileId, TransistorModelId } from '../circuit';
 import { NumberEditor } from './NumberEditor';
 import { relativeLedBrightness } from './ledAppearance';
 import { CapacitanceEditor } from './CapacitanceEditor';
@@ -29,7 +29,7 @@ export function PartControls({part,reading,pressed,onConfigure,onPress,autoAnnou
       onKeyUp={e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();onPress(false);}}}>{pressed?'正在按下':'按住接通，松开断开'}</button>}
     {part.kind==='potentiometer'&&<><label>总阻值 <select aria-label="电位器总阻值" value={part.resistance??10000} onChange={e=>onConfigure({resistance:Number(e.target.value)})}>{[1000,10000,100000].map(value=><option key={value} value={value}>{value/1000} kΩ</option>)}</select></label><label className="range-control">旋钮位置 <input aria-label="旋钮位置" type="range" min="0" max="100" step="1" value={part.position??50} onChange={e=>onConfigure({position:Number(e.target.value)})}/><output>{part.position??50}%</output></label></>}
     {part.kind==='ldr'&&<label className="range-control">模拟光照 <input aria-label="模拟光照" type="range" min="0" max="100" step="1" value={part.light??50} onChange={e=>onConfigure({light:Number(e.target.value)})}/><output>{part.light??50}%</output></label>}
-    {(part.kind==='npn'||part.kind==='pnp')&&profile==='oscillator-em-v2'&&<div className="transistor-model-settings"><label>晶体管参数模型 <select aria-label="晶体管参数模型" value={part.transistorModel??'generic'} onChange={e=>onConfigure({transistorModel:e.target.value as ComponentInstance['transistorModel']})}><option value="generic">通用虚拟模型（原版）</option><option value={part.kind==='npn'?'2n3904':'2n3906'}>{part.kind==='npn'?'2N3904':'2N3906'}（SPICE 参数子集）</option></select></label><small>型号参数来自已公开的 SPICE 模型；仅使用 IS/BF/CJE/CJC 的固定线性近似，非完整 SPICE、未验证真实振荡频率、器件安全或实际封装引脚。</small></div>}
+    {(part.kind==='npn'||part.kind==='pnp')&&profile==='oscillator-em-v2'&&<div className="transistor-model-settings"><label>晶体管参数模型 <select aria-label="晶体管参数模型" value={part.transistorModel??'generic'} onChange={e=>onConfigure({transistorModel:e.target.value as TransistorModelId})}><option value="generic">通用虚拟模型（原版）</option><option value={part.kind==='npn'?'2n3904':'2n3906'}>{part.kind==='npn'?'2N3904':'2N3906'}（SPICE 参数子集）</option></select></label><small>型号参数来自已公开的 SPICE 模型；仅使用 IS/BF/CJE/CJC 的固定线性近似，非完整 SPICE、未验证真实振荡频率、器件安全或实际封装引脚。</small></div>}
     {part.kind==='capacitor'&&<CapacitanceEditor key={`${part.id}:${profile}`} part={part} profile={profile} onApply={capacitanceF=>onConfigure({capacitanceF})}/>}
     {reading&&<span className="part-reading" aria-live={autoAnnounce?'polite':'off'}>{COMPONENTS[part.kind].name}：{reading.currentMa===undefined?'电流未提供':`${reading.currentMa.toFixed(4)} mA`}{reading.resistanceOhms!==undefined?` · ${Math.round(reading.resistanceOhms).toLocaleString()} Ω`:''}{reading.on!==undefined?` · ${reading.on?'工作中':'未导通/未鸣响'}`:''}</span>}
   </>;

@@ -13,7 +13,7 @@ export function validComponent(value: unknown): value is ComponentInstance {
   if(value.position!==undefined&&(value.kind!=='potentiometer'||!percentage(value.position)))return false;
   if(value.light!==undefined&&(value.kind!=='ldr'||!percentage(value.light)))return false;
   if(value.kind==='capacitor' ? !isCapacitance(value.capacitanceF) : value.capacitanceF!==undefined)return false;
-  if(!isTransistorModelForKind(value.kind, value.transistorModel))return false;
+  if(!isTransistorModelForKind(value.kind as ComponentInstance['kind'], value.transistorModel))return false;
   return getComponentPins(value as ComponentInstance)!==null;
 }
 export function readCircuitDocument(value: unknown): CircuitDocument | null {

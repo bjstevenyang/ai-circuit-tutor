@@ -368,3 +368,22 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 `npm run typecheck`通过；`npm run build`通过（含类型检查）；对本次12个改动代码/测试文件的`npx eslint`通过，`git diff --check`及文档引用/围栏检查通过。没有运行全套lint、模块／Chromium／性能；本次提交使用`[skip ci]`遵从不再自动跑全套的要求，不声称远端CI通过。
 
 现有1×／≤0.05s批次无法保证看清1ms瞬态，未新增时间缩放或曲线。真实学生观察、设备／辅助技术及既有未验证性能边界仍未验证。master直接修改／提交／推送只沿用本轮用户明确指示，不作为后续任务默认流程。
+
+## 运行提示按实际控件显示：2026-11-10
+
+用户报告自激电路没有黄色按钮，却仍出现“开关点击切换；黄色按钮按住接通”。根因是 `App.tsx` 在所有运行结果后使用同一固定文案。本次为 AC-17 状态清晰度的范围内缺陷修复，回归 AC-11/18；无验收 ID 增删，无电气模型、运行生命周期或存档行为变更。
+
+本次实现基线为 `2c4d8730a648adc2809c186ec81c7d9ba2bcbc27`，master 工作区干净，沿用既有 Git 授权在 `codex/contextual-running-hint` 修复分支交付。既有完整验证记录是上述 `f108d7b` 的453项模块与48个Chromium场景，不视为最新型号扩展提交的通过证据。当前基线在 `validation.ts`／`PartControls.tsx` 有两处严格类型错误，已在未修改的 HEAD 临时快照执行 `tsc --noEmit` 独立复现；本次同时收窄已由运行时目录校验的元件类型与非空型号选择类型，未修改运行时校验或型号参数。
+
+| 验收／场景 | 实际证据与结果 |
+| --- | --- |
+| AC-17：无控件、仅开关、仅按钮、两者都有 | `src/app/Simulation.test.tsx` 新增4个真实App场景；只描述实际存在的控件，无控件显示“运行中 · 点击‘停止运行’结束。”；开始／停止状态保留 |
+| AC-17、OSC-06：无开关／按钮的自激电路 | `src/app/OscillatorLifecycle.test.tsx` 在现有Worker完成场景增加状态断言，计算中、完成、过期回调及停止原断言保留；该场景模拟Worker，不是重跑数值积分 |
+| AC-17／AC-08：实际Chromium搭建与刷新 | `tests/e2e/lesson.spec.ts` 的 `build a valid circuit, inspect connections, and restore after reload` 增加状态栏断言；独立测试上下文，不读取用户作品 |
+| AC-11/18、OSC-06：相邻生命周期 | 两个上述App测试文件共15项通过，覆盖开关、按钮释放、声音停止、自激取消／后台／故障与原有显示；不是全套应用测试 |
+
+修复前命令 `npm test -- src/app/Simulation.test.tsx src/app/OscillatorLifecycle.test.tsx -t 'running instructions|publishes calculating'`：4失败／1通过／10未匹配跳过，失败文本均为错误固定提示。修复后 `npm test -- src/app/Simulation.test.tsx src/app/OscillatorLifecycle.test.tsx`：15/15通过。类型收窄后 `npm test -- src/circuit/transistorModels.test.ts`：4/4通过。
+
+`CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/lesson.spec.ts --project=chromium --workers=1 -g 'build a valid circuit'`：1/1通过；首次受沙箱端口限制未启动，经既有执行授权重试通过，不把首次记为场景失败。`npm run build`（含严格类型检查）通过；对本次6个代码／测试文件的 `npx eslint` 通过。提交前另执行差异和文档检查。
+
+沿用最近的定向验证安排，本次未运行模块、Chromium或性能全套，提交标记 `[skip ci]`，不声称远端CI通过；Firefox／WebKit、目标硬件和人工验证未执行。自动协调继续暂停；修复PR不自动合并。
