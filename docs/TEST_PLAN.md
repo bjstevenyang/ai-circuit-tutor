@@ -414,3 +414,24 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 `npm run build`（含strict类型检查）通过；对 `analysis.ts`、`namedModels.test.ts`、`oscillator.spec.ts` 的定向 `npx eslint` 通过；提交前检查文档本地引用／围栏及差异。所有执行针对基线加本次工作树，最终完整提交SHA由交付报告固定。
 
 未执行全套模块／浏览器／性能、目标M1/8GB的P95／内存、真实后台／辅助技术／试听／师生验证；不把本机定向通过当作任意具名组合可用或真实型号模型验证。两档一致只是同一实现的数值收敛核对，不冒充第二独立求解器。沿用定向验证安排使用 `[skip ci]`，不声称远端CI通过。自动协调及跨聊天回报继续暂停；不合并master。
+
+## 自激v2容量扩容定向验证：2026-11-10
+
+授权及实施基线见[决定D66](DECISIONS.md#自激v2电容上限1μf2026-11-10)。修改OSC-02和OSC-06／AC-08的v2容量范围，47–220nF扩为47–1000nF；无新增／删除验收ID。只核对本次范围及受影响回归，不扩大为整个OSC／EX2重新验收。
+
+| 受影响验收 | 测试文件／场景及实际证据 |
+| --- | --- |
+| OSC-02：新上限、预设、单位、原子校验 | `capacitanceRange.test.ts`三组221／500／1000nF编辑与精确保值；`catalog.test.ts`覆盖47nF／1μF边界、超限与间隙；`CapacitanceEditor.test.tsx`输入1μF得到精确1e-6F及新预设；Chromium `nF/μF conversion`场景验证应用／错误草稿不覆盖 |
+| OSC-06、AC-08：合法v5存档往返 | 新容量测试覆盖保存／加载；`storage/oscillator.test.ts`验证原迁移／未知版本保护；同一Chromium场景验证刷新后1000nF=1μF，配置值不变 |
+| AC-07／14：历史和校验回归 | 新容量的撤销／重做；超限1.001μF、非有限／未完成／重复单位拒绝；Chromium撤销回200nF、重做到1μF并恢复 |
+| OSC-03–05、AC-17：局部运行／音频回归 | 新容量测试：通用1μF完成40ms且KCL≤1nA、有限读数、计数预算内；具名1μF当前明确数值失败且无读数／频率。Chromium `OSC model cards`验证100nF具名近直流→1μF数值失败清旧读数／连续音→100nF通用重新周期及音频；未重跑独立数值金标准全表 |
+| EX2-05／10、OSC-06：旧模型与格式保护 | `legacyCapacitance.test.ts`4项覆盖原实验100nF及间隙；新容量测试保持旧v1和legacy拒绝1μF、schema4拒绝1μF但保留100μF、默认仍100nF；存储测试覆盖旧schema迁移 |
+
+实际命令及结果：
+
+- 测试先行：新文件和1μF界面场景在旧实现6失败／1通过；失败由编辑拒绝或运行前结构拒绝引起，确认原限制。
+- `npm test -- src/circuit/oscillator/capacitanceRange.test.ts src/editor/CapacitanceEditor.test.tsx src/circuit/catalog.test.ts src/circuit/legacyCapacitance.test.ts src/storage/oscillator.test.ts`：5文件53项通过。UI测试类型修正后单独重跑`npm test -- src/editor/CapacitanceEditor.test.tsx --reporter=dot`，15项通过；不重复计入53项。
+- `CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/oscillator.spec.ts --project=chromium --workers=1 -g 'nF/μF conversion|OSC model cards'`：转换／恢复场景通过；型号场景新增断言最初误以为失败时整个诊断读数容器消失，改为保留最后接受时刻、无元件读数／扬声器端口。最终以同命令的`-g 'OSC model cards'`定向重跑通过。两种场景均有通过证据，不声称同一批全套通过。
+- `npm run build`：严格TypeScript及生产构建通过。对4个改动源码和4个测试文件执行`npx eslint`通过；另执行Markdown相对链接／代码围栏和`git diff --check`。
+
+已知未闭合项：当前具名2N3904／2N3906配1μF在约7.103511872ms报告Newton阻尼未收敛；本次只扩输入／保存范围，未改变求解器或宣称该组合完成40ms。更大容量下可能不足以检测稳定周期；不保证发声或真实器件效果。未执行全套模块／浏览器／性能、远端CI、Firefox／WebKit、设备试听、目标硬件及人工教学／辅助技术验证。提交使用`[skip ci]`，未执行不得写通过；自动协调保持暂停。

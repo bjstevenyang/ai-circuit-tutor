@@ -457,3 +457,12 @@ Chromium总场景为44（原35＋新9），实际执行结果以实施证据为�
 - [oscillator.spec.ts](../tests/e2e/oscillator.spec.ts)：新增1个Chromium场景，验证真实Worker完成双具名计算、型号选择保存、近直流清旧声，切回通用卡后重新获得稳定周期及音频。
 
 仅定向执行，22个不同模块／会话场景分次通过、1个Chromium场景通过；命令、变更验收与未验证项见[测试计划](TEST_PLAN.md#可选晶体管型号步长修复2026-11-10)。不重写旧章节数量，不声称全套或设备试听通过。
+
+## 20. 自激v2电容扩至1μF（2026-11-10）
+
+- [capacitanceRange.test.ts](../src/circuit/oscillator/capacitanceRange.test.ts)：新增6项，包含221／500／1000nF精确应用／撤销／保存、旧模型与格式保护，以及1μF通用／具名参考的有限计算与诚实失败输出。
+- [CapacitanceEditor.test.tsx](../src/editor/CapacitanceEditor.test.tsx)：新增1项，1μF单位换算与预设；原超限草稿由221nF改为1001nF。
+- [catalog.test.ts](../src/circuit/catalog.test.ts)：合法范围表新增221／500／1000nF三项，更新超限边界，继续验证原实验模型拒绝其他容量。
+- [oscillator.spec.ts](../tests/e2e/oscillator.spec.ts)：扩展现有2个Chromium场景，覆盖1μF应用／错误保护／撤销／刷新，以及具名卡数值失败不残留旧读数或声音、恢复100nF通用周期；无新增浏览器场景。
+
+本轮5文件53项模块／界面测试通过，两个受影响Chromium场景分次通过，严格构建及定向静态检查通过。具体命令／逐ID证据及具名1μF尚未收敛的限制见[测试计划](TEST_PLAN.md#自激v2容量扩容定向验证2026-11-10)；历史全套计数不改写。

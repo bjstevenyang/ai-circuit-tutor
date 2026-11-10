@@ -169,7 +169,7 @@ v4 仅持久化经过白名单验证的配置；不包含实际 Vc、时间、�
 
 ### 权威状态、接口及异步边界
 
-CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。按D64，当前所有profile新建电容默认100e-9F；原实验模型“应用”只接受100nF或10–1000μF，自激v1/v2仍47–220nF，不能只用原实验模型的最小／最大值检查而放过间隙。读取配置允许原有两容量范围并集，分析支持域另校验。默认值只在新建时补入，不重写已有作品容量，schema仍5。
+CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。按D64，当前所有profile新建电容默认100e-9F；原实验模型“应用”只接受100nF或10–1000μF，按D66，自激v2为47–1000nF（0.047–1μF），已知旧v1保持47–220nF，不能只用原实验模型的最小／最大值检查而放过间隙。读取v5配置允许[47,1000]nF与[10,1000]μF两范围并集，分析支持域另校验。默认值只在新建时补入，不重写已有作品容量，schema仍5。
 
 可运行profile只有legacy-stage2-v1与oscillator-em-v2；新建作品默认legacy，明确选择“自激发声·虚拟模型v2”才使用新参数。已知oscillator-em-v1为可恢复的旧模型配置：保留全部ID/位置/参数/接线及47–220nF值，显示“旧版虚拟模型，需显式切换v2”，不创建Worker或播放/计算，运行返回unsupported-model-version。已知v1配置编辑仍用47–220nF范围/新建电容100nF默认及同一物理目录，合法编辑可保存，但不触发计算。菜单不把v1呈现为可新建的可用模型；其当前旧版标签仍可读。用户显式选v2是一次可撤销配置编辑，停止/清旧generation，不缩放容量或自动改线；撤销回v1再次只恢复不运行。schema版本仍5，未知profile与已知不运行的v1必须分开：未知值保护原存档，不默退legacy/v2。此转换不会自动产生额外实验或实施授权。
 
@@ -212,7 +212,7 @@ AudioContext仅手势内创建/恢复，复用现有会话许可和15ms平滑增
 
 ### v5保存及迁移
 
-存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind，v4电容仍只接受10–1000μF，不能借当前100nF增补放宽历史格式或修改旧fixture字节／哈希；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。v5容量F严格验证[47,220]nF与[10,1000]μF两范围并集，缺字段不猜；原实验模型100nF已在该并集中，无需schema升级。原100μF等合法存档按原值恢复，不替换为新默认。保存物理合法但profile不支持的组合，运行说明限制。
+存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind，v4电容仍只接受10–1000μF，不能借当前100nF增补放宽历史格式或修改旧fixture字节／哈希；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。按D66，v5容量F严格验证[47,1000]nF与[10,1000]μF两范围并集，缺字段不猜；原实验模型100nF已在该并集中，无需schema升级。原100μF等合法存档按原值恢复，不替换为新默认。保存物理合法但profile不支持的组合，运行说明限制。
 
 不保存模拟时间/节点电压/电荷/积分历史/显示采样/Worker/运行态/周期缓存/诊断/提示/许可/音量/未应用草稿。加载只读，下一次成功保存才写v5；未知modelProfileId/schema、结构/物理损坏保护原文本并暂停自动覆盖，不能退回旧模型默算。写失败保留内存作品和重试。撤销/重做包含profile/参数，50步上限不变，恢复配置不恢复瞬态。
 

@@ -65,7 +65,7 @@ describe('OSC-02 explicit profile and capacitance edits',()=>{
     expect(createComponent('capacitor','c13',0,'new','oscillator-em-v2').capacitanceF).toBe(100e-9);
     expect(createComponent('capacitor','c13',0,'old').capacitanceF).toBe(100e-9);
   });
-  it.each([47e-9,100e-9,220e-9])('accepts the oscillator boundary %s and only the approved 100nF legacy addition',capacitanceF=>{
+  it.each([47e-9,100e-9,220e-9,221e-9,500e-9,1e-6])('accepts the oscillator boundary %s and only the approved 100nF legacy addition',capacitanceF=>{
     const part={...createComponent('capacitor','c13',0,'cap','oscillator-em-v2'),capacitanceF};
     const oscillator={...createEmptyDocument(),modelProfileId:'oscillator-em-v2' as const};
     expect(applyEdit(oscillator,{type:'place',component:part}).ok).toBe(true);
@@ -74,7 +74,7 @@ describe('OSC-02 explicit profile and capacitance edits',()=>{
     expect(readCircuitDocument(stored)).not.toBeNull();
     if(capacitanceF!==100e-9)expect(analyzeCircuit(stored).diagnostics[0]?.reason).toContain('100 nF或10–1000');
   });
-  it.each([0,46e-9,221e-9,1e-6,9e-6,1001e-6,NaN,Infinity])('rejects out-of-range or gap configuration %s atomically',capacitanceF=>{
+  it.each([0,46e-9,1.001e-6,2e-6,9e-6,1001e-6,NaN,Infinity])('rejects out-of-range or gap configuration %s atomically',capacitanceF=>{
     const d={...createEmptyDocument(),modelProfileId:'oscillator-em-v2' as const,components:[createComponent('capacitor','c13',0,'cap','oscillator-em-v2')]};
     expect(applyEdit(d,{type:'configure',id:'cap',settings:{capacitanceF}}).ok).toBe(false);
     expect(d.components[0]?.capacitanceF).toBe(100e-9);
