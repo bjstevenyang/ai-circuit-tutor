@@ -34,7 +34,7 @@ export function npnExperiment(rb=10000,closed=true):CircuitDocument{return circu
   r('rb',rb,'S','B'),r('down',100000,'B','N'),r('ref',100000,'P','C'),{id:'s',kind:'switch',nets:['P','S'],settings:{closed}},
 ]);}
 export function rcExperiment():CircuitDocument{return circuitFixture([
-  {id:'cap',kind:'capacitor',nets:['X','N']},r('charge',10000,'SC','X'),r('discharge',10000,'X','SD'),
+  {id:'cap',kind:'capacitor',nets:['X','N'],settings:{capacitanceF:100e-6}},r('charge',10000,'SC','X'),r('discharge',10000,'X','SD'),
   {id:'sc',kind:'switch',nets:['P','SC'],settings:{closed:true}},{id:'sd',kind:'switch',nets:['SD','N'],settings:{closed:false}},
 ]);}
 export function piezoExperiment(extraResistance=0):CircuitDocument{const d=circuitFixture([

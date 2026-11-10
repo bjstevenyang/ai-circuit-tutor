@@ -1,6 +1,6 @@
 import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from '../circuit';
 import { validComponent } from '../circuit/validation';
-import { capacitanceRange, isKnownModelProfile, isSupplyVoltage, profileOf } from '../circuit/parameters';
+import { isCapacitanceForProfile, isKnownModelProfile, isSupplyVoltage, profileOf } from '../circuit/parameters';
 import type { CircuitDocument, ComponentInstance, Rotation, RunnableModelProfileId, Wire } from '../circuit';
 
 export type WireEnd = 'from' | 'to';
@@ -123,8 +123,7 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
   const changedCap = command.type === 'place' && command.component.kind === 'capacitor' ? command.component :
     command.type === 'configure' && command.settings.capacitanceF !== undefined ? next.components.find(p => p.id === command.id) : undefined;
   if (changedCap) {
-    const [min, max] = capacitanceRange(document);
-    if (changedCap.capacitanceF === undefined || changedCap.capacitanceF < min || changedCap.capacitanceF > max)
+    if (!isCapacitanceForProfile(changedCap.capacitanceF,profileOf(document)))
       return { ok:false, error:'电容值不在当前实验模型的支持范围内，请检查单位。' };
   }
   const error = validateDocument(next);

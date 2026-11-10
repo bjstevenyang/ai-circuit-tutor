@@ -8,18 +8,19 @@ export function parseParameter(text: string, min: number, max: number): number |
   return Number.isFinite(number)&&number>=min&&number<=max?number:null;
 }
 
-export function NumberEditor({label,value,unit,min,max,onApply}:{label:string;value:number;unit:string;min:number;max:number;onApply:(value:number)=>void}) {
+export function NumberEditor({label,value,unit,min,max,onApply,isAllowed,rangeLabel}:{label:string;value:number;unit:string;min:number;max:number;onApply:(value:number)=>void;isAllowed?:(value:number)=>boolean;rangeLabel?:string}) {
   const [draft,setDraft]=useState(String(value)),[error,setError]=useState('');
   const id=useId();
+  const range=rangeLabel??`${min.toLocaleString()}–${max.toLocaleString()} ${unit}`;
   return <form className="number-editor" aria-label={`${label}设置`} noValidate onSubmit={event=>{
     event.preventDefault();
     const number=parseParameter(draft,min,max);
-    if(number===null){setError(`请输入 ${min.toLocaleString()}–${max.toLocaleString()} ${unit} 范围内的有效数值。`);return;}
+    if(number===null||isAllowed&&!isAllowed(number)){setError(`请输入 ${range} 范围内的有效数值。`);return;}
     setError('');setDraft(String(number));if(number!==value)onApply(number);
   }}>
     <label htmlFor={id}>{label}</label>
     <div className="number-editor-fields"><input id={id} type="text" inputMode="decimal" value={draft} aria-invalid={!!error} aria-describedby={`${id}-range${error?` ${id}-error`:''}`} onChange={event=>{setDraft(event.target.value);setError('');}}/><span>{unit}</span><button className="small-button">应用{label}</button></div>
-    <small id={`${id}-range`}>{min.toLocaleString()}–{max.toLocaleString()} {unit}</small>
+    <small id={`${id}-range`}>{range}</small>
     {error&&<p id={`${id}-error`} role="alert">{error}</p>}
   </form>;
 }

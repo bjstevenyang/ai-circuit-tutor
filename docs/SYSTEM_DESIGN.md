@@ -122,7 +122,7 @@ PartControls 的接线区域显示三个实际孔位、W 滑臂含义、A–W／
 
 ### 状态边界与接口职责
 
-CircuitDocument v4 保留 boardId，lessonId 使用 dc-lab-v2；新增 kind 为 rgb-led、npn、capacitor、piezo-passive。仅 capacitor 存 capacitanceF（10e-6–1000e-6，默认100e-6）；固定参数由目录读取，不复制到实例。新增必填 sourceMode=battery|teaching-square、signalFrequencyHz=250|500|1000（默认500）；supplyVoltage 始终表示直流电池设定，信号模式不改它。切源／频率经单次编辑，可撤销／保存，电源端点 ID 保持不变。虚拟信号源不计板上元件数。
+CircuitDocument v4 保留 boardId，lessonId 使用 dc-lab-v2；新增 kind 为 rgb-led、npn、capacitor、piezo-passive。仅 capacitor 存 capacitanceF（10e-6–1000e-6，原v4新建默认100e-6；本段是旧格式契约，不代表当前v5新建默认）；固定参数由目录读取，不复制到实例。新增必填 sourceMode=battery|teaching-square、signalFrequencyHz=250|500|1000（默认500）；supplyVoltage 始终表示直流电池设定，信号模式不改它。切源／频率经单次编辑，可撤销／保存，电源端点 ID 保持不变。虚拟信号源不计板上元件数。
 
 运行会话独立于作品，包含 sessionId、documentRevision、状态 stopped/running/background-paused/fault、模拟时间、capacitor 状态、上次接受的结果；不再仅以 analysis 是否为空推导动态运行。新分析结果区分 DC／RC／周期驱动、失败原因、逐实例及逐通道读数和输出状态；未知值省略。诊断证据显式含实例、可选通道／脚、模拟时间和版本，caption 不把通道字符串误当实例 ID。核心纯函数接受文档、控制输入及显式时间状态／事件，返回同一时刻的新状态和结果；失败不推进时间。UI 调度／AudioContext／localStorage 均在核心以外。
 
@@ -144,6 +144,8 @@ CircuitDocument v4 保留 boardId，lessonId 使用 dc-lab-v2；新增 kind 为 
 | 诊断变化／数值失败 | 诊断按 code＋实例／通道／脚的集合比较，变化重置提示；失败整会话停止数值推进 | 无旧数值冒充当前值；不可恢复故障清输出，错误说明仍可阅读和停止；fault不再调度，修改作品后停止，重新运行从初态 |
 
 旧八类无动态模式时保留 AC-06 的原重新求解清提示与 AC-11/17 生命周期。静态查阅中动态实时数值可因时间继续变化，但查阅操作自身不重置提示、不改作品；不能要求冻结整个运行作为“只读”。读屏以用户请求播报当前状态，自动时步不连续刷屏。
+
+D64新增的原实验模型100nF沿用本表：改C停止、下次运行从0V开始，容量应用仍一次历史／保存；单位显示切换与非法草稿不修改作品。100nF与10kΩ的τ=1ms由核心解析式直接验证，不调整1×推进、0.05s批次上限或60s时长，也不承诺现有界面能展示快速瞬态；可观察的入门RC实验需显式选100μF。
 
 ### 保存迁移契约
 
@@ -167,7 +169,7 @@ v4 仅持久化经过白名单验证的配置；不包含实际 Vc、时间、�
 
 ### 权威状态、接口及异步边界
 
-CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。新建电容按当前profile默认值；应用参数按该profile范围。读取配置允许两容量范围并集，分析支持域另校验。
+CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。按D64，当前所有profile新建电容默认100e-9F；原实验模型“应用”只接受100nF或10–1000μF，自激v1/v2仍47–220nF，不能只用原实验模型的最小／最大值检查而放过间隙。读取配置允许原有两容量范围并集，分析支持域另校验。默认值只在新建时补入，不重写已有作品容量，schema仍5。
 
 可运行profile只有legacy-stage2-v1与oscillator-em-v2；新建作品默认legacy，明确选择“自激发声·虚拟模型v2”才使用新参数。已知oscillator-em-v1为可恢复的旧模型配置：保留全部ID/位置/参数/接线及47–220nF值，显示“旧版虚拟模型，需显式切换v2”，不创建Worker或播放/计算，运行返回unsupported-model-version。已知v1配置编辑仍用47–220nF范围/新建电容100nF默认及同一物理目录，合法编辑可保存，但不触发计算。菜单不把v1呈现为可新建的可用模型；其当前旧版标签仍可读。用户显式选v2是一次可撤销配置编辑，停止/清旧generation，不缩放容量或自动改线；撤销回v1再次只恢复不运行。schema版本仍5，未知profile与已知不运行的v1必须分开：未知值保护原存档，不默退legacy/v2。此转换不会自动产生额外实验或实施授权。
 
@@ -208,7 +210,7 @@ AudioContext仅手势内创建/恢复，复用现有会话许可和15ms平滑增
 
 ### v5保存及迁移
 
-存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。v5容量F严格验证两范围并集，缺字段不猜；保存物理合法但profile不支持的组合，运行说明限制。
+存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind，v4电容仍只接受10–1000μF，不能借当前100nF增补放宽历史格式或修改旧fixture字节／哈希；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。v5容量F严格验证[47,220]nF与[10,1000]μF两范围并集，缺字段不猜；原实验模型100nF已在该并集中，无需schema升级。原100μF等合法存档按原值恢复，不替换为新默认。保存物理合法但profile不支持的组合，运行说明限制。
 
 不保存模拟时间/节点电压/电荷/积分历史/显示采样/Worker/运行态/周期缓存/诊断/提示/许可/音量/未应用草稿。加载只读，下一次成功保存才写v5；未知modelProfileId/schema、结构/物理损坏保护原文本并暂停自动覆盖，不能退回旧模型默算。写失败保留内存作品和重试。撤销/重做包含profile/参数，50步上限不变，恢复配置不恢复瞬态。
 

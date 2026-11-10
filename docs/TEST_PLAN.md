@@ -280,7 +280,7 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 | 验收 | 未来文件/具体场景 | 实施命令/实际状态 |
 | --- | --- | --- |
 | OSC-01 | src/circuit/catalog.test.ts和editor/model.test.ts：PNP/speaker四方向稳定脚序/标记/物理拒绝/取消不入历史；Chromium从空板纯键盘/表单搭建OSC-REF，记录实际合法孔位全表，说明查阅只读 | npm test；npm run test:e2e -- --project=chromium --workers=1；均未执行 |
-| OSC-02 | parameters/validation/transient测试：100nF=.1μF、47/220边界、非有限/空白/半输入/重复单位；profile参数不匹配保留；零态/一次上电/严格档/LTE拒步、KCL、Newton/域/步长失败；旧RC默认和范围回归 | npm test；npm run typecheck；npm run build；未执行 |
+| OSC-02 | parameters/validation/transient测试：100nF=.1μF、47/220边界、非有限/空白/半输入/重复单位；profile参数不匹配保留；零态/一次上电/严格档/LTE拒步、KCL、Newton/域/步长失败；D64起原实验模型仅新增离散100nF、各profile新建默认100nF，原10–1000μF及间隙拒绝回归 | 本表为原OSC验证计划；本次D64只执行下方100nF定向验证，不重新运行整套 |
 | OSC-03 | src/circuit/transient.test.ts独立fixture：OSC-REF两档的五上穿、周期、8相位四节点、D/speaker RMS及源流；五单参数变体周期/次数；固定参数不读音频/拓扑匹配；严格档同门槛 | npm test；固定有限数值runner命令由实现PR列明；未执行 |
 | OSC-04 | src/app/useBuzzerSound.test.tsx或独立speaker音频hook：来自端口的f/RMS/增益，许可/音量0/端点交换/旁路/API不可用/20Hz与20kHz边界；Chromium真实手势/AudioContext调用及停止/后台清理 | npm test；npm run test:e2e -- --project=chromium --workers=1；实际设备试听另记，未执行 |
 | OSC-05 | transient/tutor测试逐反例：DC/窗内无周期/限制分类、有限/理想短路差别、未知不当0；β100/100不变成持续音；Chromium删C→看结果/三层提示→恢复C→periodic，记录模拟时刻/对象 | npm test；npm run test:e2e -- --project=chromium --workers=1；未执行 |
@@ -343,3 +343,28 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 产品代码f108d7b8534bc7eb44fbbd21a26ad45db03df19f：本机32文件453模块通过，CI Verify42697686184/42697675137均成功（453模块、Chromium48通过/1原生事件环境跳过，typecheck/lint/build通过）。原CI资源失败已修，5s及精度不变；独立Standards/Spec代码覆盖PASS。完整逐ID证据、之前失败/返修和未验证边界见[实施记录](changes/OSCILLATOR-IMPLEMENTATION.md)最新节；旧构建实际原始性能样本见[性能记录](changes/OSCILLATOR-PERFORMANCE.md)。
 
 按用户最新“只跑失败测试”，停止了进行中的本机全套，未再运行优化版整套性能/真实UI基准。目标M1/8GB、优化版正式P95/内存、发声停止20次、真实后台失焦、试听、读屏/200%及师生仍未验证。本次仅证据文档提交不改变需求/验收定义，以[skip ci]避免再触发全套；不将其写成该文档head测试通过。
+
+## 原实验模型100nF定向验证（2026-11-09）
+
+用户当前直接批准的范围、基线和master操作例外见[决定D64](DECISIONS.md#原实验模型100nf与新建默认值2026-11-09)。修改OSC-02、EX2-05、EX2-10，回归EX2-06/11、OSC-06及AC-07/08/14/17；没有新增或删除验收ID。原实验模型新增离散100nF，新建默认100nF；原连续10–1000μF、自激47–220nF、旧存档值、schema1–4容量限制及运行／时间规则保留。
+
+遵循用户定向验证要求，未跑模块、Chromium或性能全套。本轮7个新增场景及8个受影响既有场景共15个不同场景最终通过，分次验证，不将跳过项算通过。
+
+| 验收ID／变化 | 实际测试文件／场景 | 执行及实际结果 |
+| --- | --- | --- |
+| OSC-02：修改 | src/circuit/legacyCapacitance.test.ts：三个profile新建100nF、原模型放置与离散集合；catalog.test.ts：自激边界及已有100μF切profile保值 | 命令A中4个纯模型／存档用例通过；命令B中4个catalog定向项通过 |
+| OSC-02、AC-07/14：修改／回归 | src/app/LegacyCapacitance.test.tsx：默认100nF/nF显示、0.1μF一次转换、预设、非法1μF草稿保留存档/运行态/aria-invalid、撤销、单位只读 | 命令A中默认／单位2项通过；剩余转换用例命令B通过。既有空白／半输入解析逻辑未改，本轮未重复运行无关用例 |
+| EX2-05：修改 | legacyCapacitance.test.ts：100nF/10kΩ的0、1τ、5τ（τ=1ms）独立Vc/Ic；transient.test.ts：原100μF/1s及R/C×10解析回归 | 命令A新100nF数值通过；命令B旧EX2-05三项通过；rcExperiment已显式指定100μF，旧固定v4 fixture文件未改 |
+| EX2-06、AC-17：回归 | LegacyCapacitance.test.tsx：无效草稿不停止、有效改C停止；OscillatorConfiguration.test.tsx：已有100μF切profile保值、停止及撤销 | 命令B两项通过；未更改RC连续／后台／重启实现，完整旧生命周期未重跑 |
+| EX2-10、OSC-06、AC-08：修改／回归 | legacyCapacitance.test.ts：v4的100μF只读加载保值，v5原模型100nF保存恢复，撤销／重做容量；LegacyCapacitance.test.tsx默认作品刷新恢复配置 | 命令A通过；schema1–4容量拒绝代码未改，v1–3/未知/损坏保护未在本轮重复执行 |
+| EX2-11：回归 | src/tutor/components.ts、catalog.ts与USER_GUIDE：默认100nF、支持集合、100μF慢速RC教学说明及1ms观察边界 | 定向ESLint、文档引用/围栏/差异检查通过；独立只读代码审阅PASS；真实教学/辅助技术未验证 |
+
+命令A：`npm test -- src/circuit/legacyCapacitance.test.ts src/app/LegacyCapacitance.test.tsx`。修改前6失败/1通过，证明旧实现拒绝100nF/默认仍100μF；修改后4模型项及2界面项通过，1界面项因撤销后测试未重新选中元件而失败，补回真实重选操作后由命令B复验通过。未把中间失败写成整套通过。
+
+命令B：`npm test -- src/app/LegacyCapacitance.test.tsx src/circuit/catalog.test.ts src/app/OscillatorConfiguration.test.tsx src/circuit/transient.test.ts -t 'converts 0.1|changes profile as one|accepts the oscillator boundary|explicitly switches profiles|EX2-05'`：4文件9通过/21未匹配跳过（1.81s），只覆盖失败项和本次直接受影响回归。
+
+一次尝试的`--rerun-failures`不是当前Vitest支持的参数，CLI退出且未执行测试；随后采用上述`-t`精确选择，未借此运行全套。
+
+`npm run typecheck`通过；`npm run build`通过（含类型检查）；对本次12个改动代码/测试文件的`npx eslint`通过，`git diff --check`及文档引用/围栏检查通过。没有运行全套lint、模块／Chromium／性能；本次提交使用`[skip ci]`遵从不再自动跑全套的要求，不声称远端CI通过。
+
+现有1×／≤0.05s批次无法保证看清1ms瞬态，未新增时间缩放或曲线。真实学生观察、设备／辅助技术及既有未验证性能边界仍未验证。master直接修改／提交／推送只沿用本轮用户明确指示，不作为后续任务默认流程。

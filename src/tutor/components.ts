@@ -44,7 +44,7 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
   capacitor: {
     about:'电容储存电荷，端电压随时间变化；断开电源后可经电阻放电。',pins:['1 无极性端','2 无极性端；任一端接负端参考'],
     connection:'一端接负端；另一端经充电开关及10 kΩ到正端，再经10 kΩ与放电开关到负端。',example:'P → S充 → 10 kΩ → X；X → C → N；X → 10 kΩ → S放 → N',
-    tryIt:'100 μF、10 kΩ时τ=1 s；先充电5 s，断充开关再闭放开关，观察电压连续和有符号电流。',commonMistake:'停止仿真不等于放电；两开关都断开会保持电压。直接接理想源无有限电阻不支持。',modelNote:'单一无极性虚拟封装，10–1000 μF；初态0 V、单电容线性RC，不与半导体／压电混接；刷新只恢复配置。',
+    tryIt:'新建默认100 nF；观察缓慢充放电请先选100 μF，配10 kΩ时τ=1 s。先充电5 s，断充再闭放，观察电压连续和有符号电流。',commonMistake:'100 nF配10 kΩ仅1 ms，现有1×显示可能直接接近稳态；停止仿真不等于放电。两开关都断开会保持电压；不能直连理想源。',modelNote:'单一无极性虚拟封装，支持100 nF或10–1000 μF，默认100 nF；初态0 V、单电容线性RC，不与半导体／压电混接；刷新只恢复配置。',
   },
   'piezo-passive': {
     about:'无源压电需要变化信号，恒定直流不持续发声，与有源蜂鸣器不同。',pins:['1 无极性端','2 无极性端'],
@@ -142,7 +142,7 @@ export function componentGuideCopy(kind:ComponentKind,profile:ModelProfileId):Co
     example:'反馈输入节点 → 1〔电容〕2 → 输出节点；100nF = 0.1μF',
     tryIt:'比较47、100和220nF；应用参数后从零初态重算0–40ms，不连续保留上次电荷。',
     commonMistake:'把0.1μF误读成1μF，或把导线交叉当连接；删除反馈电容后仍可能有直流电流。',
-    modelNote:'本profile范围47–220nF、默认100nF；线性无极性电容与内部结电容共同参与EM瞬态。旧RC的10–1000μF、默认100μF及连续性规则保持。',
+    modelNote:'本profile范围47–220nF、默认100nF；线性无极性电容与内部结电容共同参与EM瞬态。原实验RC支持100nF或10–1000μF、默认100nF；旧作品容量及连续性规则保留。',
   };
   return copy;
 }

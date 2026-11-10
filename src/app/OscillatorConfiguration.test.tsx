@@ -31,7 +31,7 @@ describe('OSC-01/02/06 configuration slice (not numerical conformance)',()=>{
     expect(Worker).not.toHaveBeenCalled();
   });
   it('explicitly switches profiles, preserves capacitance and voltage, stops and undoes',()=>{
-    const d={...createEmptyDocument(),supplyVoltage:6,components:[createComponent('capacitor','c13',0,'cap')]};
+    const d={...createEmptyDocument(),supplyVoltage:6,components:[{...createComponent('capacitor','c13',0,'cap'),capacitanceF:100e-6}]};
     localStorage.setItem(STORAGE_KEY,JSON.stringify(d));render(<App/>);
     fireEvent.click(screen.getByRole('button',{name:'运行电路'}));
     fireEvent.click(screen.getByRole('radio',{name:'自激发声·虚拟模型v2'}));
