@@ -175,6 +175,8 @@ CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|
 
 核心纯函数职责分compileTransient(document, profile)→明确预检/编译结果；initialize(compiled, initial)→全部电荷零态；advance(compiled,state,target,budget)→accepted state/readings或带原因的失败。state包含所有独立电荷/必要节点解、模拟时刻及积分所需状态，不由上次UI读数还原。核心不依赖React/SVG/DOM/Worker/AudioContext/localStorage或墙钟。单个组件的导通状态由模型派生，不另存可与解冲突的开关标签。
 
+按D65，`createOscillatorAnalysis` 从已通过编译校验的配置选择默认精度：任一 `transistorModel=2n3904|2n3906` 使用hmin=1e-13s，其余仍用原DEFAULT_PRECISION的1e-11s；只改变该下限，其他精度字段原样保留。选择基于参数卡身份，适用于不同接线／布局，不识别参考图。初始化后精度随会话状态进入全部批次和统计遍数，预算／取消不重置。测试显式传入的precision覆盖值仍按原接口执行，用于严格档与失败注入，不暗改测试要求的下限。既有v5保存型号标识，不持久化步长、积分状态或声音；无需升级schema、Worker消息或会话身份字段。
+
 主线程外的内置Worker负责此profile编译/数值/周期统计，单会话单Worker（可复用一个Worker但不得并行旧generation）。外层以performance.now监督5s墙钟预算，超时/停止可terminate；无新库。每个请求/响应含sessionId、documentRevision、generation和modelProfileId，任一过期即丢弃。取消先使generation失效并静音，再清理计算，不等完成回调。UI不以每个求解步setState，也不按音频采样率求解；最多4096显示样本，周期统计用接受步流式累计，编译数据/旧会话不无限缓存。
 
 通用周期阈值需要5–40ms全窗极值；产品采用最多两遍确定性流式分析，保持有界内存。第一遍从冷态求0–40ms，累计speaker极值、末5ms节点范围/电容导数/KCL及有界显示采样；第二遍使用同一编译网络/控制配置/初态与同一积分参数重放0–40ms，固定第一遍阈值/迟滞，逐接受半步计算上穿、周期均值和RMS，最多保留当前周期累加量、最近5次上穿/4个周期统计及≤4096显示采样。所有遍合计最多4096显示点，第二遍复用或替换同一有界缓冲，不另留第一遍轨迹；不存全轨迹，不能从显示点猜脉冲/频率。speaker缺失/旁路/幅度不足时无需第二遍，但仍按全部节点末窗判DC或window-no-period，不能把无speaker误作全网络静态。

@@ -1,5 +1,7 @@
 # CR-OSCILLATOR：有限虚拟互补晶体管自激发声实验
 
+2026-11-10批准增补：下文的2/1nF、10ps和独立参考描述通用卡；可选2N3904／2N3906卡的既有参数保留，仅其推进下限改为0.1ps，依据[决定D65](../DECISIONS.md#可选晶体管型号时间分辨率2026-11-10)及当前PRD／CIRCUIT_MODEL。原审批／暂停段落保留当时记录，不能据其重启自动协调；当前功能已合并PR #7，本次在既有修复分支按用户明确例外修改，不重新派发或合并。
+
 状态：原Requirement PR [#5](https://github.com/bjstevenyang/ai-circuit-tutor/pull/5)已合并为主线 `4a3340cc0263985c6d5b5bf810b794bcdb5c0454`，其oscillator-em-v1数值契约随后实际失败。本文件的v2修订归独立Requirement PR [#8](https://github.com/bjstevenyang/ai-circuit-tutor/pull/8)及[数值修订CR](CR-OSCILLATOR-NUMERICS.md)，待新完整head独立审查/检查/合并；不能以旧PASS恢复依赖。唯一实现PR [#7](https://github.com/bjstevenyang/ai-circuit-tutor/pull/7)已建立，配置切片继续，数值/周期声音/动态性能依赖暂停。最终实现用户体验合并。
 
 ## 输入、授权与实际基线

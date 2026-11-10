@@ -1,5 +1,7 @@
 # CR-OSCILLATOR-NUMERICS：可验证的自激虚拟模型v2
 
+2026-11-10批准增补：本CR及原归档的通用卡2/1nF、10ps和独立参考保持；可选具名参数卡的0.1ps例外、授权与本次当前分支实施见[决定D65](../DECISIONS.md#可选晶体管型号时间分辨率2026-11-10)，以最新PRD／CIRCUIT_MODEL为准。下文原审批／暂停文字属于历史，不作为恢复自动协调的指令。
+
 状态：Specification / 待新完整head独立审查与检查，不是最终PASS或已合并。原需求[PR #5](https://github.com/bjstevenyang/ai-circuit-tutor/pull/5)已合并，唯一实现[PR #7](https://github.com/bjstevenyang/ai-circuit-tutor/pull/7)配置切片继续，数值依赖待本[Requirement PR #8](https://github.com/bjstevenyang/ai-circuit-tutor/pull/8)通过合并后恢复。仅需求文档，不新建重复实现任务或分支。
 
 ## 输入、授权与实际基线

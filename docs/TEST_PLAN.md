@@ -387,3 +387,30 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 `CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/lesson.spec.ts --project=chromium --workers=1 -g 'build a valid circuit'`：1/1通过；首次受沙箱端口限制未启动，经既有执行授权重试通过，不把首次记为场景失败。`npm run build`（含严格类型检查）通过；对本次6个代码／测试文件的 `npx eslint` 通过。提交前另执行差异和文档检查。
 
 沿用最近的定向验证安排，本次未运行模块、Chromium或性能全套，提交标记 `[skip ci]`，不声称远端CI通过；Firefox／WebKit、目标硬件和人工验证未执行。自动协调继续暂停；修复PR不自动合并。
+
+## 可选晶体管型号步长修复：2026-11-10
+
+用户批准[决定D65](DECISIONS.md#可选晶体管型号时间分辨率2026-11-10)的当前分支需求／实现例外；基线`d22c93e5c5d6644c5a9bb6176ea5158129fdfda1`，开始时干净。修改OSC-02：只有2N3904／2N3906卡的默认hmin改为1e-13s；原全通用／未指定仍1e-11s。无验收ID新增／删除；回归OSC-03–06和AC-08/17。器件卡、默认/严格容差、BE-LTE、模型域、5s／1m接受／10k拒绝／4096显示点、音频门槛、存档及会话协议均未放宽。
+
+实际失败：原实现双具名在0.757479962ms的10ps下LTE约1.040751。新增 `namedModels.test.ts` 修复前8项中5失败／3通过，覆盖错误默认下限和真实计算未完成；更细步长候选只在临时程序验证，未先改产品或器件参数。修复仅在分析初始化按已编译配置选择下限，显式precision测试覆盖仍被尊重。
+
+| 验收 | 文件／场景 | 实际执行证据 |
+| --- | --- | --- |
+| OSC-02：修改 | `namedModels.test.ts` 五种卡组合的默认精度；只变hmin；0.1ps的上电／窗口余量不得批准更小推进 | A中五种选择通过；C中两个边界的单场景通过，原10ps边界由A回归 |
+| OSC-02/05：具名参考 | 同文件双具名默认／严格40ms完成，保留原参数；近直流、不提供周期频率；两种混用也为DC | A中默认／严格通过；C中混用2项通过。末speaker端压约1.061754286V，双档相差约2.2e-12V；min约0.198159/0.137179ps、KCL≤1nA、传导域及原步数限制通过 |
+| OSC-03：通用回归 | `analysis.test.ts` 的 `classifies REF` | A通过；通用参考仍periodic，RMS／源流及预算按原断言；未重复原独立参考研究或完整变体套件 |
+| OSC-02/06：明确失败 | `namedModels.test.ts` 显式注入10ps重现原失败、零接受预算拒绝且无当前读数／声音；`contracts.test.ts` 原Newton／拒步／接受限制及10ps边界 | A通过；不会忽略调用方测试精度或绕过新／旧下限 |
+| OSC-04/06、AC-08/17 | `oscillator.spec.ts` 的 `OSC model cards`：启用实际Chromium音频、选择NPN具名／再选PNP具名、40ms近直流、无旧频率／残音、型号保存、停止后切回通用重新起振和发声 | D的1个场景通过。不是实际扬声器试听或正式性能采样 |
+| OSC-06：参数／生命周期 | `transistorModels.test.ts` 原参数、类型匹配／拒绝、v5保存；`oscillatorSession.test.ts` 旧generation、停止、共享5s和Worker不可用 | B的8项通过；数值方程、Worker消息、声音实现及保存格式均未修改 |
+
+命令A：`npm test -- src/circuit/oscillator/namedModels.test.ts src/circuit/oscillator/analysis.test.ts src/circuit/oscillator/contracts.test.ts -t 'optional transistor card|classifies REF|fails Newton/hmin|never approves a sub-10ps'`。首轮修复后11通过／16未匹配跳过；随后只新增3项测试（未再改产品代码），由命令C单独验证，不重复通过项。
+
+命令B：`npm test -- src/circuit/transistorModels.test.ts src/app/oscillatorSession.test.ts`：8/8通过。
+
+命令C：`npm test -- src/circuit/oscillator/namedModels.test.ts -t 'mixed pair|0.1 ps floor'`：新增3通过／8未匹配跳过。A/B/C合计22个不同场景，不将跳过项计为通过。
+
+命令D：`CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/oscillator.spec.ts --project=chromium --workers=1 -g 'OSC model cards'`：1/1通过。隔离测试作品与本地端口，不读取或修改学生作品。
+
+`npm run build`（含strict类型检查）通过；对 `analysis.ts`、`namedModels.test.ts`、`oscillator.spec.ts` 的定向 `npx eslint` 通过；提交前检查文档本地引用／围栏及差异。所有执行针对基线加本次工作树，最终完整提交SHA由交付报告固定。
+
+未执行全套模块／浏览器／性能、目标M1/8GB的P95／内存、真实后台／辅助技术／试听／师生验证；不把本机定向通过当作任意具名组合可用或真实型号模型验证。两档一致只是同一实现的数值收敛核对，不冒充第二独立求解器。沿用定向验证安排使用 `[skip ci]`，不声称远端CI通过。自动协调及跨聊天回报继续暂停；不合并master。

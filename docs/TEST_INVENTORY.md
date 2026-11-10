@@ -450,3 +450,10 @@ Chromium总场景为44（原35＋新9），实际执行结果以实施证据为�
 ## 18. OSC v2新增测试（2026-11-08）
 
 配置/存档测试见catalog、CapacitanceEditor、storage/oscillator和OscillatorConfiguration；纯数值测试见src/circuit/oscillator下fixtures/numeric/contracts/analysis/verification，覆盖独立参考、变体、精确反例、等价、预算及失败。异步生命周期见oscillatorSession和OscillatorLifecycle；声音边界追加在useBuzzerSound；Chromium在tests/e2e/oscillator.spec.ts；有限生产性能在tests/oscillator-performance。实际通过数量及交付边界统一见TEST_PLAN和OSCILLATOR-IMPLEMENTATION最新记录，旧历史清单不改写成新通过。
+
+## 19. 可选晶体管型号时间分辨率（2026-11-10）
+
+- [namedModels.test.ts](../src/circuit/oscillator/namedModels.test.ts)：新增11项，覆盖未指定／通用／两种混用／双具名的步长选择、双具名默认与严格40ms近直流、参数不变、两种混用无假频率、0.1ps边界拒绝，以及显式精度／预算失败注入。
+- [oscillator.spec.ts](../tests/e2e/oscillator.spec.ts)：新增1个Chromium场景，验证真实Worker完成双具名计算、型号选择保存、近直流清旧声，切回通用卡后重新获得稳定周期及音频。
+
+仅定向执行，22个不同模块／会话场景分次通过、1个Chromium场景通过；命令、变更验收与未验证项见[测试计划](TEST_PLAN.md#可选晶体管型号步长修复2026-11-10)。不重写旧章节数量，不声称全套或设备试听通过。

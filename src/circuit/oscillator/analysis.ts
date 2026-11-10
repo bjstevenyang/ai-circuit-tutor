@@ -6,9 +6,13 @@ import type { ComponentReading } from '../types';
 export { compileOscillator } from './compile';
 
 export const WINDOW_S=.04, MAX_DISPLAY_SAMPLES=4096;
+const SOURCED_MODEL_MIN_STEP_S=1e-13;
 const zeroPoint=(compiled:CompiledOscillator):AcceptedPoint=>({timeS:0,voltage:new Float64Array(compiled.model.size),derivative:new Float64Array(compiled.model.size),residualA:0});
 export function createOscillatorAnalysis(compiled:CompiledOscillator,options:AnalysisOptions={}):OscillatorAnalysisState {
-  const precision=options.precision??DEFAULT_PRECISION;
+  const sourcedModel=compiled.document.components.some(part=>part.transistorModel==='2n3904'||part.transistorModel==='2n3906');
+  // Only the selected pF model cards need the approved finer floor; tolerances stay unchanged.
+  // Explicit precision remains authoritative for strict and failure-injection tests.
+  const precision=options.precision??(sourcedModel?{...DEFAULT_PRECISION,hMinS:SOURCED_MODEL_MIN_STEP_S}:DEFAULT_PRECISION);
   return {numeric:initializeNumeric(compiled.model,precision),precision,limits:options.limits??{},pass:1,
     previous:zeroPoint(compiled),previousFullVoltage:new Float64Array(compiled.nodeIds.length),previousSourceCurrentA:0,samples:[{timeS:0,voltageV:compiled.nodeIds.map(()=>0)}],nextSampleS:WINDOW_S/(MAX_DISPLAY_SAMPLES-1),
     speakerMin:Infinity,speakerMax:-Infinity,tailMin:new Float64Array(compiled.nodeIds.length).fill(Infinity),tailMax:new Float64Array(compiled.nodeIds.length).fill(-Infinity),tailDerivative:0,

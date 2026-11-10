@@ -43,6 +43,41 @@ const refPart=(page:Page,document:CircuitDocument,id:string)=>{
   return page.getByRole('button',{name:new RegExp(`${COMPONENTS[part.kind].name}.*，锚点 ${part.anchor}$`)});
 };
 const completedPeriodic=(page:Page)=>expect(page.locator('.result-card h3')).toHaveText('检测到稳定周期',{timeout:10000});
+
+test('OSC model cards: completes the sourced pair as DC and restores the generic periodic audio',async({page})=>{
+  await audioCounters(page,true);
+  const reference=oscillatorFixtureDetails().document;
+  await openFixture(page,reference);
+  await page.getByRole('button',{name:'运行电路',exact:true}).click();
+  await completedPeriodic(page);
+  await page.getByRole('button',{name:/^启用.*声音$/,exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(1);
+
+  await refPart(page,reference,'Q1').click();
+  await page.getByLabel('晶体管参数模型').selectOption('2n3904');
+  await expect(page.locator('.result-card h3')).toHaveText('观察窗内已近直流',{timeout:10000});
+  await refPart(page,reference,'Q2').click();
+  await page.getByLabel('晶体管参数模型').selectOption('2n3906');
+  await expect(page.locator('.result-card h3')).toHaveText('观察窗内已近直流',{timeout:10000});
+  await expect(page.getByLabel('仿真状态')).toContainText('运行中');
+  await expect(page.getByLabel('实验读数')).toContainText(/模拟时刻：40\s*ms/);
+  await expect(page.getByLabel('实验读数')).not.toContainText('稳定频率');
+  const stored=await storedDocument(page);
+  expect(stored.components.find(part=>part.id==='Q1')?.transistorModel).toBe('2n3904');
+  expect(stored.components.find(part=>part.id==='Q2')?.transistorModel).toBe('2n3906');
+  expect(await page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(1);
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {audioEvidence:{stopped:number}}).audioEvidence.stopped)).toBe(1);
+
+  await page.getByRole('button',{name:'停止运行',exact:true}).click();
+  await refPart(page,reference,'Q1').click();
+  await page.getByLabel('晶体管参数模型').selectOption('generic');
+  await refPart(page,reference,'Q2').click();
+  await page.getByLabel('晶体管参数模型').selectOption('generic');
+  await page.getByRole('button',{name:'运行电路',exact:true}).click();
+  await completedPeriodic(page);
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(2);
+});
+
 test('OSC configuration: keyboard places new parts, reads actual pins, saves and undoes model choice',async({page})=>{
   await page.goto('/');await page.getByRole('radio',{name:'自激发声·虚拟模型v2',exact:true}).press('Enter');
   await keyboardPlace(page,'PNP 晶体管','c13');await keyboardPlace(page,'无源扬声器','c20');
