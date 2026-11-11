@@ -435,3 +435,28 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 - `npm run build`：严格TypeScript及生产构建通过。对4个改动源码和4个测试文件执行`npx eslint`通过；另执行Markdown相对链接／代码围栏和`git diff --check`。
 
 已知未闭合项：当前具名2N3904／2N3906配1μF在约7.103511872ms报告Newton阻尼未收敛；本次只扩输入／保存范围，未改变求解器或宣称该组合完成40ms。更大容量下可能不足以检测稳定周期；不保证发声或真实器件效果。未执行全套模块／浏览器／性能、远端CI、Firefox／WebKit、设备试听、目标硬件及人工教学／辅助技术验证。提交使用`[skip ci]`，未执行不得写通过；自动协调保持暂停。
+
+## 标准SPICE晶体管动态模型：2026-11-10
+
+授权与范围见[CR-BJT-DYNAMICS](changes/CR-BJT-DYNAMICS.md)。本轮新增标准卡路径，不把此前简化模型DC结果当作完整模型期望。实际独立执行为原生ngspice47与WASM45.2的同一卡比较，不是独立物理模型或实物测量。
+
+| 验收 | 输入／测试及证据 | 当前边界 |
+| --- | --- | --- |
+| BJT-DYN-01 | `src/spice/cards.ts`固定OUP B.11全卡；`src/spice/netlist.test.ts`验证全卡传入、供电斜坡、端口传感器、禁止通用卡默替和源短路 | 参数由标准GP内核解释，非自行实现的逐参数导数单测；封装版本固定1.9.0，运行启动信息45.2 |
+| BJT-DYN-02 | 原图末端工作点、两管开关测试覆盖截止／正向导通／饱和；Chromium逐采样点对照原生端压及源流 | 独立反向有源偏置扫描尚未执行，不宣称全工作区实测完成 |
+| BJT-DYN-03 | `npn-switching.cir`／`pnp-switching.cir`，2μs阶跃、10μs脉宽、1kΩ基极／100Ω集电极；0–20μs含开通／饱和／关断尾部，9个时刻比较 | 初版1ns步在NPN边沿差2.24mV，未放宽1mV容差；两端改0.1ns且收紧参考数值精度后NPN／PNP通过。未声称独立提取每项寄生参数 |
+| BJT-DYN-04 | `reference.cir`原图9V／100nF／8Ω，40ms；8个时间点跨原生/WASM电压误差<1mV、源流误差<10μA；实际App新版本计算与保存恢复 | 两端均近直流约1.037066799V，无连续音；不能用“必须响”判定程序正确，也不能推断实物不起振 |
+| BJT-DYN-05、AC-17 | 父session原有过期／超时／取消测试，实际Chromium计算中停止无旧读数；结果新增检查全窗、有限数、采样≤1m及三脚总端流KCL≤1nA | 5s截止保留；≤100ms定量采样、最大网表／内存峰值／WASM堆硬上限尚未完成，不能称性能验收全通过 |
+| OSC-02／06、AC-07／08／14 | 3项netlist／版本测试：显式切换、完整存档往返、撤销恢复、未知／不匹配版本拒绝；App刷新仍选新版本且停止 | 旧schema1–4不变；原通用模型不自动转换 |
+| OSC-03–05、EX2-05／10、AC-13／17回归 | catalog、storage/oscillator、oscillatorSession、OscillatorLifecycle、ComponentGuide定向执行 | 未重跑所有金标准、全应用和全浏览器，不将局部覆盖写成全套通过 |
+
+执行命令与实际结果：
+
+- `python3 tests/spice/generate-reference.py`：原生3个固定网表完成；输出为提交的摘要／输入SHA256，raw／日志只在临时目录。切换基准reltol1e-6／vntol100nV／abstol10pA／hmax0.1ns；原图按生产标准卡精度。再生成是显式操作，不在测试中重写期望。
+- `npm test -- src/spice/netlist.test.ts src/app/oscillatorSession.test.ts src/circuit/catalog.test.ts src/storage/oscillator.test.ts src/app/OscillatorLifecycle.test.tsx src/app/ComponentGuide.test.tsx --reporter=dot`：6文件53项通过。新增3项；本轮中更正了测试误用fixture布局参数和切profile未清字段，保留回归断言。
+- `CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/spice-engine.spec.ts --project=chromium --workers=1`：原图原生对照与应用路径通过；NPN初次边沿比较失败，后以更细基准复验。相同命令加`-g 'npn-switching|pnp-switching|SPICE mode'`：3项通过。最终端流守恒／电容传感器后只重跑`-g 'SPICE mode'`，1项通过；四个不同场景均有通过证据，不伪称同批4/4。
+- `npm run build`：严格类型及生产构建通过；旧Worker约27.43kB，新Worker约20.20MB，主界面gzip约116.9kB。对全部本轮源文件／测试执行定向`npx eslint`通过。另检查文档本地引用、代码围栏、`git diff --check`。
+
+生产构建另以临时预览配置执行`npx playwright test --config /private/tmp/circuit-spice-preview.config.mts --project=chromium -g 'SPICE mode'`：1项通过，确认打包后的独立Worker实际计算／保存／停止。配置只指向5188预览服务及已提交同一场景，不提交临时配置／构建物。
+
+未执行：远端CI／全套测试、Firefox／WebKit、目标M1／8GB、完整反向工作区扫描、完整卡持续周期正例／交流强度对照、引擎峰值内存硬约束、定量停止延迟、设备试听和实物／教学验证。eecircuit-engine封装MIT已核对，随包还含ASU／FreePDK／SkyWater／GF180模型，其完整许可清单尚未闭合；本轮不公开部署，不称生产发布验收完成。标准器件动态路径可本地验证，资源及分发门槛仍须收尾。提交用`[skip ci]`，不声称CI通过。

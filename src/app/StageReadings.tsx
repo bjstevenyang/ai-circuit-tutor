@@ -9,7 +9,7 @@ export function StageReadings({result,document}:{result:AnalysisResult;document:
       {oscillator?.speaker&&<p>扬声器端口：{oscillator.speaker.bypassed?'被旁路 · 端压0 V':`${number(oscillator.speaker.voltageV)} V`}{oscillator.speaker.frequencyHz===undefined?'':` · 稳定频率 ${number(oscillator.speaker.frequencyHz)} Hz · 交流RMS ${number(oscillator.speaker.acRmsV)} V`}</p>}
       {Object.entries(oscillator?.readings??{}).map(([id,r])=><div key={id} data-part-reading={id}><strong>{COMPONENTS[document.components.find(p=>p.id===id)!.kind].name}</strong>
         {r.voltageV!==undefined&&<p>端压 {number(r.voltageV)} V{r.currentMa===undefined?'':` · 有符号电流 ${number(r.currentMa)} mA`}</p>}
-        {r.baseCurrentMa!==undefined&&<p>流入端口：B {number(r.baseCurrentMa)} mA · C {number(r.collectorCurrentMa!)} mA · E {number(r.emitterCurrentMa!)} mA；包含EM传导和结电容位移电流。</p>}
+        {r.baseCurrentMa!==undefined&&<p>流入端口：B {number(r.baseCurrentMa)} mA · C {number(r.collectorCurrentMa!)} mA · E {number(r.emitterCurrentMa!)} mA；{document.transistorDynamics?'标准SPICE端口电流。':'包含EM传导和结电容位移电流。'}</p>}
       </div>)}
       {oscillator?.outcome==='periodic'&&<p>声音按已计算稳定周期作正弦示意；不是持续实时仿真或真实器件音色。</p>}
     </div>;

@@ -15,6 +15,7 @@ export type EditCommand =
   | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF' | 'transistorModel'> }
   | { type: 'set-source'; mode: 'battery'|'teaching-square' }
   | { type: 'set-profile'; profile: RunnableModelProfileId }
+  | { type: 'set-dynamics'; enabled: boolean }
   | { type: 'set-frequency'; value: 250|500|1000 }
   | { type: 'set-voltage'; value: number }
   | { type: 'reset' };
@@ -109,9 +110,15 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
     case 'reset': next = createEmptyDocument(); break;
     case 'set-voltage': next={...document,supplyVoltage:command.value};break;
     case 'set-source': next={...document,sourceMode:command.mode};break;
+    case 'set-dynamics': {
+      const {transistorDynamics: _old,...rest}=document;void _old;
+      if(profileOf(document)!=='oscillator-em-v2')return {ok:false,error:'请先选择自激发声模型。'};
+      next=command.enabled?{...rest,modelProfileId:'oscillator-spice-gp-v1',transistorDynamics:'spice-gp-v1'}:{...rest,modelProfileId:'oscillator-em-v2'};break;
+    }
     case 'set-profile': {
       if(command.profile!=='legacy-stage2-v1'&&command.profile!=='oscillator-em-v2')return {ok:false,error:'新实验请选择原实验模型或自激发声·虚拟模型v2。'};
-      next={...document,schemaVersion:5,modelProfileId:command.profile};break;
+      const {transistorDynamics: _old,...base}=document;void _old;
+      next={...base,schemaVersion:5,modelProfileId:command.profile};break;
     }
     case 'set-frequency': next={...document,signalFrequencyHz:command.value};break;
     case 'configure': {

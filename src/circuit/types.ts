@@ -3,7 +3,7 @@ export type Resistance = number;
 /** Optional transistor card; undefined means the historical generic educational model. */
 export type TransistorModelId = 'generic' | '2n3904' | '2n3906';
 export type ComponentKind = 'resistor' | 'led' | 'switch' | 'button' | 'potentiometer' | 'buzzer' | 'diode' | 'ldr' | 'rgb-led' | 'npn' | 'capacitor' | 'piezo-passive' | 'pnp' | 'speaker';
-export type ModelProfileId = 'legacy-stage2-v1' | 'oscillator-em-v1' | 'oscillator-em-v2';
+export type ModelProfileId = 'legacy-stage2-v1' | 'oscillator-em-v1' | 'oscillator-em-v2' | 'oscillator-spice-gp-v1';
 export type RunnableModelProfileId = Exclude<ModelProfileId, 'oscillator-em-v1'>;
 export type ComponentInstance = {
   id: string;
@@ -21,6 +21,7 @@ export type Wire = { id: string; from: string; to: string; color: string; bend: 
 export type CircuitDocument = {
   schemaVersion: 1 | 2 | 3 | 4 | 5;
   modelProfileId?: ModelProfileId;
+  transistorDynamics?: 'spice-gp-v1';
   boardId: 'breadboard-30-v1';
   lessonId: 'led-series-v1' | 'dc-lab-v2';
   supplyVoltage?: number;

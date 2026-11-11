@@ -356,7 +356,8 @@ export function App() {
           <div className="panel-heading"><h2>元件盒</h2><span className="mono">{COMPONENT_KINDS.length} PARTS</span></div>
           <ChoiceGroup label="实验模型" value={profile} choices={[{value:'legacy-stage2-v1',label:'原实验模型'},{value:'oscillator-em-v2',label:'自激发声·虚拟模型v2'}] as const} onChange={next=>{if(next!=='oscillator-em-v1')edit({type:'set-profile',profile:next});}}/>
           {profile==='oscillator-em-v1'&&<p className="panel-intro" role="status">当前为旧版虚拟模型v1，仅恢复配置；需显式切换v2后运行。切换保留元件值和接线，可撤销。</p>}
-          {profile==='oscillator-em-v2'&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。每管2/1 nF为虚拟结电容，不是真实3904参数。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
+          {profile==='oscillator-em-v2'&&<label><input type="checkbox" checked={document.transistorDynamics==='spice-gp-v1'} onChange={e=>edit({type:'set-dynamics',enabled:e.target.checked})}/>标准SPICE晶体管动态模型（2N3904／2N3906，27°C）</label>}
+          {profile==='oscillator-em-v2'&&!document.transistorDynamics&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。每管2/1 nF为虚拟结电容，不是真实3904参数。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
           <p className="panel-intro">选择元件，再点击孔位放置。</p>
           <div className="part-list">
             {COMPONENT_KINDS.map(kind => {
@@ -467,7 +468,7 @@ export function App() {
         </section>
 
         <aside className="tutor-panel" aria-label="学习指导">
-          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} profile={profile} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
+          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} profile={document.modelProfileId??'legacy-stage2-v1'} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
           <div className="tutor-heading"><span className="tutor-symbol"><Icon name="bulb" size={21} /></span><div><h2>一起想一想</h2><span>先观察，再找到答案</span></div><span className="reviewed-badge">课程提示</span></div>
           <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live={state.analysis?.mode==='rc'?'off':'polite'}>
             {state.analysis?.mode==='oscillator'?<>

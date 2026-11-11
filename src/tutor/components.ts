@@ -126,6 +126,10 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
 };
 
 export function componentGuideCopy(kind:ComponentKind,profile:ModelProfileId):ComponentGuideCopy {
+  if(profile==='oscillator-spice-gp-v1'){
+    const base=componentGuideCopy(kind,'oscillator-em-v2');
+    return kind==='npn'||kind==='pnp'?{...base,modelNote:'标准SPICE Gummel–Poon型号卡，固定27°C。包括增益变化、非线性结电荷、扩散储存和寄生电阻；并非通用卡固定β／结电容。不能判断实物安全，不保证原图起振；扬声器仍为8Ω纯电阻近似。'}:base;
+  }
   const copy=COMPONENT_GUIDES[kind];
   if(!isOscillatorProfile(profile))return copy;
   if(kind==='npn')return {

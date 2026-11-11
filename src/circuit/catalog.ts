@@ -6,6 +6,7 @@ const capacitorDefaults:Record<ModelProfileId,number> = {
   'legacy-stage2-v1':DEFAULT_CAPACITANCE_F,
   'oscillator-em-v1':DEFAULT_CAPACITANCE_F,
   'oscillator-em-v2':DEFAULT_CAPACITANCE_F,
+  'oscillator-spice-gp-v1':DEFAULT_CAPACITANCE_F,
 };
 export const COMPONENT_KINDS: readonly ComponentKind[] = ['resistor', 'led', 'switch', 'button', 'potentiometer', 'buzzer', 'diode', 'ldr', 'rgb-led', 'npn', 'capacitor', 'piezo-passive', 'pnp', 'speaker'];
 export const COMPONENTS: Record<ComponentKind, Definition> = {
