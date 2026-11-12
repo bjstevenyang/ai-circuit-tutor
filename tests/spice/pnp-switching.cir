@@ -1,0 +1,19 @@
+pnp full-card switching and charge storage, native reference
+Vdd rail 0 -5
+Vdrive drive 0 PULSE(0 -2 2u 1n 1n 10u 30u)
+Rb drive b 1k
+Rc rail c 100
+Qdut c b 0 Q2N3906
+.model Q2N3904 NPN(IS=6.734f XTI=3 EG=1.11 VAF=74.03 BF=416.4 NE=1.259 ISE=6.734f
++ IKF=66.78m XTB=1.5 BR=.7371 NC=2 ISC=0 IKR=0 RC=1
++ CJC=3.638p MJC=.3085 VJC=.75 FC=.5 CJE=4.493p MJE=.2593 VJE=.75
++ TR=239.5n TF=301.2p ITF=.4 VTF=4 XTF=2 RB=10)
+.model Q2N3906 PNP(IS=1.41f XTI=3 EG=1.11 VAF=18.7 BF=180.7 NE=1.5 ISE=0
++ IKF=80m XTB=1.5 BR=4.977 NC=2 ISC=0 IKR=0 RC=2.5
++ CJC=9.728p MJC=.5776 VJC=.75 FC=.5 CJE=8.063p MJE=.3677 VJE=.75
++ TR=33.42n TF=179.3p ITF=.4 VTF=4 XTF=6 RB=10)
+.temp 27
+.options reltol=1e-6 vntol=100n abstol=10p
+.save v(b) v(c) i(vdd)
+.tran .1n 20u 0 .1n uic
+.end

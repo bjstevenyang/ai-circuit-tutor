@@ -2,7 +2,7 @@ import { getComponentPins } from '../board';
 import { resistanceOf } from '../catalog';
 import { transistorParameters } from '../transistorModels';
 import { buildNets } from '../network';
-import { profileOf, supplyVoltageOf } from '../parameters';
+import { isCapacitanceForProfile, profileOf, supplyVoltageOf } from '../parameters';
 import type { CircuitDocument, SimulationControls } from '../types';
 import { readCircuitDocument } from '../validation';
 import { GROUND, POSITIVE, solveDense } from './numeric';
@@ -32,8 +32,8 @@ export function compileOscillator(input:CircuitDocument,controls:SimulationContr
     const parts=document.components.filter(p=>p.kind===kind);
     if(parts.length>1)return failure(`此模型最多一只${kind}`,parts.map(p=>p.id));
   }
-  const invalidC=document.components.filter(p=>p.kind==='capacitor'&&(p.capacitanceF!<47e-9||p.capacitanceF!>220e-9));
-  if(invalidC.length)return failure('当前模型的外部电容范围为47–220 nF；原值已保留',invalidC.map(p=>p.id));
+  const invalidC=document.components.filter(p=>p.kind==='capacitor'&&!isCapacitanceForProfile(p.capacitanceF,'oscillator-em-v2'));
+  if(invalidC.length)return failure('当前模型的外部电容范围为47–1000 nF（0.047–1 μF）；原值已保留',invalidC.map(p=>p.id));
   const used=new Set<string>();
   for(const part of document.components)if(part.kind!=='switch'&&part.kind!=='button')for(const pin of getComponentPins(part)!)used.add(net(pin));
   const nodeIds=[...used].filter(x=>x!==positive&&x!==ground).sort(),n=nodeIds.length;

@@ -1,4 +1,4 @@
-import type { ComponentKind, TransistorModelId } from './types';
+import type { ComponentInstance, ComponentKind, TransistorModelId } from './types';
 import { EM } from './oscillator/numeric';
 
 /**
@@ -25,6 +25,10 @@ export function isTransistorModelForKind(kind:ComponentKind,model:unknown):boole
   if(kind!=='npn'&&kind!=='pnp')return model===undefined;
   if(model===undefined||model==='generic')return true;
   return kind==='npn'?model==='2n3904':model==='2n3906';
+}
+/** The standard GP path has fixed named cards; generic virtual cards stay in EM. */
+export function hasSpiceModelSelections(parts:readonly ComponentInstance[]):boolean {
+  return parts.every(part=>(part.kind!=='npn'||part.transistorModel==='2n3904')&&(part.kind!=='pnp'||part.transistorModel==='2n3906'));
 }
 export function transistorParameters(kind:'npn'|'pnp',model:TransistorModelId|undefined):TransistorParameters {
   if(!isTransistorModelForKind(kind,model))throw new Error('晶体管型号与NPN/PNP类型不匹配');

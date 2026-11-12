@@ -368,3 +368,117 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 `npm run typecheck`通过；`npm run build`通过（含类型检查）；对本次12个改动代码/测试文件的`npx eslint`通过，`git diff --check`及文档引用/围栏检查通过。没有运行全套lint、模块／Chromium／性能；本次提交使用`[skip ci]`遵从不再自动跑全套的要求，不声称远端CI通过。
 
 现有1×／≤0.05s批次无法保证看清1ms瞬态，未新增时间缩放或曲线。真实学生观察、设备／辅助技术及既有未验证性能边界仍未验证。master直接修改／提交／推送只沿用本轮用户明确指示，不作为后续任务默认流程。
+
+## 运行提示按实际控件显示：2026-11-10
+
+用户报告自激电路没有黄色按钮，却仍出现“开关点击切换；黄色按钮按住接通”。根因是 `App.tsx` 在所有运行结果后使用同一固定文案。本次为 AC-17 状态清晰度的范围内缺陷修复，回归 AC-11/18；无验收 ID 增删，无电气模型、运行生命周期或存档行为变更。
+
+本次实现基线为 `2c4d8730a648adc2809c186ec81c7d9ba2bcbc27`，master 工作区干净，沿用既有 Git 授权在 `codex/contextual-running-hint` 修复分支交付。既有完整验证记录是上述 `f108d7b` 的453项模块与48个Chromium场景，不视为最新型号扩展提交的通过证据。当前基线在 `validation.ts`／`PartControls.tsx` 有两处严格类型错误，已在未修改的 HEAD 临时快照执行 `tsc --noEmit` 独立复现；本次同时收窄已由运行时目录校验的元件类型与非空型号选择类型，未修改运行时校验或型号参数。
+
+| 验收／场景 | 实际证据与结果 |
+| --- | --- |
+| AC-17：无控件、仅开关、仅按钮、两者都有 | `src/app/Simulation.test.tsx` 新增4个真实App场景；只描述实际存在的控件，无控件显示“运行中 · 点击‘停止运行’结束。”；开始／停止状态保留 |
+| AC-17、OSC-06：无开关／按钮的自激电路 | `src/app/OscillatorLifecycle.test.tsx` 在现有Worker完成场景增加状态断言，计算中、完成、过期回调及停止原断言保留；该场景模拟Worker，不是重跑数值积分 |
+| AC-17／AC-08：实际Chromium搭建与刷新 | `tests/e2e/lesson.spec.ts` 的 `build a valid circuit, inspect connections, and restore after reload` 增加状态栏断言；独立测试上下文，不读取用户作品 |
+| AC-11/18、OSC-06：相邻生命周期 | 两个上述App测试文件共15项通过，覆盖开关、按钮释放、声音停止、自激取消／后台／故障与原有显示；不是全套应用测试 |
+
+修复前命令 `npm test -- src/app/Simulation.test.tsx src/app/OscillatorLifecycle.test.tsx -t 'running instructions|publishes calculating'`：4失败／1通过／10未匹配跳过，失败文本均为错误固定提示。修复后 `npm test -- src/app/Simulation.test.tsx src/app/OscillatorLifecycle.test.tsx`：15/15通过。类型收窄后 `npm test -- src/circuit/transistorModels.test.ts`：4/4通过。
+
+`CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/lesson.spec.ts --project=chromium --workers=1 -g 'build a valid circuit'`：1/1通过；首次受沙箱端口限制未启动，经既有执行授权重试通过，不把首次记为场景失败。`npm run build`（含严格类型检查）通过；对本次6个代码／测试文件的 `npx eslint` 通过。提交前另执行差异和文档检查。
+
+沿用最近的定向验证安排，本次未运行模块、Chromium或性能全套，提交标记 `[skip ci]`，不声称远端CI通过；Firefox／WebKit、目标硬件和人工验证未执行。自动协调继续暂停；修复PR不自动合并。
+
+## 可选晶体管型号步长修复：2026-11-10
+
+用户批准[决定D65](DECISIONS.md#可选晶体管型号时间分辨率2026-11-10)的当前分支需求／实现例外；基线`d22c93e5c5d6644c5a9bb6176ea5158129fdfda1`，开始时干净。修改OSC-02：只有2N3904／2N3906卡的默认hmin改为1e-13s；原全通用／未指定仍1e-11s。无验收ID新增／删除；回归OSC-03–06和AC-08/17。器件卡、默认/严格容差、BE-LTE、模型域、5s／1m接受／10k拒绝／4096显示点、音频门槛、存档及会话协议均未放宽。
+
+实际失败：原实现双具名在0.757479962ms的10ps下LTE约1.040751。新增 `namedModels.test.ts` 修复前8项中5失败／3通过，覆盖错误默认下限和真实计算未完成；更细步长候选只在临时程序验证，未先改产品或器件参数。修复仅在分析初始化按已编译配置选择下限，显式precision测试覆盖仍被尊重。
+
+| 验收 | 文件／场景 | 实际执行证据 |
+| --- | --- | --- |
+| OSC-02：修改 | `namedModels.test.ts` 五种卡组合的默认精度；只变hmin；0.1ps的上电／窗口余量不得批准更小推进 | A中五种选择通过；C中两个边界的单场景通过，原10ps边界由A回归 |
+| OSC-02/05：具名参考 | 同文件双具名默认／严格40ms完成，保留原参数；近直流、不提供周期频率；两种混用也为DC | A中默认／严格通过；C中混用2项通过。末speaker端压约1.061754286V，双档相差约2.2e-12V；min约0.198159/0.137179ps、KCL≤1nA、传导域及原步数限制通过 |
+| OSC-03：通用回归 | `analysis.test.ts` 的 `classifies REF` | A通过；通用参考仍periodic，RMS／源流及预算按原断言；未重复原独立参考研究或完整变体套件 |
+| OSC-02/06：明确失败 | `namedModels.test.ts` 显式注入10ps重现原失败、零接受预算拒绝且无当前读数／声音；`contracts.test.ts` 原Newton／拒步／接受限制及10ps边界 | A通过；不会忽略调用方测试精度或绕过新／旧下限 |
+| OSC-04/06、AC-08/17 | `oscillator.spec.ts` 的 `OSC model cards`：启用实际Chromium音频、选择NPN具名／再选PNP具名、40ms近直流、无旧频率／残音、型号保存、停止后切回通用重新起振和发声 | D的1个场景通过。不是实际扬声器试听或正式性能采样 |
+| OSC-06：参数／生命周期 | `transistorModels.test.ts` 原参数、类型匹配／拒绝、v5保存；`oscillatorSession.test.ts` 旧generation、停止、共享5s和Worker不可用 | B的8项通过；数值方程、Worker消息、声音实现及保存格式均未修改 |
+
+命令A：`npm test -- src/circuit/oscillator/namedModels.test.ts src/circuit/oscillator/analysis.test.ts src/circuit/oscillator/contracts.test.ts -t 'optional transistor card|classifies REF|fails Newton/hmin|never approves a sub-10ps'`。首轮修复后11通过／16未匹配跳过；随后只新增3项测试（未再改产品代码），由命令C单独验证，不重复通过项。
+
+命令B：`npm test -- src/circuit/transistorModels.test.ts src/app/oscillatorSession.test.ts`：8/8通过。
+
+命令C：`npm test -- src/circuit/oscillator/namedModels.test.ts -t 'mixed pair|0.1 ps floor'`：新增3通过／8未匹配跳过。A/B/C合计22个不同场景，不将跳过项计为通过。
+
+命令D：`CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/oscillator.spec.ts --project=chromium --workers=1 -g 'OSC model cards'`：1/1通过。隔离测试作品与本地端口，不读取或修改学生作品。
+
+`npm run build`（含strict类型检查）通过；对 `analysis.ts`、`namedModels.test.ts`、`oscillator.spec.ts` 的定向 `npx eslint` 通过；提交前检查文档本地引用／围栏及差异。所有执行针对基线加本次工作树，最终完整提交SHA由交付报告固定。
+
+未执行全套模块／浏览器／性能、目标M1/8GB的P95／内存、真实后台／辅助技术／试听／师生验证；不把本机定向通过当作任意具名组合可用或真实型号模型验证。两档一致只是同一实现的数值收敛核对，不冒充第二独立求解器。沿用定向验证安排使用 `[skip ci]`，不声称远端CI通过。自动协调及跨聊天回报继续暂停；不合并master。
+
+## 自激v2容量扩容定向验证：2026-11-10
+
+授权及实施基线见[决定D66](DECISIONS.md#自激v2电容上限1μf2026-11-10)。修改OSC-02和OSC-06／AC-08的v2容量范围，47–220nF扩为47–1000nF；无新增／删除验收ID。只核对本次范围及受影响回归，不扩大为整个OSC／EX2重新验收。
+
+| 受影响验收 | 测试文件／场景及实际证据 |
+| --- | --- |
+| OSC-02：新上限、预设、单位、原子校验 | `capacitanceRange.test.ts`三组221／500／1000nF编辑与精确保值；`catalog.test.ts`覆盖47nF／1μF边界、超限与间隙；`CapacitanceEditor.test.tsx`输入1μF得到精确1e-6F及新预设；Chromium `nF/μF conversion`场景验证应用／错误草稿不覆盖 |
+| OSC-06、AC-08：合法v5存档往返 | 新容量测试覆盖保存／加载；`storage/oscillator.test.ts`验证原迁移／未知版本保护；同一Chromium场景验证刷新后1000nF=1μF，配置值不变 |
+| AC-07／14：历史和校验回归 | 新容量的撤销／重做；超限1.001μF、非有限／未完成／重复单位拒绝；Chromium撤销回200nF、重做到1μF并恢复 |
+| OSC-03–05、AC-17：局部运行／音频回归 | 新容量测试：通用1μF完成40ms且KCL≤1nA、有限读数、计数预算内；具名1μF当前明确数值失败且无读数／频率。Chromium `OSC model cards`验证100nF具名近直流→1μF数值失败清旧读数／连续音→100nF通用重新周期及音频；未重跑独立数值金标准全表 |
+| EX2-05／10、OSC-06：旧模型与格式保护 | `legacyCapacitance.test.ts`4项覆盖原实验100nF及间隙；新容量测试保持旧v1和legacy拒绝1μF、schema4拒绝1μF但保留100μF、默认仍100nF；存储测试覆盖旧schema迁移 |
+
+实际命令及结果：
+
+- 测试先行：新文件和1μF界面场景在旧实现6失败／1通过；失败由编辑拒绝或运行前结构拒绝引起，确认原限制。
+- `npm test -- src/circuit/oscillator/capacitanceRange.test.ts src/editor/CapacitanceEditor.test.tsx src/circuit/catalog.test.ts src/circuit/legacyCapacitance.test.ts src/storage/oscillator.test.ts`：5文件53项通过。UI测试类型修正后单独重跑`npm test -- src/editor/CapacitanceEditor.test.tsx --reporter=dot`，15项通过；不重复计入53项。
+- `CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/oscillator.spec.ts --project=chromium --workers=1 -g 'nF/μF conversion|OSC model cards'`：转换／恢复场景通过；型号场景新增断言最初误以为失败时整个诊断读数容器消失，改为保留最后接受时刻、无元件读数／扬声器端口。最终以同命令的`-g 'OSC model cards'`定向重跑通过。两种场景均有通过证据，不声称同一批全套通过。
+- `npm run build`：严格TypeScript及生产构建通过。对4个改动源码和4个测试文件执行`npx eslint`通过；另执行Markdown相对链接／代码围栏和`git diff --check`。
+
+已知未闭合项：当前具名2N3904／2N3906配1μF在约7.103511872ms报告Newton阻尼未收敛；本次只扩输入／保存范围，未改变求解器或宣称该组合完成40ms。更大容量下可能不足以检测稳定周期；不保证发声或真实器件效果。未执行全套模块／浏览器／性能、远端CI、Firefox／WebKit、设备试听、目标硬件及人工教学／辅助技术验证。提交使用`[skip ci]`，未执行不得写通过；自动协调保持暂停。
+
+## 标准SPICE晶体管动态模型：2026-11-10
+
+授权与范围见[CR-BJT-DYNAMICS](changes/CR-BJT-DYNAMICS.md)。本轮新增标准卡路径，不把此前简化模型DC结果当作完整模型期望。实际独立执行为原生ngspice47与WASM45.2的同一卡比较，不是独立物理模型或实物测量。
+
+| 验收 | 输入／测试及证据 | 当前边界 |
+| --- | --- | --- |
+| BJT-DYN-01 | `src/spice/cards.ts`固定OUP B.11全卡；`src/spice/netlist.test.ts`验证全卡传入、供电斜坡、端口传感器、禁止通用卡默替和源短路 | 参数由标准GP内核解释，非自行实现的逐参数导数单测；封装版本固定1.9.0，运行启动信息45.2 |
+| BJT-DYN-02 | 原图末端工作点、两管开关测试覆盖截止／正向导通／饱和；Chromium逐采样点对照原生端压及源流 | 独立反向有源偏置扫描尚未执行，不宣称全工作区实测完成 |
+| BJT-DYN-03 | `npn-switching.cir`／`pnp-switching.cir`，2μs阶跃、10μs脉宽、1kΩ基极／100Ω集电极；0–20μs含开通／饱和／关断尾部，9个时刻比较 | 初版1ns步在NPN边沿差2.24mV，未放宽1mV容差；两端改0.1ns且收紧参考数值精度后NPN／PNP通过。未声称独立提取每项寄生参数 |
+| BJT-DYN-04 | `reference.cir`原图9V／100nF／8Ω，40ms；8个时间点跨原生/WASM电压误差<1mV、源流误差<10μA；实际App新版本计算与保存恢复 | 两端均近直流约1.037066799V，无连续音；不能用“必须响”判定程序正确，也不能推断实物不起振 |
+| BJT-DYN-05、AC-17 | 父session原有过期／超时／取消测试，实际Chromium计算中停止无旧读数；结果新增检查全窗、有限数、采样≤1m及三脚总端流KCL≤1nA | 5s截止保留；≤100ms定量采样、最大网表／内存峰值／WASM堆硬上限尚未完成，不能称性能验收全通过 |
+| OSC-02／06、AC-07／08／14 | 3项netlist／版本测试：显式切换、完整存档往返、撤销恢复、未知／不匹配版本拒绝；App刷新仍选新版本且停止 | 旧schema1–4不变；原通用模型不自动转换 |
+| OSC-03–05、EX2-05／10、AC-13／17回归 | catalog、storage/oscillator、oscillatorSession、OscillatorLifecycle、ComponentGuide定向执行 | 未重跑所有金标准、全应用和全浏览器，不将局部覆盖写成全套通过 |
+
+执行命令与实际结果：
+
+- `python3 tests/spice/generate-reference.py`：原生3个固定网表完成；输出为提交的摘要／输入SHA256，raw／日志只在临时目录。切换基准reltol1e-6／vntol100nV／abstol10pA／hmax0.1ns；原图按生产标准卡精度。再生成是显式操作，不在测试中重写期望。
+- `npm test -- src/spice/netlist.test.ts src/app/oscillatorSession.test.ts src/circuit/catalog.test.ts src/storage/oscillator.test.ts src/app/OscillatorLifecycle.test.tsx src/app/ComponentGuide.test.tsx --reporter=dot`：6文件53项通过。新增3项；本轮中更正了测试误用fixture布局参数和切profile未清字段，保留回归断言。
+- `CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/spice-engine.spec.ts --project=chromium --workers=1`：原图原生对照与应用路径通过；NPN初次边沿比较失败，后以更细基准复验。相同命令加`-g 'npn-switching|pnp-switching|SPICE mode'`：3项通过。最终端流守恒／电容传感器后只重跑`-g 'SPICE mode'`，1项通过；四个不同场景均有通过证据，不伪称同批4/4。
+- `npm run build`：严格类型及生产构建通过；旧Worker约27.43kB，新Worker约20.20MB，主界面gzip约116.9kB。对全部本轮源文件／测试执行定向`npx eslint`通过。另检查文档本地引用、代码围栏、`git diff --check`。
+
+生产构建另以临时预览配置执行`npx playwright test --config /private/tmp/circuit-spice-preview.config.mts --project=chromium -g 'SPICE mode'`：1项通过，确认打包后的独立Worker实际计算／保存／停止。配置只指向5188预览服务及已提交同一场景，不提交临时配置／构建物。
+
+未执行：远端CI／全套测试、Firefox／WebKit、目标M1／8GB、完整反向工作区扫描、完整卡持续周期正例／交流强度对照、引擎峰值内存硬约束、定量停止延迟、设备试听和实物／教学验证。eecircuit-engine封装MIT已核对，随包还含ASU／FreePDK／SkyWater／GF180模型，其完整许可清单尚未闭合；本轮不公开部署，不称生产发布验收完成。标准器件动态路径可本地验证，资源及分发门槛仍须收尾。提交用`[skip ci]`，不声称CI通过。
+
+## SPICE型号引导与240kΩ周期对照（2026-11-12）
+
+基线与问题依据见D68；开始于`319459b6d2a078f03f2ed7ca2239d64300fbaaeb`、干净的`codex/contextual-running-hint`分支。界面把原有具名卡条件提前检查，不新增模型／器件／依赖，也不修改原图、默认电阻、完整卡或生产求解设置。原图120kΩ仍得到直流；240kΩ为另一个明确调整外部参数的实验，不替换原图验收。新增／删除验收ID均无，BJT-DYN-01／04及OSC-02／06补配置引导与周期正例；回归AC-07／08／14／17。
+
+| 验收ID | 测试／场景与实际证据 | 当前边界 |
+| --- | --- | --- |
+| BJT-DYN-01、OSC-02／06、AC-07／08／14 | `OscillatorConfiguration.test.tsx`的`SPICE model selection`：通用卡禁用新勾选并给操作步骤，分别明确选两具名卡后才可勾选；改回通用卡不自动替换参数，暂禁运行，仍可取消SPICE | 定向模块A通过；既有保存／撤销机制不改，未重跑全部迁移测试 |
+| BJT-DYN-01 | `netlist.test.ts`的`requires explicit cards`：底层仍独立拒绝未明确选择型号及电源短路；与界面共用型号条件 | 定向模块B通过，其他网表场景未执行 |
+| BJT-DYN-04 | `reference-240k.cir`保持完整卡、9V、47Ω／10Ω、100nF／8Ω，仅将偏置改240kΩ；原生ngspice47默认157.890404554Hz、交流RMS0.343129708V，末4周期及各周期RMS偏差均小于1% | 默认摘要含网表SHA256；未由产品生成期望 |
+| BJT-DYN-04数值核对 | 同一240kΩ输入的原生严格档，reltol1e-6／vntol100nV／abstol10pA，最大步由0.25μs减至0.125μs，仍用零初态／100μs上电／40ms；157.888072609Hz、0.343131258V，相对默认差约0.001477%／0.000452% | 严格摘要含修改后网表SHA256；这是同一内核精度核对，不冒充第二物理模型 |
+| BJT-DYN-04、OSC-02／06、AC-14／17 | `spice-engine.spec.ts`的`SPICE model selection and 240k`：从通用卡经实际型号选择开启SPICE，实际Worker检测到稳定周期；UI频率及交流RMS分别与原生摘要比较，容差1%；运行中选回通用卡会停止／清读数／禁无效运行，可取消SPICE继续编辑 | Chromium定向C通过；补上旧记录中未做的完整卡周期正例和交流强度对照，不覆盖设备音频／实物 |
+
+实际执行：
+
+- A：`npm test -- src/app/OscillatorConfiguration.test.tsx -t 'SPICE model selection'`，新增回归先在未修复界面因允许勾选失败；修复后1项通过、5项过滤未执行。
+- B：`npm test -- src/spice/netlist.test.ts -t 'requires explicit cards'`，1项通过、2项过滤未执行。
+- 独立默认参考：`python3 tests/spice/generate-reference.py reference-240k`，仅生成新网表摘要，未重写已有3份参考；独立严格参考：同命令加`--strict`，仅生成该网表严格摘要。另在临时目录复算原图及少量单因素对照；PNP的BF人为降至50会起振，只增加2／1nF线性结C仍直流，说明不能单独归因于大结电容；人为卡不进入产品。
+- C：`CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/spice-engine.spec.ts --project=chromium --workers=1 -g 'SPICE model selection and 240k'`，1项通过。首次受本地端口启动权限限制而未启动场景，获准后执行；补充运行中改卡停止断言后仅重跑同一场景，最终1项通过（6.8秒）。未运行其余浏览器场景。
+- `npm run typecheck`通过。最初新增模块测试误用了Playwright的`exact`选项，类型检查指出后删除，未修改应用类型约束。对本轮5个TypeScript文件执行定向`npx eslint`通过；文档相对引用／围栏、参考哈希／默认严格指标及`git diff --check`另核对。
+
+没有运行全套模块／E2E、Firefox／WebKit、性能、生产构建或远端CI；不重写旧记录为本轮全部通过。仍未验证目标M1／8GB、WASM峰值内存硬上限、定量停止延迟、完整反向工作区、真实扬声器负载／实物频率、设备试听、辅助技术与教学效果、完整分发许可。生产器件卡没有人为减小BF或增加结电容，不强制起振；不自动改用户电路，原图120kΩ直流结论保留。使用`[skip ci]`避免完整CI；自动协调保持暂停，不部署／合并。

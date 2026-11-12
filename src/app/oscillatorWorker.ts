@@ -1,6 +1,6 @@
 import { compileOscillator, createOscillatorAnalysis, advanceOscillatorAnalysis } from '../circuit/oscillator/analysis';
 import type { WorkerRequest, WorkerResponse } from './oscillatorSession';
-import { OSCILLATOR_DEADLINE_MS, oscillatorFailure } from './oscillatorSession';
+import { OSCILLATOR_DEADLINE_MS, oscillatorFailure } from './oscillatorLimits';
 
 const scope=globalThis as unknown as {onmessage:((event:MessageEvent<WorkerRequest>)=>void)|null;postMessage:(message:WorkerResponse)=>void};
 scope.onmessage=({data})=>{

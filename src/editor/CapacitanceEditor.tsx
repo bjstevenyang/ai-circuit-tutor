@@ -14,7 +14,7 @@ export function CapacitanceEditor({part,profile,onApply}:{part:ComponentInstance
   const [unit,setUnit]=useState<'nF'|'μF'>(oscillator||part.capacitanceF===DEFAULT_CAPACITANCE_F?'nF':'μF');
   const places=unit==='nF'?9:6;
   const displayed=(value:number)=>decimalShift(value,places);
-  const presetF=oscillator?[47e-9,100e-9,220e-9]:[DEFAULT_CAPACITANCE_F,10e-6,100e-6,1000e-6];
+  const presetF=profile==='oscillator-em-v2'?[47e-9,100e-9,220e-9,1e-6]:oscillator?[47e-9,100e-9,220e-9]:[DEFAULT_CAPACITANCE_F,10e-6,100e-6,1000e-6];
   const [min,max]=capacitanceRangeForProfile(profile);
   const value=part.capacitanceF!;
   return <>
@@ -28,6 +28,6 @@ export function CapacitanceEditor({part,profile,onApply}:{part:ComponentInstance
       {...(oscillator?{}:{rangeLabel:'100 nF（0.1 μF）或 10–1000 μF'})} onApply={v=>onApply(decimalShift(v,-places))}/>
     {!isCapacitanceForProfile(value,profile)?<p role="status">已保留容量；该值不在当前模型范围内，运行前请调整。</p>:null}
     {!oscillator&&<small>100 nF 配 10 kΩ 时 τ = 1 ms；观察缓慢充放电可选择 100 μF。</small>}
-    {oscillator&&<small>100 nF = 0.1 μF；所有电容从零初态重新计算。</small>}
+    {oscillator&&<small>100 nF = 0.1 μF{profile==='oscillator-em-v2'?'；1000 nF = 1 μF':''}；所有电容从零初态重新计算。</small>}
   </>;
 }

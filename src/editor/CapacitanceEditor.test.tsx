@@ -25,7 +25,18 @@ describe('OSC-01/02 units and upright pin identification',()=>{
     await user.clear(screen.getByRole('textbox',{name:'电容容量'}));await user.type(screen.getByRole('textbox',{name:'电容容量'}),'0.2');
     await user.click(screen.getByRole('button',{name:'应用电容容量'}));expect(apply).toHaveBeenCalledExactlyOnceWith(200e-9);
   });
-  it.each(['','1e','100 nF','0.1 μF','46','221','Infinity','NaN'])('rejects invalid or duplicate-unit draft %j without applying',async draft=>{
+  it('accepts 1 μF as exactly 1000 nF and exposes the new preset',async()=>{
+    const user=userEvent.setup(),apply=vi.fn();
+    render(<CapacitanceEditor part={createComponent('capacitor','c13',0,'c','oscillator-em-v2')} profile="oscillator-em-v2" onApply={apply}/>);
+    await user.selectOptions(screen.getByRole('combobox',{name:'电容显示单位'}),'μF');
+    const input=screen.getByRole('textbox',{name:'电容容量'});
+    await user.clear(input);await user.type(input,'1');
+    await user.click(screen.getByRole('button',{name:'应用电容容量'}));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(apply).toHaveBeenCalledExactlyOnceWith(1e-6);
+    expect(screen.getByRole('option',{name:'1 μF'})).toBeInTheDocument();
+  });
+  it.each(['','1e','100 nF','0.1 μF','46','1001','Infinity','NaN'])('rejects invalid or duplicate-unit draft %j without applying',async draft=>{
     const user=userEvent.setup(),apply=vi.fn();
     render(<CapacitanceEditor part={createComponent('capacitor','c13',0,'c','oscillator-em-v2')} profile="oscillator-em-v2" onApply={apply}/>);
     const input=screen.getByRole('textbox',{name:'电容容量'});await user.clear(input);if(draft)await user.type(input,draft);

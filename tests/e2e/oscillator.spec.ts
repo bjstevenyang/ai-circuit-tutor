@@ -43,6 +43,51 @@ const refPart=(page:Page,document:CircuitDocument,id:string)=>{
   return page.getByRole('button',{name:new RegExp(`${COMPONENTS[part.kind].name}.*，锚点 ${part.anchor}$`)});
 };
 const completedPeriodic=(page:Page)=>expect(page.locator('.result-card h3')).toHaveText('检测到稳定周期',{timeout:10000});
+
+test('OSC model cards: completes the sourced pair as DC and restores the generic periodic audio',async({page})=>{
+  await audioCounters(page,true);
+  const reference=oscillatorFixtureDetails().document;
+  await openFixture(page,reference);
+  await page.getByRole('button',{name:'运行电路',exact:true}).click();
+  await completedPeriodic(page);
+  await page.getByRole('button',{name:/^启用.*声音$/,exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(1);
+
+  await refPart(page,reference,'Q1').click();
+  await page.getByLabel('晶体管参数模型').selectOption('2n3904');
+  await expect(page.locator('.result-card h3')).toHaveText('观察窗内已近直流',{timeout:10000});
+  await refPart(page,reference,'Q2').click();
+  await page.getByLabel('晶体管参数模型').selectOption('2n3906');
+  await expect(page.locator('.result-card h3')).toHaveText('观察窗内已近直流',{timeout:10000});
+  await expect(page.getByLabel('仿真状态')).toContainText('运行中');
+  await expect(page.getByLabel('实验读数')).toContainText(/模拟时刻：40\s*ms/);
+  await expect(page.getByLabel('实验读数')).not.toContainText('稳定频率');
+  const stored=await storedDocument(page);
+  expect(stored.components.find(part=>part.id==='Q1')?.transistorModel).toBe('2n3904');
+  expect(stored.components.find(part=>part.id==='Q2')?.transistorModel).toBe('2n3906');
+  expect(await page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(1);
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {audioEvidence:{stopped:number}}).audioEvidence.stopped)).toBe(1);
+
+  await refPart(page,reference,'C1').click();
+  await page.getByLabel('电容容量预设').selectOption(String(1e-6));
+  await expect(page.getByLabel('仿真状态')).toContainText('运行受限',{timeout:10000});
+  await expect(page.locator('.result-card')).toContainText('Newton 阻尼未收敛');
+  await expect(page.getByLabel('实验读数')).not.toContainText('扬声器端口');
+  await expect(page.getByLabel('实验读数').locator('[data-part-reading]')).toHaveCount(0);
+  expect((await storedDocument(page)).components.find(part=>part.id==='C1')?.capacitanceF).toBe(1e-6);
+  expect(await page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(1);
+
+  await page.getByRole('button',{name:'停止运行',exact:true}).click();
+  await page.getByLabel('电容容量预设').selectOption(String(100e-9));
+  await refPart(page,reference,'Q1').click();
+  await page.getByLabel('晶体管参数模型').selectOption('generic');
+  await refPart(page,reference,'Q2').click();
+  await page.getByLabel('晶体管参数模型').selectOption('generic');
+  await page.getByRole('button',{name:'运行电路',exact:true}).click();
+  await completedPeriodic(page);
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {audioEvidence:{started:number}}).audioEvidence.started)).toBe(2);
+});
+
 test('OSC configuration: keyboard places new parts, reads actual pins, saves and undoes model choice',async({page})=>{
   await page.goto('/');await page.getByRole('radio',{name:'自激发声·虚拟模型v2',exact:true}).press('Enter');
   await keyboardPlace(page,'PNP 晶体管','c13');await keyboardPlace(page,'无源扬声器','c20');
@@ -72,11 +117,23 @@ test('OSC configuration: nF/μF conversion and invalid drafts preserve the saved
   await page.getByLabel('电容容量',{exact:true}).fill('0.2');await page.getByRole('button',{name:'应用电容容量',exact:true}).click();
   const updated=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),STORAGE_KEY);
   expect(updated.components[0].capacitanceF).toBe(200e-9);
-  for(const draft of ['NaN','1e','0.2 μF','1']) {
+  await page.getByLabel('电容容量',{exact:true}).fill('1');await page.getByRole('button',{name:'应用电容容量',exact:true}).click();
+  await expect(page.getByLabel('电容容量预设')).toHaveValue(String(1e-6));
+  await expect(page.getByLabel('电容容量预设').getByRole('option',{name:'1 μF',exact:true})).toHaveCount(1);
+  expect((await storedDocument(page)).components[0]?.capacitanceF).toBe(1e-6);
+  for(const draft of ['NaN','1e','0.2 μF','1.001']) {
     await page.getByLabel('电容容量',{exact:true}).fill(draft);await page.getByRole('button',{name:'应用电容容量',exact:true}).click();
     await expect(page.getByRole('alert')).toContainText('有效数值');
-    expect((await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),STORAGE_KEY)).components[0].capacitanceF).toBe(200e-9);
+    expect((await storedDocument(page)).components[0]?.capacitanceF).toBe(1e-6);
   }
+  await page.getByRole('button',{name:'撤销',exact:true}).click();
+  expect((await storedDocument(page)).components[0]?.capacitanceF).toBe(200e-9);
+  await page.getByRole('button',{name:'重做',exact:true}).click();
+  expect((await storedDocument(page)).components[0]?.capacitanceF).toBe(1e-6);
+  await page.reload();await page.getByRole('button',{name:'电容，锚点 c13',exact:true}).click();
+  await expect(page.getByLabel('电容容量',{exact:true})).toHaveValue('1000');
+  await expect(page.getByRole('region',{name:'电容使用说明'})).toContainText('0.047–1μF');
+  expect((await storedDocument(page)).components[0]?.capacitanceF).toBe(1e-6);
 });
 
 test('OSC-01/03/04: builds the complete seven-node reference from an empty board by keyboard, solves and opts into real Chromium audio',async({page},testInfo)=>{

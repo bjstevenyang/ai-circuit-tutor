@@ -4,10 +4,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { createComponent, createEmptyDocument } from '../circuit';
 import { STORAGE_KEY } from '../storage';
+import { oscillatorFixture } from '../circuit/oscillator/fixtures';
 
 beforeEach(()=>localStorage.clear());
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 describe('OSC-01/02/06 configuration slice (not numerical conformance)',()=>{
+  it('SPICE model selection explains and prevents unsupported generic combinations without replacing cards',()=>{
+    const Worker=vi.fn();vi.stubGlobal('Worker',Worker);
+    const doc=oscillatorFixture();
+    const raw=JSON.stringify(doc);localStorage.setItem(STORAGE_KEY,raw);render(<App/>);
+    const spice=screen.getByRole('checkbox',{name:/标准SPICE晶体管动态模型/});
+    expect(spice).toBeDisabled();
+    expect(screen.getByText(/先点击板上的晶体管/)).toBeVisible();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(raw);
+    for(const [kind,model] of [['NPN','2n3904'],['PNP','2n3906']]){
+      fireEvent.click(screen.getByRole('button',{name:new RegExp(`^${kind} 晶体管，锚点`)}));
+      fireEvent.change(screen.getByLabelText('晶体管参数模型'),{target:{value:model}});
+      if(kind==='NPN')expect(spice).toBeDisabled();
+    }
+    expect(spice).toBeEnabled();fireEvent.click(spice);
+    expect(spice).toBeChecked();
+    fireEvent.change(screen.getByLabelText('晶体管参数模型'),{target:{value:'generic'}});
+    expect(spice).toBeChecked();expect(spice).toBeEnabled();
+    expect(screen.getByRole('button',{name:'运行电路'})).toBeDisabled();
+    expect(Worker).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).components.find((p:{id:string})=>p.id==='Q2').transistorModel).toBe('generic');
+    fireEvent.click(spice);
+    expect(spice).not.toBeChecked();
+    expect(screen.getByRole('button',{name:'运行电路'})).toBeEnabled();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).transistorDynamics).toBeUndefined();
+  });
   it('restores known v1 without a Worker, supports explicit keyboard conversion and undo, and preserves every configuration value',()=>{
     const Worker=vi.fn();vi.stubGlobal('Worker',Worker);
     const d={...createEmptyDocument(),modelProfileId:'oscillator-em-v1' as const,supplyVoltage:6,

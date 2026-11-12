@@ -126,6 +126,10 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
 };
 
 export function componentGuideCopy(kind:ComponentKind,profile:ModelProfileId):ComponentGuideCopy {
+  if(profile==='oscillator-spice-gp-v1'){
+    const base=componentGuideCopy(kind,'oscillator-em-v2');
+    return kind==='npn'||kind==='pnp'?{...base,modelNote:'标准SPICE Gummel–Poon型号卡，固定27°C。包括增益变化、非线性结电荷、扩散储存和寄生电阻；并非通用卡固定β／结电容。不能判断实物安全，不保证原图起振；扬声器仍为8Ω纯电阻近似。'}:base;
+  }
   const copy=COMPONENT_GUIDES[kind];
   if(!isOscillatorProfile(profile))return copy;
   if(kind==='npn')return {
@@ -140,9 +144,9 @@ export function componentGuideCopy(kind:ComponentKind,profile:ModelProfileId):Co
     ...copy,pins:['1 无极性端','2 无极性端'],
     connection:'在反馈支路连接两个电路节点，不必把一端接负极。参考实验连接NPN基极与PNP集电极输出。',
     example:'反馈输入节点 → 1〔电容〕2 → 输出节点；100nF = 0.1μF',
-    tryIt:'比较47、100和220nF；应用参数后从零初态重算0–40ms，不连续保留上次电荷。',
+    tryIt:profile==='oscillator-em-v2'?'比较47、100、220和1000nF；应用参数后从零初态重算0–40ms。容量较大时，观察窗内可能不足以确认稳定周期。':'比较47、100和220nF；应用参数后从零初态重算0–40ms，不连续保留上次电荷。',
     commonMistake:'把0.1μF误读成1μF，或把导线交叉当连接；删除反馈电容后仍可能有直流电流。',
-    modelNote:'本profile范围47–220nF、默认100nF；线性无极性电容与内部结电容共同参与EM瞬态。原实验RC支持100nF或10–1000μF、默认100nF；旧作品容量及连续性规则保留。',
+    modelNote:`当前模型范围${profile==='oscillator-em-v2'?'47–1000nF（0.047–1μF）':'47–220nF'}、默认100nF；线性无极性电容与内部结电容共同参与EM瞬态。原实验RC支持100nF或10–1000μF、默认100nF；旧作品容量及连续性规则保留。`,
   };
   return copy;
 }

@@ -16,6 +16,7 @@ import { NumberEditor } from '../editor/NumberEditor';
 import { OscillatorSession, speakerDrive } from './oscillatorSession';
 import { calculatingResult, presentOscillator, OSCILLATOR_TITLES } from './oscillatorPresentation';
 import type { OscillatorProgress } from '../circuit/oscillator/types';
+import { hasSpiceModelSelections } from '../circuit/transistorModels';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
 const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
@@ -140,6 +141,14 @@ export function App() {
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
   const profile=profileOf(document);
+  const spiceEnabled=document.transistorDynamics==='spice-gp-v1';
+  const spiceCardsReady=hasSpiceModelSelections(document.components);
+  const invalidSpiceSelection=spiceEnabled&&!spiceCardsReady;
+  const runningControlHints = [
+    document.components.some(part => part.kind === 'switch') && '开关点击切换',
+    document.components.some(part => part.kind === 'button') && '黄色按钮按住接通',
+  ].filter(Boolean).join('；');
+  const runningStatus = runningControlHints ? `运行中 · ${runningControlHints}。` : '运行中 · 点击“停止运行”结束。';
   const oscillatorSession=useRef<OscillatorSession|null>(null);
   if(oscillatorSession.current===null){oscillatorSession.current=new OscillatorSession();}
   const backgroundResume=useRef(false);
@@ -148,6 +157,9 @@ export function App() {
   useEffect(()=>()=>oscillatorSession.current?.cancel(),[]);
   const startOscillator=(next:CircuitDocument,pressed:readonly string[],revision=state.revision)=>{
     backgroundResume.current=false;
+    if(next.transistorDynamics==='spice-gp-v1'&&!hasSpiceModelSelections(next.components)){
+      oscillatorSession.current?.cancel();setPressedButtons([]);dispatch({type:'stop'});return;
+    }
     const sessionId=state.sessionId+1;
     dispatch({type:'run',result:calculatingResult(),restart:true});
     oscillatorSession.current!.start(next,{pressedButtons:pressed},{sessionId,documentRevision:revision},result=>dispatch({type:'tick',result:presentOscillator(result,next),sessionId,revision}),progress=>dispatch({type:'progress',progress,sessionId,revision}));
@@ -351,7 +363,8 @@ export function App() {
           <div className="panel-heading"><h2>元件盒</h2><span className="mono">{COMPONENT_KINDS.length} PARTS</span></div>
           <ChoiceGroup label="实验模型" value={profile} choices={[{value:'legacy-stage2-v1',label:'原实验模型'},{value:'oscillator-em-v2',label:'自激发声·虚拟模型v2'}] as const} onChange={next=>{if(next!=='oscillator-em-v1')edit({type:'set-profile',profile:next});}}/>
           {profile==='oscillator-em-v1'&&<p className="panel-intro" role="status">当前为旧版虚拟模型v1，仅恢复配置；需显式切换v2后运行。切换保留元件值和接线，可撤销。</p>}
-          {profile==='oscillator-em-v2'&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。每管2/1 nF为虚拟结电容，不是真实3904参数。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
+          {profile==='oscillator-em-v2'&&<><label><input type="checkbox" checked={spiceEnabled} disabled={!spiceEnabled&&!spiceCardsReady} aria-describedby={!spiceCardsReady?'spice-card-selection-help':undefined} onChange={e=>edit({type:'set-dynamics',enabled:e.target.checked})}/>标准SPICE晶体管动态模型（2N3904／2N3906，27°C）</label>{!spiceCardsReady&&<p id="spice-card-selection-help" className="panel-intro">标准SPICE只支持具名型号。先点击板上的晶体管，在“晶体管参数模型”中把NPN选为2N3904、PNP选为2N3906；使用通用虚拟模型时请取消勾选。作品和接线会保留。</p>}</>}
+          {profile==='oscillator-em-v2'&&!document.transistorDynamics&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。通用卡每管2/1 nF为虚拟结电容；具名卡使用对应的四参数子集，均不是完整SPICE。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
           <p className="panel-intro">选择元件，再点击孔位放置。</p>
           <div className="part-list">
             {COMPONENT_KINDS.map(kind => {
@@ -401,13 +414,13 @@ export function App() {
               <button className="icon-button" aria-label="重置工作台" title="重置工作台（可撤销）" onClick={() => { if (edit({ type: 'reset' })) { setSelected(null); setSelectedEndpoint(null); setWireFrom(''); setTool('inspect'); } }}><Icon name="reset" /></button>
             </div>
             <button className="delete-button" title="删除选中对象（Delete / Backspace）" disabled={!selectedPart && !selectedWire} onClick={deleteSelected}><Icon name="trash" size={16} />删除</button>
-            <button className={`run-button${running?' stop-button':''}`} aria-describedby="simulation-status" onClick={() => {
+            <button className={`run-button${running?' stop-button':''}`} disabled={!running&&invalidSpiceSelection} aria-describedby={invalidSpiceSelection?'simulation-status spice-card-selection-help':'simulation-status'} onClick={() => {
               setError('');
               if(running){backgroundResume.current=false;oscillatorSession.current?.cancel();setPressedButtons([]);dispatch({type:'stop'});}
               else {setTool('inspect');run();}
             }}><Icon name={running?'stop':'play'} size={16} />{running?'停止运行':'运行电路'}</button>
           </div>
-          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?(profile==='oscillator-em-v2'?'后台已暂停 · 返回前台从零初态重算。':'后台已暂停 · 返回前台继续，不补算离开时间。'):state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?(state.analysis?.mode==='oscillator'&&!state.analysis.oscillator?`计算中 · 分析进度 ${(((state.progress?.pass??1)-1)*50+(state.progress?.timeS??0)/.04*50).toFixed(0)}% · 从初态重算`:'运行中 · 开关点击切换；黄色按钮按住接通。'):'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
+          <div id="simulation-status" className={`simulation-status${running?' running':''}`} data-session={state.sessionId} data-revision={state.revision} role="status" aria-label="仿真状态"><span className="status-dot" />{state.phase==='background-paused'?(profile==='oscillator-em-v2'?'后台已暂停 · 返回前台从零初态重算。':'后台已暂停 · 返回前台继续，不补算离开时间。'):state.phase==='fault'?'运行受限 · 可阅读说明并停止。':running?(state.analysis?.mode==='oscillator'&&!state.analysis.oscillator?`计算中 · 分析进度 ${(((state.progress?.pass??1)-1)*50+(state.progress?.timeS??0)/.04*50).toFixed(0)}% · 从初态重算`:runningStatus):'已停止 · 可编辑电路，点击“运行电路”开始。'}</div>
           <div className="tool-message"><span className="tool-message-dot" />{toolInstructions[tool]}<span className="zoom-control"><button aria-label="缩小画布" disabled={zoom === 100} onClick={() => setZoom(Math.max(100, zoom - 25))}>−</button><span>{zoom}%</span><button aria-label="放大画布" disabled={zoom === 175} onClick={() => setZoom(Math.min(175, zoom + 25))}>+</button></span></div>
           <div className="canvas-scroll"><div className="canvas-scale" style={{ width: `${zoom}%` }}>
             <Breadboard document={document} connected={connected} selected={selected} selectedEndpoint={selectedEndpoint}
@@ -462,7 +475,7 @@ export function App() {
         </section>
 
         <aside className="tutor-panel" aria-label="学习指导">
-          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} profile={profile} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
+          {guideKind ? <ComponentGuide key={guideKind} kind={guideKind} profile={document.modelProfileId??'legacy-stage2-v1'} {...(selectedPart?{part:selectedPart}:{})}/> : <p className="component-guide-prompt">不认识元件？点击左侧元件盒或板上的元件，查看它的用途和接法。</p>}
           <div className="tutor-heading"><span className="tutor-symbol"><Icon name="bulb" size={21} /></span><div><h2>一起想一想</h2><span>先观察，再找到答案</span></div><span className="reviewed-badge">课程提示</span></div>
           <div className={`result-card ${state.analysis?.complete ? 'success' : ''}`} aria-live={state.analysis?.mode==='rc'?'off':'polite'}>
             {state.analysis?.mode==='oscillator'?<>

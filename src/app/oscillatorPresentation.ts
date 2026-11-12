@@ -8,5 +8,5 @@ export function presentOscillator(result:OscillatorResult,document:CircuitDocume
   const success=['periodic','settled-DC','window-no-period'].includes(result.outcome);
   const pins=result.entities.flatMap(id=>{const part=document.components.find(p=>p.id===id);return part?getComponentPins(part)??[]:[];});
   const diagnostic:Diagnostic={code:result.reason.startsWith('理想电源正负端被直接短接')?'source-short':'unsupported',entities:[...result.entities,...pins],reason:result.reason,timeS:result.timeS,context:'oscillator'};
-  return {status:success?'supported':'unsupported',mode:'oscillator',complete:false,timeS:result.timeS,oscillator:result,diagnostics:result.outcome==='periodic'?[]:[diagnostic],notes:['虚拟开关模型，不能判断真实器件安全。观察窗0–40 ms；参数/控制改变会从初态重算。'],...(success?{readings:result.readings??{},...(result.currentMa===undefined?{}:{currentMa:result.currentMa})}:{})};
+  return {status:success?'supported':'unsupported',mode:'oscillator',complete:false,timeS:result.timeS,oscillator:result,diagnostics:result.outcome==='periodic'?[]:[diagnostic],notes:[document.transistorDynamics?'标准SPICE器件卡，固定27°C；8Ω纯电阻负载近似，不能判断真实器件安全。观察窗0–40ms；参数改变从初态重算。':'虚拟开关模型，不能判断真实器件安全。观察窗0–40 ms；参数/控制改变会从初态重算。'],...(success?{readings:result.readings??{},...(result.currentMa===undefined?{}:{currentMa:result.currentMa})}:{})};
 }

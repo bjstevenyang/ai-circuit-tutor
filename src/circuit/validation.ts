@@ -13,7 +13,7 @@ export function validComponent(value: unknown): value is ComponentInstance {
   if(value.position!==undefined&&(value.kind!=='potentiometer'||!percentage(value.position)))return false;
   if(value.light!==undefined&&(value.kind!=='ldr'||!percentage(value.light)))return false;
   if(value.kind==='capacitor' ? !isCapacitance(value.capacitanceF) : value.capacitanceF!==undefined)return false;
-  if(!isTransistorModelForKind(value.kind, value.transistorModel))return false;
+  if(!isTransistorModelForKind(value.kind as ComponentInstance['kind'], value.transistorModel))return false;
   return getComponentPins(value as ComponentInstance)!==null;
 }
 export function readCircuitDocument(value: unknown): CircuitDocument | null {
@@ -26,6 +26,8 @@ export function readCircuitDocument(value: unknown): CircuitDocument | null {
   const current=v4||v5;
   if(!legacy&&!previous&&!v3&&!current)return null;
   if(v5&&!isKnownModelProfile(value.modelProfileId))return null;
+  if(value.transistorDynamics!==undefined&&(!v5||value.transistorDynamics!=='spice-gp-v1'))return null;
+  if(v5&&((value.modelProfileId==='oscillator-spice-gp-v1')!==(value.transistorDynamics==='spice-gp-v1')))return null;
   if((current||v3)&&!isSupplyVoltage(value.supplyVoltage))return null;
   if(current&&(!['battery','teaching-square'].includes(value.sourceMode as string)||![250,500,1000].includes(value.signalFrequencyHz as number)))return null;
   const supplyVoltage=current||v3?value.supplyVoltage as number:DEFAULT_SUPPLY_VOLTAGE;
@@ -47,5 +49,5 @@ export function readCircuitDocument(value: unknown): CircuitDocument | null {
     if(!record(wire)||!identity(wire.id)||typeof wire.from!=='string'||typeof wire.to!=='string'||!ENDPOINT_BY_ID.has(wire.from)||!ENDPOINT_BY_ID.has(wire.to)||wire.from===wire.to||typeof wire.color!=='string'||!/^#[0-9a-f]{6}$/i.test(wire.color)||(wire.bend!=='horizontal'&&wire.bend!=='vertical'))return null;
     wires.push({id:wire.id as string,from:wire.from,to:wire.to,color:wire.color,bend:wire.bend});
   }
-  return {schemaVersion:5,modelProfileId:v5?value.modelProfileId as ModelProfileId:'legacy-stage2-v1',boardId:'breadboard-30-v1',lessonId:'dc-lab-v2',supplyVoltage,sourceMode:current?value.sourceMode as 'battery'|'teaching-square':'battery',signalFrequencyHz:current?value.signalFrequencyHz as 250|500|1000:500,components,wires};
+  return {...(value.transistorDynamics==='spice-gp-v1'?{transistorDynamics:'spice-gp-v1' as const}:{}),schemaVersion:5,modelProfileId:v5?value.modelProfileId as ModelProfileId:'legacy-stage2-v1',boardId:'breadboard-30-v1',lessonId:'dc-lab-v2',supplyVoltage,sourceMode:current?value.sourceMode as 'battery'|'teaching-square':'battery',signalFrequencyHz:current?value.signalFrequencyHz as 250|500|1000:500,components,wires};
 }

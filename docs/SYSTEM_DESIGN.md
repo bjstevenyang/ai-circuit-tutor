@@ -169,11 +169,13 @@ v4 仅持久化经过白名单验证的配置；不包含实际 Vc、时间、�
 
 ### 权威状态、接口及异步边界
 
-CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。按D64，当前所有profile新建电容默认100e-9F；原实验模型“应用”只接受100nF或10–1000μF，自激v1/v2仍47–220nF，不能只用原实验模型的最小／最大值检查而放过间隙。读取配置允许原有两容量范围并集，分析支持域另校验。默认值只在新建时补入，不重写已有作品容量，schema仍5。
+CircuitDocument v5新增必填modelProfileId=`legacy-stage2-v1|oscillator-em-v1|oscillator-em-v2`，保留boardId/lessonId、sourceMode/supplyVoltage/signalFrequencyHz、原实例/线身份，新增pnp/speaker kind。kind/端点决定图元及安装，profile选择数学语义；同一旧NPN不能因新增PNP或C就自动切EM。模型选择是可见单次可撤销编辑，切换停止，配置值不缩放；容量不合当前profile时保留并提示，运行预检拒绝，不偷偷转成100nF或100μF。按D64，当前所有profile新建电容默认100e-9F；原实验模型“应用”只接受100nF或10–1000μF，按D66，自激v2为47–1000nF（0.047–1μF），已知旧v1保持47–220nF，不能只用原实验模型的最小／最大值检查而放过间隙。读取v5配置允许[47,1000]nF与[10,1000]μF两范围并集，分析支持域另校验。默认值只在新建时补入，不重写已有作品容量，schema仍5。
 
 可运行profile只有legacy-stage2-v1与oscillator-em-v2；新建作品默认legacy，明确选择“自激发声·虚拟模型v2”才使用新参数。已知oscillator-em-v1为可恢复的旧模型配置：保留全部ID/位置/参数/接线及47–220nF值，显示“旧版虚拟模型，需显式切换v2”，不创建Worker或播放/计算，运行返回unsupported-model-version。已知v1配置编辑仍用47–220nF范围/新建电容100nF默认及同一物理目录，合法编辑可保存，但不触发计算。菜单不把v1呈现为可新建的可用模型；其当前旧版标签仍可读。用户显式选v2是一次可撤销配置编辑，停止/清旧generation，不缩放容量或自动改线；撤销回v1再次只恢复不运行。schema版本仍5，未知profile与已知不运行的v1必须分开：未知值保护原存档，不默退legacy/v2。此转换不会自动产生额外实验或实施授权。
 
 核心纯函数职责分compileTransient(document, profile)→明确预检/编译结果；initialize(compiled, initial)→全部电荷零态；advance(compiled,state,target,budget)→accepted state/readings或带原因的失败。state包含所有独立电荷/必要节点解、模拟时刻及积分所需状态，不由上次UI读数还原。核心不依赖React/SVG/DOM/Worker/AudioContext/localStorage或墙钟。单个组件的导通状态由模型派生，不另存可与解冲突的开关标签。
+
+按D65，`createOscillatorAnalysis` 从已通过编译校验的配置选择默认精度：任一 `transistorModel=2n3904|2n3906` 使用hmin=1e-13s，其余仍用原DEFAULT_PRECISION的1e-11s；只改变该下限，其他精度字段原样保留。选择基于参数卡身份，适用于不同接线／布局，不识别参考图。初始化后精度随会话状态进入全部批次和统计遍数，预算／取消不重置。测试显式传入的precision覆盖值仍按原接口执行，用于严格档与失败注入，不暗改测试要求的下限。既有v5保存型号标识，不持久化步长、积分状态或声音；无需升级schema、Worker消息或会话身份字段。
 
 主线程外的内置Worker负责此profile编译/数值/周期统计，单会话单Worker（可复用一个Worker但不得并行旧generation）。外层以performance.now监督5s墙钟预算，超时/停止可terminate；无新库。每个请求/响应含sessionId、documentRevision、generation和modelProfileId，任一过期即丢弃。取消先使generation失效并静音，再清理计算，不等完成回调。UI不以每个求解步setState，也不按音频采样率求解；最多4096显示样本，周期统计用接受步流式累计，编译数据/旧会话不无限缓存。
 
@@ -210,10 +212,20 @@ AudioContext仅手势内创建/恢复，复用现有会话许可和15ms平滑增
 
 ### v5保存及迁移
 
-存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind，v4电容仍只接受10–1000μF，不能借当前100nF增补放宽历史格式或修改旧fixture字节／哈希；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。v5容量F严格验证[47,220]nF与[10,1000]μF两范围并集，缺字段不猜；原实验模型100nF已在该并集中，无需schema升级。原100μF等合法存档按原值恢复，不替换为新默认。保存物理合法但profile不支持的组合，运行说明限制。
+存储键仍ai-circuit-tutor.workspace.v1，仅白名单配置入库。v1/v2保留原4.5V兼容，v3/v4按原已定义字段恢复；全部v1–v4补modelProfileId=legacy-stage2-v1，保留原ID/位置/线/阻值/容量/电压及原迁移默认值。旧schema不接受新kind，v4电容仍只接受10–1000μF，不能借当前100nF增补放宽历史格式或修改旧fixture字节／哈希；schema v5的已知oscillator-em-v1按上述只恢复/显式转换处理，不能静默当v2；v5的pnp/speaker由固定目录推导参数。按D66，v5容量F严格验证[47,1000]nF与[10,1000]μF两范围并集，缺字段不猜；原实验模型100nF已在该并集中，无需schema升级。原100μF等合法存档按原值恢复，不替换为新默认。保存物理合法但profile不支持的组合，运行说明限制。
 
 不保存模拟时间/节点电压/电荷/积分历史/显示采样/Worker/运行态/周期缓存/诊断/提示/许可/音量/未应用草稿。加载只读，下一次成功保存才写v5；未知modelProfileId/schema、结构/物理损坏保护原文本并暂停自动覆盖，不能退回旧模型默算。写失败保留内存作品和重试。撤销/重做包含profile/参数，50步上限不变，恢复配置不恢复瞬态。
 
 ### 资源及测量
 
 新profile编译/全部统计遍数的40ms分析P95≤2s，交互反馈≤200ms、停止/静音≤100ms、墙钟硬截止5s、内存增长≤10MB；数值步数/12未知量见模型。这些均是未来验收门槛，尚未实测。旧EX2-12的100ms核心/200ms交互/100ms停止及原长运行规程保留；新有限窗不重复套10分钟连续RC实验。固定输入/时钟/样本/内存步骤以TEST_PLAN为准，不能把其他机器结果冒充M1/8GB。
+
+## 标准SPICE适配（2026-11-10）
+
+`src/spice/netlist.ts`把已校验的显式网络映射成数字节点／元件名，独立于DOM／存储；`cards.ts`固定全卡；`engine.ts`拥有WASM对象、检查结果并归一化。新增`spiceWorker.ts`仅在显式SPICE模式由session创建，旧Worker不携带新内核。父会话统一负责5s截止、终止和generation失效。
+
+v5新增已知profile `oscillator-spice-gp-v1`，要求配套白名单字段`transistorDynamics=spice-gp-v1`。旧版本看到未知profile保护原存档；当前读取拒绝两字段不匹配／未知版本，缺失字段的旧作品语义不变。UI复选框是一项原子可撤销编辑；切回原profile清除动态字段。`profileOf`为现有自激调度／参数策略将新profile映射为v2族，原始文档保留独立身份，不以该调度族代替持久化版本。
+
+按D68，App与网表预检共用纯函数`hasSpiceModelSelections`核对每只已放置NPN／PNP的具名卡。含通用卡时先给型号选择说明，禁止新勾选SPICE；已经勾选的作品仍可取消。SPICE作品改回通用卡或新增通用晶体管时保留作品／版本字段，运行按钮暂禁用；运行中改卡会取消并停止，清旧读数／声音，不创建下一Worker。历史／保存格式不变，不自动替换型号、电阻或接线；底层网表仍独立拒绝不兼容选择。
+
+只保存电路配置及模型版本，不保存WASM／波形。新引擎不提供旧BE的统计字段，不补假值。原图和两个晶体管开关动态的跨原生／WASM证据见TEST_PLAN；内核内部内存尚无批准的硬上限，现有输出点检查是读取后保护，不能宣称覆盖计算期间峰值内存。

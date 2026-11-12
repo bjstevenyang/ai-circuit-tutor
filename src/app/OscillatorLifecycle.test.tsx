@@ -28,6 +28,7 @@ describe('oscillator cold-run event contract',()=>{
     expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
     fireEvent.click(screen.getByRole('button',{name:'停止运行'}));expect(old.terminate).toHaveBeenCalledOnce();old.result();expect(status()).toHaveTextContent('已停止');
     start();expect(latest()).not.toBe(old);latest().result();expect(screen.getByRole('heading',{name:'检测到稳定周期'})).toBeInTheDocument();
+    expect(status()).toHaveTextContent('运行中 · 点击“停止运行”结束。');
     expect(screen.getByLabelText('实验读数')).toHaveTextContent('288.5 Hz');expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
     fireEvent.click(screen.getByRole('button',{name:'播报当前实验状态'}));
     fireEvent.click(screen.getByRole('button',{name:'停止运行'}));start();

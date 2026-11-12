@@ -21,3 +21,7 @@ https://learninglink.oup.com/protected/files/content/file/1617108117122-Sedra8e_
 ## 验收与限制
 
 新增定向测试为 `src/circuit/transistorModels.test.ts`（型号与类型约束、参数来源值、默认兼容、v5 存储恢复、不同 IS/BF 电流响应）。没有采用“切换型号后必须发声”的假验收；不同参数下可能出现无稳定振荡、数值失败或模型域不支持。对照 NGSPICE/PSpice 直流工作点、瞬态波形和真实元件实验仍是后续独立验收项。
+
+## 新增完整标准GP卡路径（2026-11-10）
+
+上述四参数子集继续描述旧v2模式。显式启用`oscillator-spice-gp-v1`后，使用固定完整GP卡，由浏览器ngspice-45.2执行，固定27°C；卡参数与默认、Worker、保存兼容和原生ngspice-47对照见[CR](changes/CR-BJT-DYNAMICS.md#本轮实际实现与验证)。全卡路径没有把BF当作所有电流下的固定hFE，也没有把CJE／CJC当作固定线性结电容。原图完整卡结果仍为近直流。标准模型不等同于实物校准、发热／击穿／声学仿真。

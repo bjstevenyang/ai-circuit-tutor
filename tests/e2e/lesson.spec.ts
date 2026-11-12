@@ -52,6 +52,7 @@ test('build a valid circuit, inspect connections, and restore after reload', asy
   await assemble(page);
   await page.getByRole('button', { name: '运行电路', exact: true }).click();
   await expect(page.getByRole('heading', { name: '亮起来了！' })).toBeVisible();
+  await expect(page.getByRole('status', { name: '仿真状态' })).toHaveText('运行中 · 点击“停止运行”结束。');
   if (test.info().project.name === 'chromium') {
     await page.screenshot({ path: 'test-results/circuit-complete.png', fullPage: true });
   }

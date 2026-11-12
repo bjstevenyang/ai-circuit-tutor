@@ -450,3 +450,35 @@ Chromium总场景为44（原35＋新9），实际执行结果以实施证据为�
 ## 18. OSC v2新增测试（2026-11-08）
 
 配置/存档测试见catalog、CapacitanceEditor、storage/oscillator和OscillatorConfiguration；纯数值测试见src/circuit/oscillator下fixtures/numeric/contracts/analysis/verification，覆盖独立参考、变体、精确反例、等价、预算及失败。异步生命周期见oscillatorSession和OscillatorLifecycle；声音边界追加在useBuzzerSound；Chromium在tests/e2e/oscillator.spec.ts；有限生产性能在tests/oscillator-performance。实际通过数量及交付边界统一见TEST_PLAN和OSCILLATOR-IMPLEMENTATION最新记录，旧历史清单不改写成新通过。
+
+## 19. 可选晶体管型号时间分辨率（2026-11-10）
+
+- [namedModels.test.ts](../src/circuit/oscillator/namedModels.test.ts)：新增11项，覆盖未指定／通用／两种混用／双具名的步长选择、双具名默认与严格40ms近直流、参数不变、两种混用无假频率、0.1ps边界拒绝，以及显式精度／预算失败注入。
+- [oscillator.spec.ts](../tests/e2e/oscillator.spec.ts)：新增1个Chromium场景，验证真实Worker完成双具名计算、型号选择保存、近直流清旧声，切回通用卡后重新获得稳定周期及音频。
+
+仅定向执行，22个不同模块／会话场景分次通过、1个Chromium场景通过；命令、变更验收与未验证项见[测试计划](TEST_PLAN.md#可选晶体管型号步长修复2026-11-10)。不重写旧章节数量，不声称全套或设备试听通过。
+
+## 20. 自激v2电容扩至1μF（2026-11-10）
+
+- [capacitanceRange.test.ts](../src/circuit/oscillator/capacitanceRange.test.ts)：新增6项，包含221／500／1000nF精确应用／撤销／保存、旧模型与格式保护，以及1μF通用／具名参考的有限计算与诚实失败输出。
+- [CapacitanceEditor.test.tsx](../src/editor/CapacitanceEditor.test.tsx)：新增1项，1μF单位换算与预设；原超限草稿由221nF改为1001nF。
+- [catalog.test.ts](../src/circuit/catalog.test.ts)：合法范围表新增221／500／1000nF三项，更新超限边界，继续验证原实验模型拒绝其他容量。
+- [oscillator.spec.ts](../tests/e2e/oscillator.spec.ts)：扩展现有2个Chromium场景，覆盖1μF应用／错误保护／撤销／刷新，以及具名卡数值失败不残留旧读数或声音、恢复100nF通用周期；无新增浏览器场景。
+
+本轮5文件53项模块／界面测试通过，两个受影响Chromium场景分次通过，严格构建及定向静态检查通过。具体命令／逐ID证据及具名1μF尚未收敛的限制见[测试计划](TEST_PLAN.md#自激v2容量扩容定向验证2026-11-10)；历史全套计数不改写。
+
+## 21. 标准SPICE晶体管动态模型（2026-11-10）
+
+- [netlist.test.ts](../src/spice/netlist.test.ts)：3项，明确型号／源短路、全卡／引脚与零压传感器、显式模型版本／未知保护／撤销／存档。
+- [spice-engine.spec.ts](../tests/e2e/spice-engine.spec.ts)：4个Chromium场景，原图与NPN／PNP开关动态分别对照原生SPICE，以及实际Worker完整模型／保存／刷新／计算中停止。
+- [原生基准生成器](../tests/spice/generate-reference.py)、三个`.cir`网表及对应`*-summary.json`：离线原生参考，输入SHA256和固定容差，不调用生产求解器生成自身期望。
+
+本轮6文件53项定向模块通过；四个浏览器场景分次通过，严格构建及定向静态检查通过。逐ID结果和未闭合的性能／工作区／分发许可／人工项见[测试计划](TEST_PLAN.md#标准spice晶体管动态模型2026-11-10)。
+
+## 22. SPICE型号引导与240kΩ周期对照（2026-11-12）
+
+- `OscillatorConfiguration.test.tsx`新增1个配置回归：通用卡先提示、禁止不兼容选择／运行、保留配置、可取消SPICE。
+- `spice-engine.spec.ts`新增1个Chromium场景：从通用卡明确选择两具名卡，240kΩ偏置的实际Worker结果对照原生频率／交流RMS；运行中改回通用卡停止并清结果。
+- `reference-240k.cir`和默认／严格摘要：保持完整卡、其余电路参数不变的周期参考；生成器支持指定单个网表及该网表的严格档，避免为本项重跑已有基准。
+
+实际命令、两个定向模块场景与一个Chromium场景的结果及未验证项见[测试计划](TEST_PLAN.md#spice型号引导与240kω周期对照2026-11-12)，没有运行全套测试。

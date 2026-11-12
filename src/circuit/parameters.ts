@@ -1,12 +1,13 @@
 import type { CircuitDocument, ModelProfileId } from './types';
 
-export const profileOf = (document: CircuitDocument) => document.schemaVersion===5 ? document.modelProfileId ?? 'legacy-stage2-v1' : 'legacy-stage2-v1';
-export const isOscillatorProfile = (profile: ModelProfileId) => profile === 'oscillator-em-v1' || profile === 'oscillator-em-v2';
-export const isKnownModelProfile = (profile: unknown): profile is ModelProfileId => profile === 'legacy-stage2-v1' || profile === 'oscillator-em-v1' || profile === 'oscillator-em-v2';
+export const profileOf = (document: CircuitDocument) => document.schemaVersion===5 ? document.modelProfileId==='oscillator-spice-gp-v1'?'oscillator-em-v2':document.modelProfileId ?? 'legacy-stage2-v1' : 'legacy-stage2-v1';
+export const isOscillatorProfile = (profile: ModelProfileId) => profile === 'oscillator-em-v1' || profile === 'oscillator-em-v2' || profile === 'oscillator-spice-gp-v1';
+export const isKnownModelProfile = (profile: unknown): profile is ModelProfileId => profile === 'legacy-stage2-v1' || profile === 'oscillator-em-v1' || profile === 'oscillator-em-v2' || profile === 'oscillator-spice-gp-v1';
 export const DEFAULT_CAPACITANCE_F = 100e-9;
 /** Numeric input bounds; use isCapacitanceForProfile to reject gaps inside them. */
 export function capacitanceRangeForProfile(profile:ModelProfileId):readonly [number,number] {
-  return isOscillatorProfile(profile)?[47e-9,220e-9]:[DEFAULT_CAPACITANCE_F,1000e-6];
+  if((profile==='oscillator-em-v2'||profile==='oscillator-spice-gp-v1'))return [47e-9,1e-6];
+  return profile==='oscillator-em-v1'?[47e-9,220e-9]:[DEFAULT_CAPACITANCE_F,1000e-6];
 }
 export function capacitanceRange(document: CircuitDocument): readonly [number, number] {
   return capacitanceRangeForProfile(profileOf(document));
@@ -19,7 +20,7 @@ export function isCapacitanceForProfile(value:unknown,profile:ModelProfileId):va
 }
 export function isCapacitance(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) &&
-    (value >= 47e-9 && value <= 220e-9 || value >= 10e-6 && value <= 1000e-6);
+    (value >= 47e-9 && value <= 1e-6 || value >= 10e-6 && value <= 1000e-6);
 }
 
 export const DEFAULT_SUPPLY_VOLTAGE = 4.5;
