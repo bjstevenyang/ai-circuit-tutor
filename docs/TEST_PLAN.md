@@ -460,3 +460,25 @@ v2独立参考/完整16命令和3份标准库脚本归档[新参考](changes/CR-
 生产构建另以临时预览配置执行`npx playwright test --config /private/tmp/circuit-spice-preview.config.mts --project=chromium -g 'SPICE mode'`：1项通过，确认打包后的独立Worker实际计算／保存／停止。配置只指向5188预览服务及已提交同一场景，不提交临时配置／构建物。
 
 未执行：远端CI／全套测试、Firefox／WebKit、目标M1／8GB、完整反向工作区扫描、完整卡持续周期正例／交流强度对照、引擎峰值内存硬约束、定量停止延迟、设备试听和实物／教学验证。eecircuit-engine封装MIT已核对，随包还含ASU／FreePDK／SkyWater／GF180模型，其完整许可清单尚未闭合；本轮不公开部署，不称生产发布验收完成。标准器件动态路径可本地验证，资源及分发门槛仍须收尾。提交用`[skip ci]`，不声称CI通过。
+
+## SPICE型号引导与240kΩ周期对照（2026-11-12）
+
+基线与问题依据见D68；开始于`319459b6d2a078f03f2ed7ca2239d64300fbaaeb`、干净的`codex/contextual-running-hint`分支。界面把原有具名卡条件提前检查，不新增模型／器件／依赖，也不修改原图、默认电阻、完整卡或生产求解设置。原图120kΩ仍得到直流；240kΩ为另一个明确调整外部参数的实验，不替换原图验收。新增／删除验收ID均无，BJT-DYN-01／04及OSC-02／06补配置引导与周期正例；回归AC-07／08／14／17。
+
+| 验收ID | 测试／场景与实际证据 | 当前边界 |
+| --- | --- | --- |
+| BJT-DYN-01、OSC-02／06、AC-07／08／14 | `OscillatorConfiguration.test.tsx`的`SPICE model selection`：通用卡禁用新勾选并给操作步骤，分别明确选两具名卡后才可勾选；改回通用卡不自动替换参数，暂禁运行，仍可取消SPICE | 定向模块A通过；既有保存／撤销机制不改，未重跑全部迁移测试 |
+| BJT-DYN-01 | `netlist.test.ts`的`requires explicit cards`：底层仍独立拒绝未明确选择型号及电源短路；与界面共用型号条件 | 定向模块B通过，其他网表场景未执行 |
+| BJT-DYN-04 | `reference-240k.cir`保持完整卡、9V、47Ω／10Ω、100nF／8Ω，仅将偏置改240kΩ；原生ngspice47默认157.890404554Hz、交流RMS0.343129708V，末4周期及各周期RMS偏差均小于1% | 默认摘要含网表SHA256；未由产品生成期望 |
+| BJT-DYN-04数值核对 | 同一240kΩ输入的原生严格档，reltol1e-6／vntol100nV／abstol10pA，最大步由0.25μs减至0.125μs，仍用零初态／100μs上电／40ms；157.888072609Hz、0.343131258V，相对默认差约0.001477%／0.000452% | 严格摘要含修改后网表SHA256；这是同一内核精度核对，不冒充第二物理模型 |
+| BJT-DYN-04、OSC-02／06、AC-14／17 | `spice-engine.spec.ts`的`SPICE model selection and 240k`：从通用卡经实际型号选择开启SPICE，实际Worker检测到稳定周期；UI频率及交流RMS分别与原生摘要比较，容差1%；运行中选回通用卡会停止／清读数／禁无效运行，可取消SPICE继续编辑 | Chromium定向C通过；补上旧记录中未做的完整卡周期正例和交流强度对照，不覆盖设备音频／实物 |
+
+实际执行：
+
+- A：`npm test -- src/app/OscillatorConfiguration.test.tsx -t 'SPICE model selection'`，新增回归先在未修复界面因允许勾选失败；修复后1项通过、5项过滤未执行。
+- B：`npm test -- src/spice/netlist.test.ts -t 'requires explicit cards'`，1项通过、2项过滤未执行。
+- 独立默认参考：`python3 tests/spice/generate-reference.py reference-240k`，仅生成新网表摘要，未重写已有3份参考；独立严格参考：同命令加`--strict`，仅生成该网表严格摘要。另在临时目录复算原图及少量单因素对照；PNP的BF人为降至50会起振，只增加2／1nF线性结C仍直流，说明不能单独归因于大结电容；人为卡不进入产品。
+- C：`CIRCUIT_E2E_PORT=5187 npx playwright test tests/e2e/spice-engine.spec.ts --project=chromium --workers=1 -g 'SPICE model selection and 240k'`，1项通过。首次受本地端口启动权限限制而未启动场景，获准后执行；补充运行中改卡停止断言后仅重跑同一场景，最终1项通过（6.8秒）。未运行其余浏览器场景。
+- `npm run typecheck`通过。最初新增模块测试误用了Playwright的`exact`选项，类型检查指出后删除，未修改应用类型约束。对本轮5个TypeScript文件执行定向`npx eslint`通过；文档相对引用／围栏、参考哈希／默认严格指标及`git diff --check`另核对。
+
+没有运行全套模块／E2E、Firefox／WebKit、性能、生产构建或远端CI；不重写旧记录为本轮全部通过。仍未验证目标M1／8GB、WASM峰值内存硬上限、定量停止延迟、完整反向工作区、真实扬声器负载／实物频率、设备试听、辅助技术与教学效果、完整分发许可。生产器件卡没有人为减小BF或增加结电容，不强制起振；不自动改用户电路，原图120kΩ直流结论保留。使用`[skip ci]`避免完整CI；自动协调保持暂停，不部署／合并。

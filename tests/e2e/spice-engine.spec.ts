@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { oscillatorFixture } from '../../src/circuit/oscillator/fixtures';
+import { oscillatorFixture, oscillatorVariant } from '../../src/circuit/oscillator/fixtures';
 import { openFixture } from '../performance/helpers';
 import { STORAGE_KEY } from '../../src/storage';
 
@@ -51,4 +51,32 @@ test('SPICE mode computes the original named pair, saves its version and restore
   await page.getByRole('button',{name:'停止运行',exact:true}).click();
   await expect(page.getByLabel('仿真状态')).toContainText('已停止');
   await expect(page.getByLabel('实验读数')).toHaveCount(0);
+});
+
+test('SPICE model selection and 240k bias produce the independently measured periodic signal',async({page})=>{
+  const native=JSON.parse(readFileSync('tests/spice/reference-240k-summary.json','utf8')) as {sha256:string;oscillation:{frequencyHz:number;acRmsV:number}};
+  expect(createHash('sha256').update(readFileSync('tests/spice/reference-240k.cir')).digest('hex')).toBe(native.sha256);
+  await openFixture(page,oscillatorVariant('R240'));
+  const spice=page.getByRole('checkbox',{name:/标准SPICE晶体管动态模型/});
+  await expect(spice).toBeDisabled();
+  await expect(page.locator('#spice-card-selection-help')).toContainText('先点击板上的晶体管');
+  for(const [kind,model] of [['NPN','2n3904'],['PNP','2n3906']]){
+    await page.getByRole('button',{name:new RegExp(`^${kind} 晶体管，锚点`)}).click();
+    await page.getByLabel('晶体管参数模型',{exact:true}).selectOption(model!);
+  }
+  await spice.check();
+  await page.getByRole('button',{name:'运行电路',exact:true}).click();
+  await expect(page.locator('.result-card h3')).toHaveText('检测到稳定周期',{timeout:15000});
+  const readings=await page.getByLabel('实验读数').innerText();
+  const frequency=Number(readings.match(/稳定频率 ([\d.]+) Hz/)?.[1]);
+  const acRms=Number(readings.match(/交流RMS ([\d.]+) V/)?.[1]);
+  expect(Math.abs(frequency/native.oscillation.frequencyHz-1)).toBeLessThan(.01);
+  expect(Math.abs(acRms/native.oscillation.acRmsV-1)).toBeLessThan(.01);
+  await page.getByLabel('晶体管参数模型',{exact:true}).selectOption('generic');
+  await expect(page.getByLabel('仿真状态')).toContainText('已停止');
+  await expect(page.getByLabel('实验读数')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'运行电路',exact:true})).toBeDisabled();
+  await expect(spice).toBeChecked();
+  await spice.uncheck();
+  await expect(page.getByRole('button',{name:'运行电路',exact:true})).toBeEnabled();
 });

@@ -3,12 +3,13 @@ import type { CircuitDocument, SimulationControls } from '../circuit';
 import { compileOscillator } from '../circuit/oscillator/compile';
 import { resistanceOf } from '../circuit/catalog';
 import { SPICE_CARDS } from './cards';
+import { hasSpiceModelSelections } from '../circuit/transistorModels';
 
 /** Explicit net identities only; never interpolate user identifiers into SPICE commands. */
 export function spiceNetlist(document:CircuitDocument,controls:SimulationControls={}) {
   const compiled=compileOscillator(document,controls);
   if(!compiled.ok)return compiled;
-  if(document.components.some(p=>(p.kind==='npn'&&p.transistorModel!=='2n3904')||(p.kind==='pnp'&&p.transistorModel!=='2n3906')))
+  if(!hasSpiceModelSelections(document.components))
     return {ok:false as const,result:{outcome:'unsupported-topology' as const,timeS:0,reason:'标准SPICE模式请明确选择NPN的2N3904和PNP的2N3906；通用模型请使用原模式。',entities:[]}};
   const roots=compiled.compiled.endpointNodes;
   const names=new Map<string,string>([[roots['battery:-']!,'0'],[roots['battery:+']!,'vp']]);

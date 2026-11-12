@@ -16,6 +16,7 @@ import { NumberEditor } from '../editor/NumberEditor';
 import { OscillatorSession, speakerDrive } from './oscillatorSession';
 import { calculatingResult, presentOscillator, OSCILLATOR_TITLES } from './oscillatorPresentation';
 import type { OscillatorProgress } from '../circuit/oscillator/types';
+import { hasSpiceModelSelections } from '../circuit/transistorModels';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
 const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
@@ -140,6 +141,9 @@ export function App() {
   const wireTargetRef=useRef<HTMLInputElement>(null);
   const document = state.history.document;
   const profile=profileOf(document);
+  const spiceEnabled=document.transistorDynamics==='spice-gp-v1';
+  const spiceCardsReady=hasSpiceModelSelections(document.components);
+  const invalidSpiceSelection=spiceEnabled&&!spiceCardsReady;
   const runningControlHints = [
     document.components.some(part => part.kind === 'switch') && '开关点击切换',
     document.components.some(part => part.kind === 'button') && '黄色按钮按住接通',
@@ -153,6 +157,9 @@ export function App() {
   useEffect(()=>()=>oscillatorSession.current?.cancel(),[]);
   const startOscillator=(next:CircuitDocument,pressed:readonly string[],revision=state.revision)=>{
     backgroundResume.current=false;
+    if(next.transistorDynamics==='spice-gp-v1'&&!hasSpiceModelSelections(next.components)){
+      oscillatorSession.current?.cancel();setPressedButtons([]);dispatch({type:'stop'});return;
+    }
     const sessionId=state.sessionId+1;
     dispatch({type:'run',result:calculatingResult(),restart:true});
     oscillatorSession.current!.start(next,{pressedButtons:pressed},{sessionId,documentRevision:revision},result=>dispatch({type:'tick',result:presentOscillator(result,next),sessionId,revision}),progress=>dispatch({type:'progress',progress,sessionId,revision}));
@@ -356,8 +363,8 @@ export function App() {
           <div className="panel-heading"><h2>元件盒</h2><span className="mono">{COMPONENT_KINDS.length} PARTS</span></div>
           <ChoiceGroup label="实验模型" value={profile} choices={[{value:'legacy-stage2-v1',label:'原实验模型'},{value:'oscillator-em-v2',label:'自激发声·虚拟模型v2'}] as const} onChange={next=>{if(next!=='oscillator-em-v1')edit({type:'set-profile',profile:next});}}/>
           {profile==='oscillator-em-v1'&&<p className="panel-intro" role="status">当前为旧版虚拟模型v1，仅恢复配置；需显式切换v2后运行。切换保留元件值和接线，可撤销。</p>}
-          {profile==='oscillator-em-v2'&&<label><input type="checkbox" checked={document.transistorDynamics==='spice-gp-v1'} onChange={e=>edit({type:'set-dynamics',enabled:e.target.checked})}/>标准SPICE晶体管动态模型（2N3904／2N3906，27°C）</label>}
-          {profile==='oscillator-em-v2'&&!document.transistorDynamics&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。每管2/1 nF为虚拟结电容，不是真实3904参数。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
+          {profile==='oscillator-em-v2'&&<><label><input type="checkbox" checked={spiceEnabled} disabled={!spiceEnabled&&!spiceCardsReady} aria-describedby={!spiceCardsReady?'spice-card-selection-help':undefined} onChange={e=>edit({type:'set-dynamics',enabled:e.target.checked})}/>标准SPICE晶体管动态模型（2N3904／2N3906，27°C）</label>{!spiceCardsReady&&<p id="spice-card-selection-help" className="panel-intro">标准SPICE只支持具名型号。先点击板上的晶体管，在“晶体管参数模型”中把NPN选为2N3904、PNP选为2N3906；使用通用虚拟模型时请取消勾选。作品和接线会保留。</p>}</>}
+          {profile==='oscillator-em-v2'&&!document.transistorDynamics&&<p className="panel-intro">虚拟开关模型，不能判断真实器件安全。通用卡每管2/1 nF为虚拟结电容；具名卡使用对应的四参数子集，均不是完整SPICE。计算0–40 ms；参数或控制改变时从零初态重算。</p>}
           <p className="panel-intro">选择元件，再点击孔位放置。</p>
           <div className="part-list">
             {COMPONENT_KINDS.map(kind => {
@@ -407,7 +414,7 @@ export function App() {
               <button className="icon-button" aria-label="重置工作台" title="重置工作台（可撤销）" onClick={() => { if (edit({ type: 'reset' })) { setSelected(null); setSelectedEndpoint(null); setWireFrom(''); setTool('inspect'); } }}><Icon name="reset" /></button>
             </div>
             <button className="delete-button" title="删除选中对象（Delete / Backspace）" disabled={!selectedPart && !selectedWire} onClick={deleteSelected}><Icon name="trash" size={16} />删除</button>
-            <button className={`run-button${running?' stop-button':''}`} aria-describedby="simulation-status" onClick={() => {
+            <button className={`run-button${running?' stop-button':''}`} disabled={!running&&invalidSpiceSelection} aria-describedby={invalidSpiceSelection?'simulation-status spice-card-selection-help':'simulation-status'} onClick={() => {
               setError('');
               if(running){backgroundResume.current=false;oscillatorSession.current?.cancel();setPressedButtons([]);dispatch({type:'stop'});}
               else {setTool('inspect');run();}
