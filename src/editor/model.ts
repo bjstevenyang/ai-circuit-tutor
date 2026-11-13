@@ -1,7 +1,9 @@
 import { createEmptyDocument, ENDPOINT_BY_ID, getComponentPins, componentBody, MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from '../circuit';
 import { validComponent } from '../circuit/validation';
 import { isCapacitanceForProfile, isKnownModelProfile, isSupplyVoltage, profileOf } from '../circuit/parameters';
-import type { CircuitDocument, ComponentInstance, Rotation, RunnableModelProfileId, Wire } from '../circuit';
+import type { CircuitDocument, ComponentInstance, CurveControl, Rotation, RunnableModelProfileId, Wire } from '../circuit';
+import { isWireShape } from '../circuit/wires';
+import { newWireShape } from './wireGeometry';
 
 export type WireEnd = 'from' | 'to';
 export type EditCommand =
@@ -9,7 +11,7 @@ export type EditCommand =
   | { type: 'move'; id: string; anchor: string; rotation: Rotation }
   | { type: 'remove'; id: string }
   | { type: 'wire'; wire: Wire }
-  | { type: 'update-wire'; id: string; color?: string; bend?: Wire['bend'] }
+  | { type: 'update-wire'; id: string; color?: string; bend?: Wire['bend']; curveControl?:CurveControl }
   | { type: 'reconnect-wire'; id: string; endpoint: WireEnd; to: string }
   | { type: 'resistance'; id: string; value: 100 | 330 | 1000 }
   | { type: 'configure'; id: string; settings: Pick<ComponentInstance, 'resistance' | 'closed' | 'position' | 'light' | 'capacitanceF' | 'transistorModel'> }
@@ -44,6 +46,7 @@ export function validateDocument(document: CircuitDocument): string | null {
   if(document.schemaVersion<5&&document.components.some(p=>['pnp','speaker'].includes(p.kind)||p.kind==='capacitor'&&(p.capacitanceF??0)<10e-6))return '旧格式不能包含新模型元件或容量，请先迁移作品。';
   const identities = new Set<string>();
   const occupied = new Set<string>();
+  const wireOccupied = new Set<string>();
   if (document.components.length > MAX_COMPONENTS) return `工作台最多放置 ${MAX_COMPONENTS} 个元件。`;
   if (document.wires.length > MAX_WIRES) return `工作台最多连接 ${MAX_WIRES} 根导线。`;
   if (profileOf(document)==='legacy-stage2-v1'&&!document.components.some(p=>['rgb-led','npn','capacitor','piezo-passive','pnp','speaker'].includes(p.kind))&&document.components.filter(p => ['led','diode','buzzer'].includes(p.kind)).length > MAX_POLAR_COMPONENTS) return `LED、二极管和蜂鸣器合计最多 ${MAX_POLAR_COMPONENTS} 个，以保证仿真响应。`;
@@ -69,10 +72,11 @@ export function validateDocument(document: CircuitDocument): string | null {
     if (!reserveId(wire.id)) return '对象标识重复或为空。';
     if (!ENDPOINT_BY_ID.has(wire.from) || !ENDPOINT_BY_ID.has(wire.to)) return '找不到导线端点，请检查孔位或电池端口名称。';
     if (wire.from === wire.to) return '导线需要两个不同的端点。';
-    if (occupied.has(wire.from) || occupied.has(wire.to)) return '孔位或电池端口已被占用，请选择其他空孔。';
+    if (wireOccupied.has(wire.from) || wireOccupied.has(wire.to)) return '孔位或电池端口已有导线，请选择其他孔位。';
+    if (document.schemaVersion<5&&(occupied.has(wire.from)||occupied.has(wire.to)))return '旧格式孔位已被占用，请先迁移作品。';
     if (!/^#[0-9a-fA-F]{6}$/.test(wire.color)) return '请选择有效的导线颜色。';
-    if (wire.bend !== 'horizontal' && wire.bend !== 'vertical') return '请选择有效的折线路径。';
-    occupied.add(wire.from); occupied.add(wire.to);
+    if (!isWireShape(wire,document.schemaVersion===5)) return '导线路径或曲线控制点无效。';
+    wireOccupied.add(wire.from); wireOccupied.add(wire.to);
   }
   return null;
 }
@@ -91,15 +95,22 @@ export function applyEdit(document: CircuitDocument, command: EditCommand): Edit
       next = { ...document, components: document.components.filter(component => component.id !== command.id), wires: document.wires.filter(wire => wire.id !== command.id) };
       break;
     }
-    case 'wire': next = { ...document, wires: [...document.wires, { ...command.wire }] }; break;
+    case 'wire': next = { ...document, wires: [...document.wires, { ...command.wire,...(command.wire.curveControl===undefined?{}:{curveControl:{...command.wire.curveControl}}) }] }; break;
     case 'reconnect-wire': {
       if (!document.wires.some(wire => wire.id === command.id)) return { ok: false, error: '找不到要修改的导线。' };
       next = { ...document, wires: document.wires.map(wire => wire.id === command.id ? { ...wire, [command.endpoint]: command.to } : wire) };
       break;
     }
     case 'update-wire': {
-      if (!document.wires.some(wire => wire.id === command.id)) return { ok: false, error: '找不到要修改的导线。' };
-      next = { ...document, wires: document.wires.map(wire => wire.id === command.id ? { ...wire, ...(command.color === undefined ? {} : { color: command.color }), ...(command.bend === undefined ? {} : { bend: command.bend }) } : wire) };
+      const original=document.wires.find(wire=>wire.id===command.id);
+      if (!original) return { ok: false, error: '找不到要修改的导线。' };
+      const bend=command.bend??original.bend;
+      if(command.curveControl!==undefined&&bend!=='curve')return {ok:false,error:'请先选择曲线再调整控制点。'};
+      const {curveControl:_old,...base}=original;void _old;
+      const shape=bend==='curve'?(command.curveControl!==undefined?{bend,curveControl:{...command.curveControl}}:
+        original.bend==='curve'?{bend,...(original.curveControl?{curveControl:{...original.curveControl}}:{})}:newWireShape(original.from,original.to,bend)):{bend};
+      const replacement={...base,...shape,...(command.color===undefined?{}:{color:command.color})};
+      next = { ...document, wires: document.wires.map(wire => wire.id === command.id ? replacement : wire) };
       break;
     }
     case 'resistance': {

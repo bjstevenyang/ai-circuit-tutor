@@ -25,6 +25,6 @@ export function ComponentGuide({ kind, part, profile='legacy-stage2-v1' }: { kin
       <p>{copy.commonMistake}</p>
       <p className="component-model-note">{copy.modelNote}</p>
     </details>
-    <p className="component-guide-note">{holes ? '孔位对应当前元件方向；接线请使用同组的其他空孔。' : '这是通用用法说明。放置后，可点击板上元件查看实际引脚孔位。'}</p>
+    <p className="component-guide-note">{holes ? '孔位对应当前元件方向；虚拟接线允许一根导线与一个引脚共孔，也可用同组其他空孔。实物面包板请使用同组孔。' : '这是通用用法说明。放置后，可点击板上元件查看实际引脚孔位。'}</p>
   </section>;
 }

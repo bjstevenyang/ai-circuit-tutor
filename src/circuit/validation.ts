@@ -4,6 +4,7 @@ import { getComponentPins, ENDPOINT_BY_ID } from './board';
 import { MAX_COMPONENTS, MAX_POLAR_COMPONENTS, MAX_WIRES } from './types';
 import { DEFAULT_SUPPLY_VOLTAGE, isCapacitance, isKnownModelProfile, isResistance, isSupplyVoltage } from './parameters';
 import type { CircuitDocument, ComponentInstance, ModelProfileId, Wire } from './types';
+import { endpointOccupancy, isWireShape } from './wires';
 const record = (value: unknown): value is Record<string, unknown> => typeof value==='object'&&value!==null&&!Array.isArray(value);
 const percentage = (value: unknown) => typeof value==='number'&&Number.isInteger(value)&&value>=0&&value<=100;
 export function validComponent(value: unknown): value is ComponentInstance {
@@ -46,8 +47,11 @@ export function readCircuitDocument(value: unknown): CircuitDocument | null {
   if((!v5||value.modelProfileId==='legacy-stage2-v1')&&!components.some(p=>['rgb-led','npn','capacitor','piezo-passive','pnp','speaker'].includes(p.kind))&&components.filter(p=>['led','diode','buzzer'].includes(p.kind)).length>MAX_POLAR_COMPONENTS)return null;
   const wires: Wire[]=[];
   for(const wire of value.wires) {
-    if(!record(wire)||!identity(wire.id)||typeof wire.from!=='string'||typeof wire.to!=='string'||!ENDPOINT_BY_ID.has(wire.from)||!ENDPOINT_BY_ID.has(wire.to)||wire.from===wire.to||typeof wire.color!=='string'||!/^#[0-9a-f]{6}$/i.test(wire.color)||(wire.bend!=='horizontal'&&wire.bend!=='vertical'))return null;
-    wires.push({id:wire.id as string,from:wire.from,to:wire.to,color:wire.color,bend:wire.bend});
+    if(!record(wire)||!identity(wire.id)||typeof wire.from!=='string'||typeof wire.to!=='string'||!ENDPOINT_BY_ID.has(wire.from)||!ENDPOINT_BY_ID.has(wire.to)||wire.from===wire.to||typeof wire.color!=='string'||!/^#[0-9a-f]{6}$/i.test(wire.color)||!isWireShape({bend:wire.bend,curveControl:wire.curveControl},v5))return null;
+    const item:Wire={id:wire.id as string,from:wire.from,to:wire.to,color:wire.color,bend:wire.bend as Wire['bend']};
+    if(item.bend==='curve'){const point=wire.curveControl as {x:number;y:number};item.curveControl={x:point.x,y:point.y};}
+    wires.push(item);
   }
+  if(!v5){const occupied=endpointOccupancy({components,wires});if([...occupied.wires].some(id=>occupied.pins.has(id)))return null;}
   return {...(value.transistorDynamics==='spice-gp-v1'?{transistorDynamics:'spice-gp-v1' as const}:{}),schemaVersion:5,modelProfileId:v5?value.modelProfileId as ModelProfileId:'legacy-stage2-v1',boardId:'breadboard-30-v1',lessonId:'dc-lab-v2',supplyVoltage,sourceMode:current?value.sourceMode as 'battery'|'teaching-square':'battery',signalFrequencyHz:current?value.signalFrequencyHz as 250|500|1000:500,components,wires};
 }

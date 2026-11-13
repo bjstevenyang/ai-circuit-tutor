@@ -17,7 +17,8 @@ export type ComponentInstance = {
   capacitanceF?: number;
   transistorModel?: TransistorModelId;
 };
-export type Wire = { id: string; from: string; to: string; color: string; bend: 'horizontal' | 'vertical' };
+export type CurveControl = { x:number; y:number };
+export type Wire = { id: string; from: string; to: string; color: string; bend: 'horizontal' | 'vertical' | 'curve'; curveControl?:CurveControl };
 export type CircuitDocument = {
   schemaVersion: 1 | 2 | 3 | 4 | 5;
   modelProfileId?: ModelProfileId;

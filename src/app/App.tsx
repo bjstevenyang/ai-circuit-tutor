@@ -17,6 +17,7 @@ import { OscillatorSession, speakerDrive } from './oscillatorSession';
 import { calculatingResult, presentOscillator, OSCILLATOR_TITLES } from './oscillatorPresentation';
 import type { OscillatorProgress } from '../circuit/oscillator/types';
 import { hasSpiceModelSelections } from '../circuit/transistorModels';
+import { newWireShape } from '../editor/wireGeometry';
 
 type Tool = 'inspect' | 'wire' | 'move' | ComponentKind;
 const isPartTool = (tool: Tool): tool is ComponentKind => COMPONENT_KINDS.includes(tool as ComponentKind);
@@ -129,7 +130,7 @@ export function App() {
   const [wireFrom, setWireFrom] = useState('');
   const [wireTo, setWireTo] = useState('');
   const [wireColor, setWireColor] = useState<string>(COLORS[0][0]);
-  const [bend, setBend] = useState<Wire['bend']>('horizontal');
+  const [bend, setBend] = useState<Wire['bend']>('curve');
   const [error, setError] = useState('');
   const [announcement,setAnnouncement]=useState<{text:string;analysis:AnalysisResult}|null>(null);
   const [inspectInput, setInspectInput] = useState('a1');
@@ -269,7 +270,8 @@ export function App() {
     dispatch({ type: 'edit', history, saveStatus: save(history.document) });
   };
   const addWire = (from: string, to: string) => {
-    if (edit({ type: 'wire', wire: { id: crypto.randomUUID(), from: normalizeEndpoint(from), to: normalizeEndpoint(to), color: wireColor, bend } })) {
+    const a=normalizeEndpoint(from),b=normalizeEndpoint(to);
+    if (edit({ type: 'wire', wire: { id: crypto.randomUUID(), from:a, to:b, color: wireColor,...newWireShape(a,b,bend) } })) {
       setWireFrom(''); setWireTo(''); return true;
     }
     return false;
@@ -394,7 +396,7 @@ export function App() {
             <form onSubmit={submitWire} aria-label="精确连接导线">
               <label htmlFor="wire-from">导线起点</label><input id="wire-from" value={wireFrom} onChange={event => setWireFrom(event.target.value)} placeholder="battery:+ 或 b10" autoComplete="off" />
               <label htmlFor="wire-to">导线终点</label><input id="wire-to" value={wireTo} onChange={event => setWireTo(event.target.value)} placeholder="例如 d14" autoComplete="off" />
-              <div className="field-pair"><div><label htmlFor="wire-color">颜色</label><select id="wire-color" value={wireColor} onChange={event => setWireColor(event.target.value)}>{COLORS.map(([color, label]) => <option key={color} value={color}>{label}</option>)}</select></div><div><label htmlFor="wire-bend">折线路径</label><select id="wire-bend" value={bend} onChange={event => setBend(event.target.value as Wire['bend'])}><option value="horizontal">先横后竖</option><option value="vertical">先竖后横</option></select></div></div>
+              <div className="field-pair"><div><label htmlFor="wire-color">颜色</label><select id="wire-color" value={wireColor} onChange={event => setWireColor(event.target.value)}>{COLORS.map(([color, label]) => <option key={color} value={color}>{label}</option>)}</select></div><div><label htmlFor="wire-bend">导线路径</label><select id="wire-bend" value={bend} onChange={event => setBend(event.target.value as Wire['bend'])}><option value="curve">曲线</option><option value="horizontal">先横后竖</option><option value="vertical">先竖后横</option></select></div></div>
               <button className="secondary-button full-width" disabled={!wireFrom.trim() || !wireTo.trim()}>添加导线 <Icon name="wire" size={15} /></button>
             </form>
           </details>
@@ -431,6 +433,7 @@ export function App() {
               running={running} onButtonPress={pressButton}
               onEndpoint={endpointClick} onSelect={chooseItem} onActivate={activatePart} onHover={setHover}
               onWireReconnect={reconnectWire}
+              onWireCurveChange={(id,point)=>edit({type:'update-wire',id,curveControl:point})}
               onWireEndSelect={endpoint=>{setWireEnd(endpoint);setWireTarget(selectedWire?.[endpoint]??'');wireTargetRef.current?.focus();}}
               onWireDrag={(from,to)=>{
                 setWireFrom('');setWireTo('');
@@ -444,7 +447,7 @@ export function App() {
                 if (edit({type:'move',id,anchor:at,rotation:part.rotation})) { setMoveAnchor(at); setTool('inspect'); }
               }} />
           </div></div>
-          <div className="canvas-footer"><span><i className="legend-dot" />直接相连的孔位</span><span><i className="legend-dot occupied" />已使用</span><span className="keyboard-tip">Tab 聚焦 · 方向键移动 · Enter 选择</span></div>
+          <div className="canvas-footer"><span><i className="legend-dot" />直接相连</span><span><i className="legend-dot pin" />仅引脚</span><span><i className="legend-dot wire" />仅导线</span><span><i className="legend-dot shared" />共用</span><span className="keyboard-tip">Tab 聚焦 · 方向键移动 · Enter 选择</span></div>
           <div className="selection-panel">
             {selectedPart ? <>
               <div className="selection-heading"><strong>{COMPONENTS[selectedPart.kind].name}</strong><span className="mono">{getComponentPins(selectedPart)?.join(' ↔ ')}</span><span className="delete-tip">Delete / 退格键删除</span></div>
@@ -457,7 +460,7 @@ export function App() {
               </div>
             </> : selectedWire ? <>
               <div className="selection-heading"><strong>导线</strong><span className="mono">{selectedWire.from} → {selectedWire.to}</span><span className="delete-tip">拖动两端圆点改接 · Delete 删除</span></div>
-              <div className="selection-controls"><label>颜色 <select aria-label="所选导线颜色" value={selectedWire.color} onChange={event => edit({ type: 'update-wire', id: selectedWire.id, color: event.target.value })}>{COLORS.map(([color, label]) => <option key={color} value={color}>{label}</option>)}</select></label><button className="small-button" onClick={() => edit({ type: 'update-wire', id: selectedWire.id, bend: selectedWire.bend === 'horizontal' ? 'vertical' : 'horizontal' })}>切换折线路径</button></div>
+              <div className="selection-controls"><label>颜色 <select aria-label="所选导线颜色" value={selectedWire.color} onChange={event => edit({ type: 'update-wire', id: selectedWire.id, color: event.target.value })}>{COLORS.map(([color, label]) => <option key={color} value={color}>{label}</option>)}</select></label><label>路径 <select aria-label="所选导线路径" value={selectedWire.bend} onChange={event=>edit({type:'update-wire',id:selectedWire.id,bend:event.target.value as Wire['bend']})}><option value="curve">曲线</option><option value="horizontal">先横后竖</option><option value="vertical">先竖后横</option></select></label>{selectedWire.bend==='curve'&&<span className="drag-tip">拖动曲线控制点调整走向；聚焦后方向键移动，Shift细调。</span>}</div>
               <form className="selection-controls reconnect-form" aria-label="修改导线接点" onSubmit={event=>{event.preventDefault();reconnectWire(selectedWire.id,wireEnd,wireTarget);}}>
                 <label>改接端点 <select aria-label="改接端点" value={wireEnd} onChange={event=>{const end=event.target.value as WireEnd;setWireEnd(end);setWireTarget(selectedWire[end]);}}><option value="from">起点</option><option value="to">终点</option></select></label>
                 <label>新接点 <input ref={wireTargetRef} aria-label="新接点孔位" value={wireTarget} onChange={event=>setWireTarget(event.target.value)} placeholder="a1 / battery:+" autoComplete="off"/></label>

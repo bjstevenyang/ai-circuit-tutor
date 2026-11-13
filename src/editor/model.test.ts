@@ -32,10 +32,10 @@ describe('physical placement commands', () => {
   });
   it('reserves all component and wire insertion points including battery ports', () => {
     const placed = edited(createEmptyDocument(), { type: 'place', component: resistor() });
-    expect(applyEdit(placed, { type: 'wire', wire: wire({ to: 'a10' }) }).ok).toBe(false);
+    expect(applyEdit(placed, { type: 'wire', wire: wire({ to: 'a10' }) }).ok).toBe(true);
     const connected = edited(placed, { type: 'wire', wire: wire() });
     expect(applyEdit(connected, { type: 'wire', wire: wire({ id: 'w2', to: 'c10' }) }).ok).toBe(false);
-    expect(applyEdit(connected, { type: 'move', id: 'r1', anchor: 'b10', rotation: 0 }).ok).toBe(false);
+    expect(applyEdit(connected, { type: 'move', id: 'r1', anchor: 'b10', rotation: 0 }).ok).toBe(true);
     expect(connected.components[0]?.anchor).toBe('a10');
   });
   it('rejects overlapping component bodies while allowing wires to cross a body', () => {
@@ -127,7 +127,7 @@ describe('existing wire reconnection',()=>{
     document=edited(document,{type:'wire',wire:wire()});
     document=edited(document,{type:'wire',wire:wire({id:'w2',from:'battery:-',to:'a1'})});
     const before=JSON.stringify(document);
-    for(const to of ['a10','a13','battery:-','a1','battery:+','a31','']) {
+    for(const to of ['battery:-','a1','battery:+','a31','']) {
       expect(applyEdit(document,{type:'reconnect-wire',id:'w1',endpoint:'to',to}).ok).toBe(false);
       expect(JSON.stringify(document)).toBe(before);
     }

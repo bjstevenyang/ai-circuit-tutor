@@ -483,6 +483,15 @@ Chromium总场景为44（原35＋新9），实际执行结果以实施证据为�
 
 实际命令、两个定向模块场景与一个Chromium场景的结果及未验证项见[测试计划](TEST_PLAN.md#spice型号引导与240kω周期对照2026-11-12)，没有运行全套测试。
 
-## 23. 连线交互需求提案（2026-11-12，测试尚未实现）
+## 23. 连线交互需求阶段记录（2026-11-12）
 
-[CR-WIRING-UX](changes/CR-WIRING-UX.md)计划新增editor曲线几何测试与Chromium连线交互文件，并修改既有占用／改接、存档、说明及网络等价场景。拟修改的验收ID、文件与命令统一见[本轮测试计划](TEST_PLAN.md#cr-wiring-ux需求验证计划2026-11-12)。这些测试文件／场景尚未创建或执行，不能计入当前通过数量；需求PR只验证文档。
+[CR-WIRING-UX](changes/CR-WIRING-UX.md)需求阶段计划新增editor曲线几何测试与Chromium连线交互文件，并修改既有占用／改接、存档、说明及网络等价场景。拟修改的验收ID、文件与命令见[需求阶段测试计划](TEST_PLAN.md#cr-wiring-ux需求验证计划2026-11-12)。当时测试未创建／执行，需求PR只验证文档；实际实现见下一节。
+
+## 24. 连线交互实现（2026-11-12）
+
+- [wiring.test.ts](../src/editor/wiring.test.ts)：80项，覆盖全14类封装四方向、逐脚共孔双顺序、同类占用拒绝、移动／旋转／改接／删除／历史、严格线形／存档保护、LED／RC／SPICE网络等价。
+- [wireGeometry.test.ts](../src/editor/wireGeometry.test.ts)：2项，固定坐标独立检查曲线默认点、边界、二次路径、退化直线及原折线序列化。
+- 既有model／components／catalog／storage／ComponentGuide按名称过滤16项通过、71项未执行；更新原占用断言，保留本体／边界／原子失败。临时固定旧读取器检查4项通过，不进入产品测试配置。
+- [wiring-improvements.spec.ts](../tests/e2e/wiring-improvements.spec.ts)：7个不同Chromium场景，覆盖真实命中、曲率拖动／保存计数／撤销恢复、取消、实际引脚共孔／移动、Worker与音频失效、运行本体与引脚优先级、缩放／滚动／边界／改接。分批执行，不声称同批7／7。
+
+逐项验收ID、命令、执行结果和人工限制见[实施记录](changes/WIRING-IMPLEMENTATION.md)与[本轮实际验证](TEST_PLAN.md#cr-wiring-ux实施定向验证2026-11-12)。仅定向验证，不重写历史全套通过数。
