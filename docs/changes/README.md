@@ -50,5 +50,6 @@ GitHub PR 是工作流状态来源，PRD 是产品需求来源，CR 是变更记
 
 - [CR-WIRING-UX：曲线导线、可靠选线与引脚共孔](CR-WIRING-UX.md)
 - [固定主线的只读技术影响报告](CR-WIRING-UX-IMPACT.md)
+- [实现及逐项定向验证记录](WIRING-IMPLEMENTATION.md)
 
-此项按用户授权先需求PR、待合并后实现，具体批准head与阶段以GitHub PR为准。
+此项需求PR #10已由用户合并；实际需求SHA与获批head、实施范围及人工验证边界记录在上述文档，实现PR仍由用户最终验收合并。

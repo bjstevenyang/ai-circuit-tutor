@@ -1,5 +1,7 @@
 # CR-WIRING-UX只读技术影响报告
 
+状态更新：本文保留需求阶段对固定旧主线的只读分析，不把“当前／拟”描述当作新实现。需求已由用户合并[PR #10](https://github.com/bjstevenyang/ai-circuit-tutor/pull/10)至`c1a09c077184a047da7b5f53bd8d93123619374c`；实际实现与验证范围见[实施记录](WIRING-IMPLEMENTATION.md)。
+
 ## 基线与边界
 
 分析基线：`51c044a8820afc234369e541c2a11c991b8ac449`，PR #9实际合并后的master；该合并包含已定向验证功能提交`89e3886266addaf12e7ac34efb5ad988cfb9bd7f`。只读核对不推断全部产品／平台已验证。本报告服务于[需求CR](CR-WIRING-UX.md)，当前不实施代码、不运行应用测试、不恢复自动协调。

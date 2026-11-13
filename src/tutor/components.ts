@@ -16,7 +16,7 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
   pnp: {
     about:'PNP晶体管的发射极通常靠近较高电位，基极比发射极低时可以控制负载。它可与NPN形成反馈。',
     pins:['B 基极，控制端','C 集电极，负载端','E 发射极，通常靠正端'],
-    connection:'显式选择自激发声虚拟模型。E接供电电阻后的节点，B可由NPN集电极驱动，C向负载供电；导线接引脚同组空孔。',
+    connection:'显式选择自激发声虚拟模型。E接供电电阻后的节点，B可由NPN集电极驱动，C向负载供电；导线可共用引脚孔或接同组其他空孔。',
     example:'正端 → 电阻 → E〔PNP〕C → 负载 → 负端；B由控制电路驱动',
     tryIt:'先查看B/C/E的实际孔位，再对照原理图接线；改变反馈电容，比较有限观察窗中的结果。',
     commonMistake:'与NPN外形相近不代表工作方向相同；B/C/E不能按照片或平面朝向猜。无连续音也可能存在直流电流。',
@@ -33,7 +33,7 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
   },
   'rgb-led': {
     about:'RGB LED 内有红、绿、蓝三条发光支路，组合电流可混色。',pins:['R 红色阳极','K 三通道共用阴极','G 绿色阳极','B 蓝色阳极'],
-    connection:'K 接负端；R、G、B 各经独立电阻接正端。接同组空孔，不占用引脚孔。',example:'电源＋ → 开关 → 330 Ω → R／G／B；K → 电源−（三条独立支路）',
+    connection:'K 接负端；R、G、B 各经独立电阻接正端。虚拟接线可共用引脚孔，或使用同组其他空孔。',example:'电源＋ → 开关 → 330 Ω → R／G／B；K → 电源−（三条独立支路）',
     tryIt:'依次开 R、G、B，再开组合；把红色支路改为 1 kΩ，观察混色。',commonMistake:'共用一个电阻可能导致分流非唯一；每通道20 mA课程限值，不是三条总和。',modelNote:'虚拟共阴脚序 R/K/G/B，压降2/3/3 V；颜色按通道电流示意，不是真实光度或通用封装。',
   },
   npn: {
@@ -90,7 +90,7 @@ export const COMPONENT_GUIDES: Record<ComponentKind, ComponentGuideCopy> = {
   potentiometer: {
     about: '电位器是可以用旋钮调整的电阻。中间滑动端 W 把总电阻分成两段，常用来取得可调电压。',
     pins: ['电阻轨道一端 A', '滑动端 W，从这里取可调输出', '电阻轨道另一端 B'],
-    connection: 'A、B 是电阻轨两端，W 是滑臂，没有固定正负极。LED 调光可用 A 与 W 串入支路，B 留空并保留固定限流电阻；练习分压可把 A 接正极方向、B 接负极方向，W 接负载。接线用引脚同组的其他空孔。',
+    connection: 'A、B 是电阻轨两端，W 是滑臂，没有固定正负极。LED 调光可用 A 与 W 串入支路，B 留空并保留固定限流电阻；练习分压可把 A 接正极方向、B 接负极方向，W 接负载。虚拟接线可共用引脚孔，或使用同组其他空孔。',
     example: '电池＋ → A〔电位器〕B → 电池−\nW → 电阻 → LED → 电池−',
     tryIt: '选中电位器调整“旋钮位置”。先运行后再调节，比较 LED 状态和电流；接上负载后输出会受负载影响。',
     commonMistake: '只连接 A、B 时总阻值不会随旋钮变化；把 W 当作固定中点，或把零阻段跨在电池两极，可能得到错误结果或短路。',

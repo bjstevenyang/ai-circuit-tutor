@@ -26,7 +26,7 @@ describe('single local workspace', () => {
   it('rejects dangling references, impossible placement, conflicting occupancy, and unsupported parts', () => {
     const cases: unknown[] = [
       { ...populated(), wires: [{ ...populated().wires[0], to: 'a31' }] },
-      { ...populated(), wires: [{ ...populated().wires[0], to: 'a10' }] },
+      { ...populated(), wires: [...populated().wires,{...populated().wires[0],id:'second',from:'battery:-'}] },
       { ...populated(), components: [{ ...populated().components[0], anchor: 'a30' }] },
       { ...populated(), components: [{ ...populated().components[0], kind: 'capacitor' }] },
       { ...populated(), components: [{ ...populated().components[0], resistance: -1 }] },

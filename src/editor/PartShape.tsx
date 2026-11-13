@@ -10,7 +10,7 @@ export function PartShape({part,ghost=false,lit=false,activated=false,brightness
   const glow=brightness===null?0:Math.sqrt(Math.max(0,Math.min(1,brightness)));
   return <g className={ghost?'part-shape ghost':'part-shape'} data-led-level={part.kind==='led'?(brightness??'unknown'):undefined}>
     {part.kind==='led'&&!ghost&&<desc id={ledDescriptionId(part.id)}>阳极 A＋ 在 {pins[0]}，朝向电源正极并串联限流电阻；阴极 K− 在 {pins[1]}，朝向电源负极。{brightness===null?'亮度未计算。':`相对亮度 ${Math.round(brightness*100)}%，为教学示意。`}</desc>}
-    {part.kind==='potentiometer'&&!ghost&&<desc id={`pot-pins-${encodeURIComponent(part.id)}`}>A 电阻端在 {pins[0]}，W 滑臂在 {pins[1]}，B 电阻端在 {pins[2]}。A、B 是电阻轨两端，W 随旋钮移动，没有固定正负极。接线使用引脚同组的其他空孔。</desc>}
+    {part.kind==='potentiometer'&&!ghost&&<desc id={`pot-pins-${encodeURIComponent(part.id)}`}>A 电阻端在 {pins[0]}，W 滑臂在 {pins[1]}，B 电阻端在 {pins[2]}。A、B 是电阻轨两端，W 随旋钮移动，没有固定正负极。虚拟接线可在引脚孔共用一根导线，也可使用同组其他空孔；实物使用同组孔。</desc>}
     {points.map(p=><line key={p.id} x1={p.x} y1={p.y} x2={body.cx} y2={body.cy} className="part-lead" />)}
     <g transform={`translate(${body.cx} ${body.cy}) rotate(${part.rotation})`}>
       {part.kind==='resistor'&&<><rect x="-19" y="-8" width="38" height="16" rx="5" fill="#ddc49b" stroke="#aa885e"/><path d="M-11-8v16M-4-8v16M4-8v16M13-8v16" stroke="#be603c" strokeWidth="3"/><path d="M-4-8v16" stroke="#6d5139" strokeWidth="3"/></>}

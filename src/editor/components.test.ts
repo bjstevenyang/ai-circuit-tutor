@@ -12,7 +12,7 @@ describe('expanded component placement',()=>{
     expect(result.ok).toBe(true);
     expect(getComponentPins(part)).toEqual(pins);
     if(!result.ok)throw new Error(result.error);
-    for(const pin of pins)expect(applyEdit(result.document,{type:'wire',wire:{id:'wire',from:'battery:+',to:pin,color:'#123456',bend:'horizontal'}}).ok).toBe(false);
+    for(const pin of pins)expect(applyEdit(result.document,{type:'wire',wire:{id:'wire',from:'battery:+',to:pin,color:'#123456',bend:'horizontal'}}).ok).toBe(true);
   });
   it.each([0,90,180,270] as Rotation[])('rotates the full four-pin footprint at %s degrees',rotation=>{
     const part=createComponent('button','d15',rotation,'button');
